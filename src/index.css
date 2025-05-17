@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 340 100% 99%;
+    --foreground: 340 10% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 340 10% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 340 10% 10%;
+
+    --primary: 340 100% 85%;
+    --primary-foreground: 340 10% 10%;
+
+    --secondary: 340 50% 95%;
+    --secondary-foreground: 340 10% 10%;
+
+    --muted: 340 10% 96%;
+    --muted-foreground: 340 5% 45%;
+
+    --accent: 340 30% 96%;
+    --accent-foreground: 340 10% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 340 20% 93%;
+    --input: 340 20% 93%;
+    --ring: 340 90% 85%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 340 5% 26%;
+    --sidebar-primary: 340 100% 85%;
+    --sidebar-primary-foreground: 340 5% 10%;
+    --sidebar-accent: 340 20% 96%;
+    --sidebar-accent-foreground: 340 5% 10%;
+    --sidebar-border: 340 20% 93%;
+    --sidebar-ring: 340 90% 85%;
+  }
+
+  .dark {
+    --background: 340 10% 10%;
+    --foreground: 340 10% 98%;
+
+    --card: 340 10% 15%;
+    --card-foreground: 340 10% 98%;
+
+    --popover: 340 10% 15%;
+    --popover-foreground: 340 10% 98%;
+
+    --primary: 340 100% 70%;
+    --primary-foreground: 340 10% 10%;
+
+    --secondary: 340 20% 25%;
+    --secondary-foreground: 340 10% 98%;
+
+    --muted: 340 20% 25%;
+    --muted-foreground: 340 10% 70%;
+
+    --accent: 340 20% 25%;
+    --accent-foreground: 340 10% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 340 10% 98%;
+
+    --border: 340 20% 25%;
+    --input: 340 20% 25%;
+    --ring: 340 70% 70%;
+    
+    --sidebar-background: 340 10% 15%;
+    --sidebar-foreground: 340 10% 90%;
+    --sidebar-primary: 340 90% 70%;
+    --sidebar-primary-foreground: 340 10% 10%;
+    --sidebar-accent: 340 20% 25%;
+    --sidebar-accent-foreground: 340 10% 90%;
+    --sidebar-border: 340 20% 25%;
+    --sidebar-ring: 340 90% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+.teampal-gradient {
+  @apply bg-gradient-to-r from-teampal-100 to-teampal-200;
+}
+
+.teampal-button {
+  @apply bg-gradient-to-r from-teampal-200 to-teampal-300 hover:from-teampal-300 hover:to-teampal-400 text-foreground font-medium py-2 px-4 rounded-md transition-all duration-300;
+}
+
+[data-theme='teampal-pink'] {
+  --main-color: #e9428e;
+  --button-bg: #e9428e;
+  --button-text: #fff;
+  --accent-color: #f9e0ef;
+}
+[data-theme='blue'] {
+  --main-color: #3b82f6;
+  --button-bg: #3b82f6;
+  --button-text: #fff;
+  --accent-color: #e0eaff;
+}
+[data-theme='purple'] {
+  --main-color: #a259f7;
+  --button-bg: #a259f7;
+  --button-text: #fff;
+  --accent-color: #f3e8ff;
+}
+
+.teampal-button {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+}
+
+.teampal-button:hover {
+  opacity: 0.9;
+}
+
+.bg-teampal-500 {
+  background: var(--main-color) !important;
+}
+
+.border-teampal-500 {
+  border-color: var(--main-color) !important;
+}
