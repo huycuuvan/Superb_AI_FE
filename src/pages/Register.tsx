@@ -26,7 +26,19 @@ const Register = () => {
       setSuccess("Đăng ký thành công!");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Đăng ký thất bại');
+      console.log("err", err);
+      const errorObj = err as Record<string, unknown>;
+      if (errorObj && typeof errorObj === 'object' && errorObj.error && errorObj.tag) {
+        if (errorObj.tag === 'REGISTER_EMAIL_EXISTS') {
+          setError('Email đã tồn tại. Vui lòng dùng email khác.');
+        } else {
+          setError(errorObj.error as string || 'Đăng ký thất bại');
+        }
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Đăng ký thất bại');
+      }
     } finally {
       setLoading(false);
     }
@@ -40,14 +52,14 @@ const Register = () => {
             <div className="bg-teampal-500 text-white p-1.5 rounded">
               <span className="font-bold text-sm">TP</span>
             </div>
-            <span className="font-bold text-xl">TeamPal</span>
+            <span className="font-bold text-xl">Superb AI</span>
           </Link>
         </div>
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Sign up</CardTitle>
             <CardDescription className="text-center">
-              Create your TeamPal account
+              Create your Superb AI account
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>

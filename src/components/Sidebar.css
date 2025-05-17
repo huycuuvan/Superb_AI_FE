@@ -1,0 +1,10 @@
+.sidebar-icon {
+  width: 1.25rem; /* 20px tương đương h-5 w-5, nhưng bạn có thể để 1rem (16px) nếu muốn nhỏ hơn */
+  height: 1.25rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  padding: 0;
+  margin: 0;
+  display: inline-block;
+  vertical-align: middle;
+} 

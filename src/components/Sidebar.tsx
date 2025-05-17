@@ -33,6 +33,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import './Sidebar.css';
+import { useAuth } from '@/hooks/useAuth';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -41,7 +43,9 @@ const Sidebar = () => {
   const { t } = useLanguage();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState<{open: boolean, folderId?: string}>({open: false, folderId: undefined});
+  const { user } = useAuth();
 
+  console.log(user);
   const menuItems = [
     { icon: Home, label: t('home'), path: '/dashboard' },
     { icon: Users, label: t('agents'), path: '/dashboard/agents' },
@@ -74,7 +78,7 @@ const Sidebar = () => {
               <span className="font-bold text-sm">TP</span>
             </div>
             {!collapsed && (
-              <span className="font-bold text-lg">TeamPal</span>
+              <span className="font-bold text-lg">Superb AI</span>
             )}
           </div>
           <button 
@@ -99,21 +103,21 @@ const Sidebar = () => {
         )}
 
         <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 max-w-[140px]">
             {workspace.name.startsWith('AI') && (
               <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
                 AI
               </div>
             )}
             {!collapsed && (
-              <div className="text-sm font-medium truncate">{workspace.name}</div>
+              <div className="text-sm font-medium truncate max-w-[100px]">{workspace.name}</div>
             )}
           </div>
           {!collapsed && (
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon" 
-              className="h-6 w-6"
+              className="h-6 w-6 ml-1 border-teampal-500 text-teampal-500 hover:bg-teampal-100 hover:text-teampal-700"
               onClick={() => setShowAddFolderDialog(true)}
             >
               <Plus className="h-4 w-4" />
@@ -133,25 +137,25 @@ const Sidebar = () => {
               onClick={() => navigate(`/dashboard/agents?category=${encodeURIComponent(folder.name)}`)}
             >
               <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  {folder.icon && <folder.icon className="h-4 w-4" />}
-                  {!collapsed && <span>{folder.name}</span>}
+                <div className="flex items-center gap-2 max-w-[120px]">
+                  {folder.icon && <folder.icon className="sidebar-icon" />}
+                  {!collapsed && <span className="truncate w-full">{folder.name}</span>}
                   {!collapsed && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
-                          <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                          <MoreVertical className="sidebar-icon text-muted-foreground" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
-                          <Edit className="h-4 w-4 mr-2" /> Đổi tên
+                          <Edit className="sidebar-icon mr-2" /> Đổi tên
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
-                          <Pin className="h-4 w-4 mr-2" /> Ghim
+                          <Pin className="sidebar-icon mr-2" /> Ghim
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
-                          <Trash className="h-4 w-4 mr-2" /> Xoá
+                          <Trash className="sidebar-icon mr-2" /> Xoá
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -177,7 +181,7 @@ const Sidebar = () => {
                   "transition-colors"
                 )}
               >
-                <item.icon className="h-4 w-4 mr-2" />
+                <item.icon className="sidebar-icon mr-2" />
                 {!collapsed && <span>{item.label}</span>}
               </Link>
             );
@@ -188,10 +192,10 @@ const Sidebar = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-teampal-200 flex items-center justify-center text-foreground">
-                H
+                {user?.name ? user.name.charAt(0) : 'U'}
               </div>
               {!collapsed && (
-                <div className="text-sm">Huy</div>
+                <div className="text-sm">{user?.name || 'Guest'}</div>
               )}
             </div>
             {!collapsed && <SettingsDropdown />}

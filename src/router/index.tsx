@@ -9,6 +9,7 @@ import Login from '@/pages/Login';
 import NotFound from '@/pages/NotFound';
 import AgentChat from '@/pages/AgentChat';
 import Register from '@/pages/Register';
+import CreateWorkspace from '@/pages/CreateWorkspace';
 
 const routes: RouteObject[] = [
   {
@@ -48,6 +49,10 @@ const routes: RouteObject[] = [
         element: <Settings />,
       },
     ],
+  },
+  {
+    path: '/create-workspace',
+    element: <CreateWorkspace />,
   },
   {
     path: '*',

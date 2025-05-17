@@ -3,11 +3,13 @@ import { useLocation } from "react-router-dom";
 import UserDropdown from "@/components/UserDropdown";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
+  const { user } = useAuth();
   
   // Generate breadcrumb segments
   const breadcrumbs = pathSegments.map((segment, index) => {
@@ -32,7 +34,7 @@ const Header = () => {
       <div>
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           {breadcrumbs.length === 0 ? (
-            <span>{getGreeting()}, Huy</span>
+            <span>{getGreeting()}, {user?.name || 'Guest'}</span>
           ) : (
             breadcrumbs.map((crumb, i) => (
               <div key={i} className="flex items-center">

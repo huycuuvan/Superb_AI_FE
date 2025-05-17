@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef } from "react";
@@ -45,7 +44,7 @@ const LandingPage = () => {
             <div className="bg-teampal-500 text-white p-1.5 rounded">
               <span className="font-bold text-sm">TP</span>
             </div>
-            <span className="font-bold text-xl">TeamPal</span>
+            <span className="font-bold text-xl">Superb AI</span>
           </div>
           
           <nav className="hidden md:flex items-center space-x-6">
@@ -220,7 +219,7 @@ const LandingPage = () => {
                 <div className="bg-teampal-500 text-white p-1.5 rounded">
                   <span className="font-bold text-sm">TP</span>
                 </div>
-                <span className="font-bold text-xl">TeamPal</span>
+                <span className="font-bold text-xl">Superb AI</span>
               </div>
               <p className="text-muted-foreground max-w-xs">
                 The next generation AI workforce management platform for businesses of all sizes.
@@ -259,7 +258,7 @@ const LandingPage = () => {
           
           <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-              © {new Date().getFullYear()} TeamPal. All rights reserved.
+              © {new Date().getFullYear()} Superb AI. All rights reserved.
             </p>
             
             <div className="flex space-x-4">

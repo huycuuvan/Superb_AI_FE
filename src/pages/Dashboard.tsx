@@ -92,7 +92,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome to your TeamPal dashboard. Manage your AI agents and tasks.
+            Welcome to your Superb AI dashboard. Manage your AI agents and tasks.
           </p>
         </div>
         <div className="flex gap-2 mt-4 md:mt-0">
@@ -107,7 +107,7 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
-      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} />
+
       
       {folders.map(({ name: category, agents: categoryAgents }) => (
         <div key={category} className="mb-10">
@@ -126,6 +126,7 @@ const Dashboard = () => {
               ) : (
                 <h2 className="text-xl font-bold">{category}</h2>
               )}
+                 <span className="ml-2 text-muted-foreground text-sm">({categoryAgents.length})</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1">
@@ -144,7 +145,7 @@ const Dashboard = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <span className="ml-2 text-muted-foreground text-sm">({categoryAgents.length})</span>
+           
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -239,6 +240,8 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+      {/* Hiển thị modal AddAgentDialog khi showAddAgentDialog = true */}
+      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} />
     </div>
   );
 };
