@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
@@ -35,9 +35,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
+import { getFolders } from '@/services/api';
 
 interface SidebarProps {
   className?: string;
+}
+
+interface FolderType {
+  id: string;
+  name: string;
 }
 
 const Sidebar = ({ className }: SidebarProps) => {
@@ -49,21 +55,22 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [showAddAgentDialog, setShowAddAgentDialog] = useState<{open: boolean, folderId?: string}>({open: false, folderId: undefined});
   const { user } = useAuth();
 
+  // Lấy folders từ API
+  const [folders, setFolders] = useState<FolderType[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(true);
+  useEffect(() => {
+    getFolders()
+      .then(data => setFolders(data))
+      .catch(() => setFolders([]))
+      .finally(() => setLoadingFolders(false));
+  }, []);
+
   console.log(user);
   const menuItems = [
     { icon: Home, label: t('home'), path: '/dashboard' },
     { icon: Users, label: t('agents'), path: '/dashboard/agents' },
     { icon: CheckCircle, label: t('tasks'), path: '/dashboard/tasks' },
     { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
-  ];
-
-  const folders = [
-    { id: 'folder-1', name: 'IT', path: '#', icon: Folder },
-    { id: 'folder-2', name: 'Design', path: '#', icon: Folder },
-    { id: 'folder-3', name: 'Sales', path: '#', icon: Folder },
-    { id: 'folder-4', name: 'Human Resources', path: '#', icon: Folder },
-    { id: 'folder-5', name: 'Information Technology', path: '#', icon: Folder },
-    { id: 'folder-6', name: 'Marketing', path: '#', icon: Folder },
   ];
 
   const workspace = workspaces[0];
@@ -130,44 +137,48 @@ const Sidebar = ({ className }: SidebarProps) => {
           )}
         </div>
         
-        <div className="flex-1 overflow-y-auto py-2">
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              className={cn(
-                "flex items-center px-3 py-2 mx-2 rounded-md text-sm cursor-pointer",
-                "hover:bg-accent hover:text-accent-foreground",
-                "transition-colors"
-              )}
-              onClick={() => navigate(`/dashboard/agents?category=${encodeURIComponent(folder.name)}`)}
-            >
-              <div className="flex items-center w-full">
-                <folder.icon className="sidebar-icon mr-2" />
-                {!collapsed && <span className="truncate flex-1">{folder.name}</span>}
-                {!collapsed && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
-                        <MoreVertical className="sidebar-icon text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
-                        <Edit className="sidebar-icon mr-2" /> Đổi tên
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
-                        <Pin className="sidebar-icon mr-2" /> Ghim
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
-                        <Trash className="sidebar-icon mr-2" /> Xoá
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+        {/* <div className="flex-1 overflow-y-auto py-2">
+          {loadingFolders ? (
+            <div className="px-3 py-2 text-muted-foreground text-sm">Đang tải thư mục...</div>
+          ) : (
+            folders?.map((folder) => (
+              <div
+                key={folder.id}
+                className={cn(
+                  "flex items-center px-3 py-2 mx-2 rounded-md text-sm cursor-pointer",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "transition-colors"
                 )}
+                onClick={() => navigate(`/dashboard/agents?category=${encodeURIComponent(folder.name)}`)}
+              >
+                <div className="flex items-center w-full">
+                  <Folder className="sidebar-icon mr-2" />
+                  {!collapsed && <span className="truncate flex-1">{folder.name}</span>}
+                  {!collapsed && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
+                          <MoreVertical className="sidebar-icon text-muted-foreground" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
+                          <Edit className="sidebar-icon mr-2" /> Đổi tên
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
+                          <Pin className="sidebar-icon mr-2" /> Ghim
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
+                          <Trash className="sidebar-icon mr-2" /> Xoá
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))
+          )}
+        </div> */}
         
         <div className="border-t border-border p-2 space-y-1">
           {menuItems.map((item) => {

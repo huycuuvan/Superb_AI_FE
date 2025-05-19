@@ -10,12 +10,13 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from "react";
 
 const UserDropdown = () => {
   const { t } = useLanguage();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -37,11 +38,9 @@ const UserDropdown = () => {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center justify-start gap-2 p-2">
-          <div className="flex flex-col space-y-1 leading-none">
-            <p className="font-medium">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
+        <div className="px-4 py-2">
+          <div className="font-bold">{/* workspace?.name || */ "Workspace"}</div>
+          <div className="text-xs text-muted-foreground">{/* workspace?.description || */ "Thông tin workspace"}</div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem>

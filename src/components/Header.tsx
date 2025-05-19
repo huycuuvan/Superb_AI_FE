@@ -1,12 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
-import { useLocation, Link } from "react-router-dom";
-import UserDropdown from "@/components/UserDropdown";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Avatar } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
+
+import { LanguageToggle } from "./LanguageToggle";
 
 const Header = () => {
   const location = useLocation();
@@ -14,7 +24,14 @@ const Header = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const navigate = useNavigate();
+
+  const { workspace, isLoading: isWorkspaceLoading, error: workspaceError } = useSelectedWorkspace();
+
+  console.log("Header: useQuery data:", workspace);
+  console.log("Header: useQuery isLoading:", isWorkspaceLoading);
+  console.log("Header: useQuery error:", workspaceError);
+
   // Generate breadcrumb segments
   const breadcrumbs = pathSegments.map((segment, index) => {
     // Capitalize first letter
@@ -86,7 +103,32 @@ const Header = () => {
           <Button variant="outline" size="sm" className="hidden md:inline-flex">
             {t('editBrand')}
           </Button>
-          <UserDropdown />
+          {workspace && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition">
+                  <Avatar className="bg-teampal-200 text-foreground w-8 h-8 flex items-center justify-center">
+                    <span className="font-bold text-base flex items-center justify-center">
+                      {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
+                    </span>
+                  </Avatar>
+                  <span className="font-semibold flex items-center justify-center">{workspace.name}{workspace.name && "'s workspace"}</span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-4 py-2">
+                  <div className="font-bold">{workspace.name}</div>
+                  {workspace.description && (
+                    <div className="text-xs text-muted-foreground">{workspace.description}</div>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/workspace')}>
+                  Chọn workspace khác
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -118,6 +160,8 @@ const Header = () => {
           })}
         </nav>
       </div>
+
+     
     </header>
   );
 };

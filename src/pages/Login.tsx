@@ -1,31 +1,41 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import { getWorkspace, WorkspaceResponse } from "@/services/api";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login, loading } = useAuth();
+  const location = useLocation();
+  const { login, loading, user } = useAuth();
+
+  // Lấy đường dẫn trước đó từ state (nếu có)
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       await login(email, password);
-      navigate("/dashboard");
+      navigate("/workspace", { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError("Đăng nhập thất bại");
     }
   };
+
+  // Nếu đã đăng nhập và đã chọn workspace, chuyển hướng về dashboard
+  if (user && localStorage.getItem('selectedWorkspace')) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

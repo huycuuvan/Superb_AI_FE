@@ -109,7 +109,7 @@ const Dashboard = () => {
       </div>
 
       
-      {folders.map(({ name: category, agents: categoryAgents }) => (
+      {/* {folders?.map(({ name: category, agents: categoryAgents }) => (
         <div key={category} className="mb-8 md:mb-10">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ const Dashboard = () => {
                 ))}
           </div>
         </div>
-      ))}
+      ))} */}
       {/* Section recent chats */}
       <div className="mt-8 md:mt-12">
         <h2 className="text-xl md:text-2xl font-bold mb-4">Your recent chats</h2>

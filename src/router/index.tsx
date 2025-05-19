@@ -9,7 +9,8 @@ import Login from '@/pages/Login';
 import NotFound from '@/pages/NotFound';
 import AgentChat from '@/pages/AgentChat';
 import Register from '@/pages/Register';
-import CreateWorkspace from '@/pages/CreateWorkspace';
+import WorkspacePage from '@/pages/Workspace';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const routes: RouteObject[] = [
   {
@@ -26,7 +27,11 @@ const routes: RouteObject[] = [
   },
   {
     path: '/dashboard',
-    element: <DashboardLayout />,
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
@@ -51,8 +56,8 @@ const routes: RouteObject[] = [
     ],
   },
   {
-    path: '/create-workspace',
-    element: <CreateWorkspace />,
+    path: '/workspace',
+    element: <WorkspacePage />,
   },
   {
     path: '*',

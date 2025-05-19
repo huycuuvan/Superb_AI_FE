@@ -9,6 +9,7 @@ export interface Workspace {
   id: string;
   name: string;
   ownerId: string;
+  description?: string;
 }
 
 export interface Agent {
@@ -48,7 +49,7 @@ export interface ChatMessage {
 export interface SidebarItem {
   id: string;
   name: string;
-  icon?: any;
+  icon?: React.ReactNode;
   href?: string;
   items?: SidebarItem[];
 }
