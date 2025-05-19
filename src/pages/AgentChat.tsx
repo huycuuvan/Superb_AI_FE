@@ -109,43 +109,43 @@ const AgentChat = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] overflow-hidden">
       {/* Agent header */}
-      <div className="flex items-center space-x-4 p-4 border-b">
-        <Avatar className="h-12 w-12">
+      <div className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 border-b">
+        <Avatar className="h-10 w-10 md:h-12 md:w-12">
           <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
           <AvatarFallback className="bg-teampal-100 text-teampal-500">
             {currentAgent?.name?.charAt(0) || 'A'}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-xl font-semibold">{currentAgent?.name || 'Agent'}</h1>
-          <p className="text-sm text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+          <h1 className="text-lg md:text-xl font-semibold">{currentAgent?.name || 'Agent'}</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
         </div>
       </div>
       
       {/* Chat area */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 p-4 overflow-y-auto space-y-4 bg-accent/30"
+        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-3 md:space-y-4 bg-accent/30"
       >
         {messages.map((msg) => (
           <div 
             key={msg.id}
             className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`max-w-3/4 ${getMessageStyle(msg.sender)} rounded-lg p-3`}>
+            <div className={`max-w-[85%] md:max-w-3/4 ${getMessageStyle(msg.sender)} rounded-lg p-2 md:p-3`}>
               {msg.sender === 'agent' && (
                 <div className="flex items-center space-x-2 mb-1">
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-5 w-5 md:h-6 md:w-6">
                     <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-teampal-100 text-teampal-500 text-xs">
+                    <AvatarFallback className="bg-teampal-100 text-teampal-500 text-[10px] md:text-xs">
                       {currentAgent?.name?.charAt(0) || 'A'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="font-medium text-sm">{currentAgent?.name}</span>
+                  <span className="font-medium text-xs md:text-sm">{currentAgent?.name}</span>
                 </div>
               )}
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-              <div className="text-xs text-muted-foreground mt-1 text-right">
+              <p className="whitespace-pre-wrap text-sm md:text-base">{msg.content}</p>
+              <div className="text-[10px] md:text-xs text-muted-foreground mt-1 text-right">
                 {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </div>
             </div>
@@ -154,42 +154,46 @@ const AgentChat = () => {
       </div>
       
       {/* Task droplist và input động */}
-      <div className="p-4 border-t bg-background">
-        <div className="mb-4 flex items-center gap-4">
+      <div className="p-3 md:p-4 border-t bg-background">
+        <div className="mb-3 md:mb-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
           <Select value={selectedTaskId || ''} onValueChange={setSelectedTaskId}>
-            <SelectTrigger className="w-60">
+            <SelectTrigger className="w-full md:w-60">
               <SelectValue placeholder="Chọn Task" />
             </SelectTrigger>
             <SelectContent>
               {tasks.map(task => (
-                <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
+                <SelectItem key={task.id} value={task.id} className="text-sm">{task.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           {selectedTask && (
-            <div className="flex flex-col gap-2 ml-4 w-full max-w-xl">
+            <div className="flex flex-col gap-2 md:ml-4 w-full md:max-w-xl">
               <Input
                 placeholder="Tiêu đề task"
                 value={selectedTask.title}
                 readOnly
+                className="text-sm"
               />
-              {/* Có thể thêm các input động khác ở đây, ví dụ: mô tả, ngày hết hạn... */}
-              <Textarea placeholder="Mô tả task (demo)" value={selectedTask.description || ''} readOnly />
-              {/* Nếu muốn cho phép nhập, bỏ readOnly và thêm state */}
+              <Textarea 
+                placeholder="Mô tả task (demo)" 
+                value={selectedTask.description || ''} 
+                readOnly 
+                className="text-sm min-h-[80px] md:min-h-[100px]"
+              />
             </div>
           )}
         </div>
-        {/* Input chat ... giữ nguyên */}
+        {/* Input chat */}
         <div className="flex items-center gap-2">
           <Input
-            className="flex-1"
+            className="flex-1 text-sm"
             placeholder="Nhập tin nhắn của bạn..."
             value={message}
             onChange={e => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <Button className="bg-teampal-500" onClick={handleSendMessage}>
-            <Send className="h-5 w-5" />
+          <Button className="bg-teampal-500 h-9 md:h-10 px-3 md:px-4" onClick={handleSendMessage}>
+            <Send className="h-4 w-4 md:h-5 md:w-5" />
           </Button>
         </div>
       </div>

@@ -36,7 +36,11 @@ import {
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
 
-const Sidebar = () => {
+interface SidebarProps {
+  className?: string;
+}
+
+const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -69,7 +73,8 @@ const Sidebar = () => {
       <aside 
         className={cn(
           "bg-white border-r border-border flex flex-col h-full transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
-          collapsed ? "w-16" : "w-64"
+          collapsed ? "w-16" : "w-64",
+          className
         )}
       >
         <div className="flex items-center p-4 border-b border-border">
@@ -136,31 +141,29 @@ const Sidebar = () => {
               )}
               onClick={() => navigate(`/dashboard/agents?category=${encodeURIComponent(folder.name)}`)}
             >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2 max-w-[120px]">
-                  {folder.icon && <folder.icon className="sidebar-icon" />}
-                  {!collapsed && <span className="truncate w-full">{folder.name}</span>}
-                  {!collapsed && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
-                          <MoreVertical className="sidebar-icon text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
-                          <Edit className="sidebar-icon mr-2" /> Đổi tên
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
-                          <Pin className="sidebar-icon mr-2" /> Ghim
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
-                          <Trash className="sidebar-icon mr-2" /> Xoá
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
+              <div className="flex items-center w-full">
+                <folder.icon className="sidebar-icon mr-2" />
+                {!collapsed && <span className="truncate flex-1">{folder.name}</span>}
+                {!collapsed && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
+                        <MoreVertical className="sidebar-icon text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
+                        <Edit className="sidebar-icon mr-2" /> Đổi tên
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
+                        <Pin className="sidebar-icon mr-2" /> Ghim
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
+                        <Trash className="sidebar-icon mr-2" /> Xoá
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           ))}
