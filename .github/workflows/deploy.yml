@@ -24,7 +24,12 @@ jobs:
             
             # Pull code mới nhất
             if [ -d ".git" ]; then
-              git pull https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main
+              git config pull.rebase false
+              git pull https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main || {
+                echo "Git pull failed, resetting repository..."
+                git fetch https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main
+                git reset --hard FETCH_HEAD
+              }
             else
               git clone https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git .
             fi
@@ -71,6 +76,26 @@ jobs:
                 proxy_set_header X-Forwarded-Proto $scheme;
               }
             }
+            EOL
+            fi
+            
+            # Tạo Dockerfile nếu chưa có
+            if [ ! -f "Dockerfile" ]; then
+              echo "Creating Dockerfile..."
+              tee Dockerfile > /dev/null << 'EOL'
+            FROM node:18 AS builder
+            WORKDIR /app
+            COPY package.json package-lock.json ./
+            RUN npm install
+            COPY . .
+            RUN npm run build
+
+            FROM nginx:alpine
+            COPY --from=builder /app/dist /usr/share/nginx/html
+            COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+            EXPOSE 80
+            CMD ["nginx", "-g", "daemon off;"]
             EOL
             fi
             
