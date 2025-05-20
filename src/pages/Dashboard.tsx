@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { agents } from "@/services/mockData";
 import { Agent } from "@/types";
@@ -13,9 +14,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AddAgentDialog } from '@/components/AddAgentDialog';
-import { getFolders } from '@/services/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { getFolders, updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import { useFolders } from '@/contexts/FolderContext';
 
 interface FolderType {
   id: string;
@@ -26,12 +33,20 @@ interface FolderType {
 const Dashboard = () => {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
-  const [folders, setFolders] = useState<FolderType[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(true);
+  const { folders, loadingFolders, fetchFolders, setFolders } = useFolders();
   const { workspace } = useSelectedWorkspace();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Group agents by category
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const agentsByCategory = agents.reduce((acc, agent) => {
     const category = agent.category || 'Other';
     if (!acc[category]) {
@@ -44,6 +59,7 @@ const Dashboard = () => {
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
@@ -54,32 +70,83 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (workspace?.id) {
+      fetchFolders(workspace.id);
+    }
+  }, [workspace?.id, fetchFolders]);
+
+  useEffect(() => {
     if (editingFolder && inputRef.current) {
       inputRef.current.focus();
     }
   }, [editingFolder]);
 
-  // Fetch folders
-  useEffect(() => {
-    const fetchFolders = async () => {
+  const handleRenameClick = (folder: FolderType) => {
+    setFolderToRename(folder);
+    setNewFolderName(folder.name);
+    setShowRenameDialog(true);
+  };
+
+  const handleRenameFolder = async () => {
+    if (!folderToRename || !newFolderName.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      await updateFolder(folderToRename.id, { name: newFolderName.trim() });
+      toast({
+        title: "Thành công!",
+        description: `Đã đổi tên folder thành "${newFolderName.trim()}".`,
+      });
       if (workspace?.id) {
-        setLoadingFolders(true);
-        try {
-          const data = await getFolders(workspace.id);
-          setFolders(data.data);
-        } catch (error) {
-          console.error('Lỗi khi lấy danh sách folder:', error);
-          setFolders([]);
-        } finally {
-          setLoadingFolders(false);
-        }
+        fetchFolders(workspace.id);
       }
-    };
+      setShowRenameDialog(false);
+    } catch (error: any) {
+      console.error('Lỗi khi đổi tên folder:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể đổi tên folder: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
+    }
+  };
 
-    fetchFolders();
-  }, [workspace?.id]);
+  const handleDeleteClick = (folder: FolderType) => {
+    setFolderToDelete(folder);
+    setShowConfirmDeleteDialog(true);
+  };
 
-  // Mock dữ liệu chat history
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteFolder(folderToDelete.id);
+      toast({
+        title: "Thành công!",
+        description: `Đã xóa folder "${folderToDelete.name}".`,
+      });
+      if (workspace?.id) {
+        fetchFolders(workspace.id);
+      }
+      setShowConfirmDeleteDialog(false);
+      if (navigate && location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi xóa folder:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể xóa folder: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const recentChats = [
     {
       id: '1',
@@ -91,7 +158,6 @@ const Dashboard = () => {
     },
   ];
 
-  // Ghim folder lên đầu
   const handlePin = (name: string) => {
     setFolders(prev => {
       const idx = prev.findIndex(f => f.name === name);
@@ -100,26 +166,6 @@ const Dashboard = () => {
       return [pinned, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
     });
   };
-
-  // Đổi tên folder
-  const handleRename = (name: string) => {
-    setEditingFolder(name);
-    setEditValue(name);
-  };
-  const handleRenameSubmit = (oldName: string) => {
-    setFolders(prev => prev.map(f => f.name === oldName ? { ...f, name: editValue } : f));
-    setEditingFolder(null);
-  };
-
-  // Xoá folder
-  const handleDelete = (name: string) => {
-    setConfirmDelete(name);
-  };
-  const confirmDeleteFolder = () => {
-    setFolders(prev => prev.filter(f => f.name !== confirmDelete));
-    setConfirmDelete(null);
-  };
-  const cancelDelete = () => setConfirmDelete(null);
 
   return (
     <div className="space-y-6">
@@ -143,7 +189,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Hiển thị danh sách folder */}
       <div className="grid gap-4">
         {loadingFolders ? (
           <div className="text-sm text-muted-foreground">Đang tải thư mục...</div>
@@ -153,23 +198,12 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Folder className="h-5 w-5 text-teampal-500" />
-                  {editingFolder === folder.name ? (
-                    <input
-                      ref={inputRef}
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      onBlur={() => handleRenameSubmit(folder.name)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleRenameSubmit(folder.name); }}
-                      className="border rounded px-2 py-1 text-lg md:text-xl font-bold w-32 md:w-40"
-                    />
-                  ) : (
-                    <h2 
-                      className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
-                      onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
-                    >
-                      {folder.name}
-                    </h2>
-                  )}
+                  <h2 
+                    className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
+                    onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
+                  >
+                    {folder.name}
+                  </h2>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -178,19 +212,18 @@ const Dashboard = () => {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleRename(folder.name)}>
+                    <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
                       <Edit className="h-4 w-4 mr-2" /> Đổi tên
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handlePin(folder.name)}>
                       <Pin className="h-4 w-4 mr-2" /> Ghim
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDelete(folder.name)} className="text-red-600 focus:text-red-600">
+                    <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-red-600 focus:text-red-600">
                       <Trash className="h-4 w-4 mr-2" /> Xoá
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* Card placeholder khi chưa có agent */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 <Card 
                   className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
@@ -215,23 +248,55 @@ const Dashboard = () => {
         )}
       </div>
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 w-full max-w-[300px] md:min-w-[300px]">
-            <div className="mb-4 text-base md:text-lg">Bạn có chắc muốn xoá thư mục <b>{confirmDelete}</b>?</div>
-            <div className="flex gap-2 justify-end">
-              <button className="px-3 md:px-4 py-1.5 md:py-2 rounded bg-gray-200 text-sm md:text-base" onClick={cancelDelete}>Huỷ</button>
-              <button className="px-3 md:px-4 py-1.5 md:py-2 rounded bg-red-500 text-white text-sm md:text-base" onClick={confirmDeleteFolder}>Xoá</button>
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Đổi tên Folder</DialogTitle>
+            <DialogDescription>
+              Nhập tên mới cho folder "{folderToRename?.name}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-folder-name" className="text-right">
+                Tên mới
+              </Label>
+              <Input
+                id="new-folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="col-span-3"
+                disabled={isRenaming}
+              />
             </div>
           </div>
-        </div>
-      )}
-      {/* Hiển thị modal AddAgentDialog khi showAddAgentDialog = true */}
-      <AddAgentDialog 
-        open={showAddAgentDialog} 
-        onOpenChange={(open) => setShowAddAgentDialog(open)} 
-        folderId={selectedFolderId} 
-      />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)} disabled={isRenaming}>Hủy</Button>
+            <Button onClick={handleRenameFolder} disabled={!newFolderName.trim() || isRenaming}>
+              {isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa Folder</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa folder "{folderToDelete?.name}"? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDeleteFolder} disabled={isDeleting}>
+               {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
     </div>
   );
 };

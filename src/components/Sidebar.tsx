@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,10 +34,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { getFolders } from '@/services/api';
+import { getFolders, updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { useToast } from '@/components/ui/use-toast';
+import { useFolders } from '@/contexts/FolderContext';
 
 interface SidebarProps {
   className?: string;
@@ -57,29 +62,90 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [showAddAgentDialog, setShowAddAgentDialog] = useState<{open: boolean, folderId?: string}>({open: false, folderId: undefined});
   const { user } = useAuth();
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
+  const { toast } = useToast();
+  const { folders, loadingFolders, fetchFolders } = useFolders();
 
-  // Lấy folders từ API
-  const [folders, setFolders] = useState<FolderType[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(true);
+  // State for rename functionality
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
 
-  const refetchFolders = async () => {
+  // State for delete functionality
+  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
     if (workspace?.id) {
-      setLoadingFolders(true);
-      try {
-        const data = await getFolders(workspace.id);
-        setFolders(data.data);
-      } catch (error) {
-        console.error('Lỗi khi lấy danh sách folder:', error);
-        setFolders([]);
-      } finally {
-        setLoadingFolders(false);
-      }
+      fetchFolders(workspace.id);
+    }
+  }, [workspace?.id, fetchFolders]);
+
+  // Handle Rename action
+  const handleRenameClick = (folder: FolderType) => {
+    setFolderToRename(folder);
+    setNewFolderName(folder.name);
+    setShowRenameDialog(true);
+  };
+
+  const handleRenameFolder = async () => {
+    if (!folderToRename || !newFolderName.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      await updateFolder(folderToRename.id, { name: newFolderName.trim() });
+      toast({
+        title: "Thành công!",
+        description: `Đã đổi tên folder thành "${newFolderName.trim()}".`,
+      });
+      fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi đổi tên
+      setShowRenameDialog(false);
+    } catch (error: any) {
+      console.error('Lỗi khi đổi tên folder:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể đổi tên folder: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
     }
   };
 
-  useEffect(() => {
-    refetchFolders();
-  }, [workspace?.id]);
+  // Handle Delete action
+  const handleDeleteClick = (folder: FolderType) => {
+    setFolderToDelete(folder);
+    setShowConfirmDeleteDialog(true);
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteFolder(folderToDelete.id);
+      toast({
+        title: "Thành công!",
+        description: `Đã xóa folder "${folderToDelete.name}".`,
+      });
+      fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi xóa
+      setShowConfirmDeleteDialog(false);
+       // Redirect if currently viewing the deleted folder's detail page
+      if (location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi xóa folder:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể xóa folder: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   console.log(user);
   const menuItems = [
@@ -136,7 +202,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               </div>
             )}
             {!collapsed && (
-              <div className="text-sm font-medium truncate max-w-[100px]">{workspace?.name}'s workspace</div>
+              <div className="text-lg font-bold truncate max-w-[100px]">{workspace?.name}'s workspace</div>
             )}
           </div>
           {!collapsed && (
@@ -176,13 +242,13 @@ const Sidebar = ({ className }: SidebarProps) => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => alert(`Rename ${folder.name}`)}>
+                        <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
                           <Edit className="sidebar-icon mr-2" /> Đổi tên
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
                           <Pin className="sidebar-icon mr-2" /> Ghim
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => alert(`Delete ${folder.name}`)} className="text-red-600 focus:text-red-600">
+                        <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-red-600 focus:text-red-600">
                           <Trash className="sidebar-icon mr-2" /> Xoá
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -231,15 +297,66 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
       </aside>
 
-      {/* Dialog */}
+      {/* Dialog: Rename Folder */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Đổi tên Folder</DialogTitle>
+            <DialogDescription>
+              Nhập tên mới cho folder "{folderToRename?.name}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-folder-name" className="text-right">
+                Tên mới
+              </Label>
+              <Input
+                id="new-folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="col-span-3"
+                disabled={isRenaming}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)} disabled={isRenaming}>Hủy</Button>
+            <Button onClick={handleRenameFolder} disabled={!newFolderName.trim() || isRenaming}>
+              {isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirm Delete Folder */}
+      <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa Folder</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa folder "{folderToDelete?.name}"? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDeleteFolder} disabled={isDeleting}>
+               {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Add Folder (existing) */}
       {showAddFolderDialog && (
         <AddFolderDialog 
           open={showAddFolderDialog} 
           onOpenChange={setShowAddFolderDialog} 
-          onSuccess={refetchFolders}
+          onSuccess={() => workspace?.id && fetchFolders(workspace.id)}
         />
       )}
 
+      {/* Dialog: Add Agent (existing) */}
       {showAddAgentDialog.open && (
         <AddAgentDialog open={showAddAgentDialog.open} onOpenChange={open => setShowAddAgentDialog({open, folderId: undefined})} folderId={showAddAgentDialog.folderId} />
       )}

@@ -216,3 +216,57 @@ export const getFolderDetail = async (
 
   return response.json();
 };
+
+export interface UpdateFolderRequest {
+  name?: string;
+  description?: string;
+  order?: number;
+  pin?: number;
+  status?: number;
+}
+
+export const updateFolder = async (
+  folderId: string,
+  folderData: UpdateFolderRequest
+): Promise<{ data: FolderDetailResponse["data"] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
+    method: "PUT", // Assuming PUT method for update
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(folderData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Lỗi khi cập nhật folder");
+  }
+
+  return response.json();
+};
+
+export const deleteFolder = async (
+  folderId: string
+): Promise<{ success: boolean }> => {
+  // Assuming API returns success status
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
+    method: "DELETE", // Assuming DELETE method for deletion
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Lỗi khi xóa folder");
+  }
+
+  // Assuming successful deletion returns a simple success indicator
+  // You might need to adjust the return type and parsing based on actual API response
+  return { success: true };
+};
