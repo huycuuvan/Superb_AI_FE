@@ -15,11 +15,11 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd ${{ secrets.PAT_TOKEN }}/EmployeeAI_FE
-            git pull origin main
+            cd /home/EmployeeAI_FE
+            git pull https://${{ secrets.PAT_TOKEN }}@github.com/OWNER/EmployeeAI_FE.git main
             docker compose down
             docker compose build --no-cache
             docker compose up -d
