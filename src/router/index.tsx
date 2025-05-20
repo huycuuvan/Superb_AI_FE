@@ -11,6 +11,7 @@ import AgentChat from '@/pages/AgentChat';
 import Register from '@/pages/Register';
 import WorkspacePage from '@/pages/Workspace';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import FolderDetail from '@/pages/FolderDetail';
 
 const routes: RouteObject[] = [
   {
@@ -52,6 +53,10 @@ const routes: RouteObject[] = [
       {
         path: 'settings',
         element: <Settings />,
+      },
+      {
+        path: 'folder/:folderId',
+        element: <FolderDetail />,
       },
     ],
   },

@@ -101,15 +101,36 @@ export const sendChatMessage = async (agentId: string, message: string) => {
   return data;
 };
 
-export const getFolders = async (): Promise<{ id: string; name: string }[]> => {
+export interface FolderResponse {
+  data: {
+    id: string;
+    name: string;
+    workspace_id: string;
+    created_at: string;
+    updated_at: string;
+  }[];
+}
+
+export const getFolders = async (
+  workspaceId: string
+): Promise<FolderResponse> => {
   const token = localStorage.getItem("token");
-  const res = await fetch("http://localhost:3000/api/folders", {
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch("http://localhost:3000/folders/list", {
+    method: "POST",
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify({ workspace_id: workspaceId }),
   });
-  if (!res.ok) throw new Error("Lấy folders thất bại");
-  return res.json();
+
+  if (!response.ok) {
+    throw new Error("Lỗi khi lấy danh sách folder");
+  }
+
+  return response.json();
 };
 
 export interface WorkspaceResponse {
@@ -126,4 +147,72 @@ export const getWorkspace = async (): Promise<WorkspaceResponse> => {
   });
   if (!res.ok) throw new Error("Lấy workspace thất bại");
   return res.json();
+};
+
+export interface CreateFolderRequest {
+  workspace_id: string;
+  name: string;
+  description?: string;
+  order?: number;
+  pin?: number;
+  status?: number;
+}
+
+export const createFolder = async (
+  folderData: CreateFolderRequest
+): Promise<{ data: FolderResponse["data"][0] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch("http://localhost:3000/folders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(folderData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Lỗi khi tạo folder");
+  }
+
+  return response.json();
+};
+
+export interface FolderDetailResponse {
+  data: {
+    // Assuming the data structure based on potential API response
+    id: string;
+    name: string;
+    workspace_id: string;
+    description?: string;
+    order?: number;
+    pin?: number;
+    status?: number;
+    // Add other potential fields like agents if the API returns them
+  };
+}
+
+export const getFolderDetail = async (
+  folderId: string,
+  workspaceId: string
+): Promise<FolderDetailResponse> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  // Using POST method based on the provided curl example, although GET is typical for detail
+  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
+    method: "GET", // Assuming POST based on the curl data field
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Lỗi khi lấy chi tiết folder");
+  }
+
+  return response.json();
 };

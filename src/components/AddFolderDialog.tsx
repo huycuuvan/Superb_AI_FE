@@ -13,21 +13,46 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createFolder } from '@/services/api';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 
-export const AddFolderDialog = ({ open: openProp, onOpenChange }: { open?: boolean, onOpenChange?: (open: boolean) => void }) => {
+interface AddFolderDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export const AddFolderDialog = ({ open: openProp, onOpenChange, onSuccess }: AddFolderDialogProps) => {
   const { t } = useLanguage();
   const [folderName, setFolderName] = useState('');
   const [internalOpen, setInternalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const open = openProp !== undefined ? openProp : internalOpen;
   const setOpen = onOpenChange ? onOpenChange : setInternalOpen;
+  const { workspace } = useSelectedWorkspace();
 
-  const handleCreateFolder = () => {
-    if (folderName.trim()) {
-      console.log('Creating folder:', folderName);
-      // In a real app, this would save the folder
+  const handleCreateFolder = async () => {
+    if (!folderName.trim() || !workspace?.id) return;
+    
+    try {
+      setIsLoading(true);
+      await createFolder({
+        workspace_id: workspace.id,
+        name: folderName.trim(),
+        description: '',
+        order: 0,
+        pin: 0,
+        status: 1
+      });
+      
+      setFolderName('');
+      setOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      console.error('Lỗi khi tạo folder:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setFolderName('');
-    setOpen(false);
   };
 
   return (
@@ -57,8 +82,8 @@ export const AddFolderDialog = ({ open: openProp, onOpenChange }: { open?: boole
           <Button variant="outline" onClick={() => setOpen(false)}>
             {t('cancel')}
           </Button>
-          <Button onClick={handleCreateFolder} disabled={!folderName.trim()}>
-            {t('create')}
+          <Button onClick={handleCreateFolder} disabled={!folderName.trim() || isLoading}>
+            {isLoading ? 'Đang tạo...' : t('create')}
           </Button>
         </DialogFooter>
       </DialogContent>

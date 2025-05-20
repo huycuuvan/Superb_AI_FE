@@ -36,6 +36,7 @@ import {
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
 import { getFolders } from '@/services/api';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 
 interface SidebarProps {
   className?: string;
@@ -44,6 +45,7 @@ interface SidebarProps {
 interface FolderType {
   id: string;
   name: string;
+  workspace_id: string;
 }
 
 const Sidebar = ({ className }: SidebarProps) => {
@@ -54,16 +56,30 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState<{open: boolean, folderId?: string}>({open: false, folderId: undefined});
   const { user } = useAuth();
+  const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
 
   // Lấy folders từ API
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(true);
+
+  const refetchFolders = async () => {
+    if (workspace?.id) {
+      setLoadingFolders(true);
+      try {
+        const data = await getFolders(workspace.id);
+        setFolders(data.data);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách folder:', error);
+        setFolders([]);
+      } finally {
+        setLoadingFolders(false);
+      }
+    }
+  };
+
   useEffect(() => {
-    getFolders()
-      .then(data => setFolders(data))
-      .catch(() => setFolders([]))
-      .finally(() => setLoadingFolders(false));
-  }, []);
+    refetchFolders();
+  }, [workspace?.id]);
 
   console.log(user);
   const menuItems = [
@@ -73,8 +89,6 @@ const Sidebar = ({ className }: SidebarProps) => {
     { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
   ];
 
-  const workspace = workspaces[0];
-  
   return (
     <>
       <aside 
@@ -116,13 +130,13 @@ const Sidebar = ({ className }: SidebarProps) => {
 
         <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border">
           <div className="flex items-center space-x-2 max-w-[140px]">
-            {workspace.name.startsWith('AI') && (
+            {workspace?.name.startsWith('AI') && (
               <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
                 AI
               </div>
             )}
             {!collapsed && (
-              <div className="text-sm font-medium truncate max-w-[100px]">{workspace.name}</div>
+              <div className="text-sm font-medium truncate max-w-[100px]">{workspace?.name}'s workspace</div>
             )}
           </div>
           {!collapsed && (
@@ -137,7 +151,7 @@ const Sidebar = ({ className }: SidebarProps) => {
           )}
         </div>
         
-        {/* <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-2">
           {loadingFolders ? (
             <div className="px-3 py-2 text-muted-foreground text-sm">Đang tải thư mục...</div>
           ) : (
@@ -149,7 +163,7 @@ const Sidebar = ({ className }: SidebarProps) => {
                   "hover:bg-accent hover:text-accent-foreground",
                   "transition-colors"
                 )}
-                onClick={() => navigate(`/dashboard/agents?category=${encodeURIComponent(folder.name)}`)}
+                onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
               >
                 <div className="flex items-center w-full">
                   <Folder className="sidebar-icon mr-2" />
@@ -178,7 +192,7 @@ const Sidebar = ({ className }: SidebarProps) => {
               </div>
             ))
           )}
-        </div> */}
+        </div>
         
         <div className="border-t border-border p-2 space-y-1">
           {menuItems.map((item) => {
@@ -219,7 +233,11 @@ const Sidebar = ({ className }: SidebarProps) => {
 
       {/* Dialog */}
       {showAddFolderDialog && (
-        <AddFolderDialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog} />
+        <AddFolderDialog 
+          open={showAddFolderDialog} 
+          onOpenChange={setShowAddFolderDialog} 
+          onSuccess={refetchFolders}
+        />
       )}
 
       {showAddAgentDialog.open && (
