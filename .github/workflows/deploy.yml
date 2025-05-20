@@ -20,6 +20,7 @@ jobs:
           script: |
             cd /home/EmployeeAI_FE
             git pull https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main
+            cd /home/EmployeeAI_FE/main
             docker compose down
             docker compose build --no-cache
             docker compose up -d
