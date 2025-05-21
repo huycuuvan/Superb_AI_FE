@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { getWorkspace, createWorkspace, WorkspaceResponse } from "@/services/api";
-import { Plus } from "lucide-react";
+import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse } from "@/services/api";
+import { Plus, LogOut, Folder } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -21,8 +21,9 @@ const WorkspacePage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState(""); // Local error state for create form
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Fetch workspace using React Query
   const { data, isLoading, error: fetchError, refetch } = useQuery<WorkspaceResponse | null>({
@@ -36,10 +37,22 @@ const WorkspacePage = () => {
     refetchOnWindowFocus: true,
   });
 
+  // Fetch folders when workspace is selected
+  const { data: foldersData, isLoading: isLoadingFolders } = useQuery<FolderResponse | null>({
+    queryKey: ['folders', selectedWorkspaceId],
+    queryFn: () => selectedWorkspaceId ? getFolders(selectedWorkspaceId) : Promise.resolve(null),
+    enabled: !!selectedWorkspaceId,
+  });
+
   // Convert fetched data to a consistent array format for rendering
   const workspaces = (data && data.data) ? (Array.isArray(data.data) ? data.data : [data.data]) : [];
+  const folders = foldersData?.data || [];
 
   const handleSelectWorkspace = (workspaceId: string) => {
+    setSelectedWorkspaceId(workspaceId);
+  };
+
+  const handleGoToDashboard = (workspaceId: string) => {
     if (workspaceId) {
       localStorage.setItem('selectedWorkspace', workspaceId);
       navigate('/dashboard');
@@ -77,7 +90,18 @@ const WorkspacePage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-white relative">
+      <Button 
+        variant="ghost" 
+        className="absolute top-4 right-4 flex items-center gap-2"
+        onClick={() => {
+          logout();
+          navigate('/login');
+        }}
+      >
+        <LogOut className="w-4 h-4" />
+        Đăng xuất
+      </Button>
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
         <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">Workspace của bạn</h1>
         {showCreate ? (
@@ -105,20 +129,51 @@ const WorkspacePage = () => {
               <div className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center">
                 <div className="w-full space-y-4">
                   {workspaces.map((workspace) => (
-                    <div
-                      key={workspace.id}
-                      className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleSelectWorkspace(workspace.id)}
-                    >
-                      <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
-                        <span className="font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-base">{workspace.name}</div>
-                        {workspace.description && (
-                          <div className="text-sm text-gray-500">{workspace.description}</div>
-                        )}
+                    <div key={workspace.id}>
+                      <div
+                        className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleSelectWorkspace(workspace.id)}
+                      >
+                        <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
+                          <span className="font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium text-base">{workspace.name}</div>
+                          {workspace.description && (
+                            <div className="text-sm text-gray-500">{workspace.description}</div>
+                          )}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGoToDashboard(workspace.id);
+                          }}
+                        >
+                          Vào Dashboard
+                        </Button>
                       </div>
+                      
+                      {selectedWorkspaceId === workspace.id && (
+                        <div className="mt-4 ml-12 space-y-2">
+                          {isLoadingFolders ? (
+                            <div className="text-sm text-gray-500">Đang tải folders...</div>
+                          ) : folders.length > 0 ? (
+                            folders.map((folder) => (
+                              <div 
+                                key={folder.id}
+                                className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded cursor-pointer"
+                              >
+                                <Folder className="w-4 h-4" />
+                                {folder.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-gray-500">Chưa có folder nào</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
