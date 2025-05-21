@@ -1,0 +1,111 @@
+name: Deploy Frontend to VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |-
+            # Đảm bảo thư mục tồn tại
+            mkdir -p /home/EmployeeAI_FE
+            cd /home/EmployeeAI_FE
+            
+            # Pull code mới nhất
+            if [ -d ".git" ]; then
+              git config pull.rebase false
+              git pull https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main || {
+                echo "Git pull failed, resetting repository..."
+                git fetch https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main
+                git reset --hard FETCH_HEAD
+              }
+            else
+              git clone https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git .
+            fi
+            
+            # Tạo file docker-compose.yml nếu chưa có
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "Creating docker-compose.yml file..."
+              tee docker-compose.yml > /dev/null << 'EOL'
+            version: '3'
+
+            services:
+              frontend:
+                build:
+                  context: .
+                ports:
+                  - "3001:80"
+                container_name: employeeai-frontend
+                restart: always
+                extra_hosts:
+                  - "host.docker.internal:host-gateway"
+            EOL
+            fi
+            
+            # Tạo file nginx.conf nếu chưa có
+            if [ ! -f "nginx.conf" ]; then
+              echo "Creating nginx.conf file..."
+              tee nginx.conf > /dev/null << 'EOL'
+            server {
+              listen 80;
+              server_name localhost;
+              
+              location / {
+                root /usr/share/nginx/html;
+                index index.html;
+                try_files $uri $uri/ /index.html;
+              }
+
+              location /api/ {
+                proxy_pass http://host.docker.internal:5000/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
+            }
+            EOL
+            fi
+            
+            # Tạo Dockerfile nếu chưa có
+            if [ ! -f "Dockerfile" ]; then
+              echo "Creating Dockerfile..."
+              tee Dockerfile > /dev/null << 'EOL'
+            FROM node:18 AS builder
+            WORKDIR /app
+            COPY package.json package-lock.json ./
+            RUN npm install
+            COPY . .
+            RUN npm run build
+
+            FROM nginx:alpine
+            COPY --from=builder /app/dist /usr/share/nginx/html
+            COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+            EXPOSE 80
+            CMD ["nginx", "-g", "daemon off;"]
+            EOL
+            fi
+            
+            # Build và khởi động container
+            docker compose down || true
+            docker compose build --no-cache
+            docker compose up -d
+            
+            # Dọn dẹp
+            docker system prune -f
+            
+            # Hiện trạng thái
+            docker ps | grep employeeai-frontend
