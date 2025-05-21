@@ -9,6 +9,9 @@ import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderRes
 import { Plus, LogOut, Folder } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { isApiError } from "@/utils/errorHandler";
+import { Alert } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
 interface Workspace {
   id: string;
@@ -24,6 +27,7 @@ const WorkspacePage = () => {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   // Fetch workspace using React Query
   const { data, isLoading, error: fetchError, refetch } = useQuery<WorkspaceResponse | null>({
@@ -62,6 +66,7 @@ const WorkspacePage = () => {
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
       const ws = await createWorkspace({ name, businessType: '', language: '', location: '', description });
       if (ws && ws.data && ws.data.id) {
@@ -73,16 +78,47 @@ const WorkspacePage = () => {
         setError('Tạo workspace thành công nhưng không nhận được ID.');
       }
     } catch (err) {
-      setError((err as Error).message || 'Tạo workspace thất bại');
+      if (isApiError(err)) {
+        setError(err.message);
+      } else {
+        setError('Tạo workspace thất bại. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-white"><div>Đang tải workspace...</div></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-teampal-500" />
+          <div className="text-gray-600">Đang tải workspace...</div>
+        </div>
+      </div>
+    );
   }
 
   if (fetchError) {
-    return <div className="min-h-screen flex items-center justify-center bg-white text-red-500">Lỗi khi tải workspace: {(fetchError as Error).message}</div>;
+    const errorMessage = isApiError(fetchError) 
+      ? fetchError.message 
+      : 'Lỗi khi tải workspace. Vui lòng thử lại sau.';
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white p-4">
+        <div className="w-full max-w-md">
+          <Alert variant="destructive">
+            {errorMessage}
+          </Alert>
+          <Button 
+            variant="outline" 
+            className="w-full mt-4"
+            onClick={() => refetch()}
+          >
+            Thử lại
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (!isLoading && !fetchError && workspaces.length === 0 && !showCreate) {
@@ -102,23 +138,57 @@ const WorkspacePage = () => {
         <LogOut className="w-4 h-4" />
         Đăng xuất
       </Button>
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center p-4">
         <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">Workspace của bạn</h1>
         {showCreate ? (
           <form onSubmit={handleCreateWorkspace} className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center">
             <h2 className="text-xl font-semibold mb-4">Tạo workspace mới</h2>
+            {error && (
+              <Alert variant="destructive" className="w-full mb-4">
+                {error}
+              </Alert>
+            )}
             <div className="w-full mb-4">
               <Label htmlFor="name">Tên workspace</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={e => setName(e.target.value)} 
+                required 
+                disabled={loading}
+              />
             </div>
             <div className="w-full mb-4">
               <Label htmlFor="description">Mô tả</Label>
-              <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
+              <Textarea 
+                id="description" 
+                value={description} 
+                onChange={e => setDescription(e.target.value)}
+                disabled={loading}
+              />
             </div>
-            <Button type="submit" className="w-full">Tạo mới</Button>
-            {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang tạo...
+                </>
+              ) : (
+                'Tạo mới'
+              )}
+            </Button>
             {(workspaces.length > 0 || isLoading) && (
-              <Button type="button" variant="outline" className="w-full mt-4" onClick={() => setShowCreate(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full mt-4"
+                onClick={() => setShowCreate(false)}
+                disabled={loading}
+              >
                 Quay lại danh sách workspace
               </Button>
             )}
@@ -131,7 +201,7 @@ const WorkspacePage = () => {
                   {workspaces.map((workspace) => (
                     <div key={workspace.id}>
                       <div
-                        className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSelectWorkspace(workspace.id)}
                       >
                         <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
@@ -158,12 +228,15 @@ const WorkspacePage = () => {
                       {selectedWorkspaceId === workspace.id && (
                         <div className="mt-4 ml-12 space-y-2">
                           {isLoadingFolders ? (
-                            <div className="text-sm text-gray-500">Đang tải folders...</div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Đang tải folders...
+                            </div>
                           ) : folders.length > 0 ? (
                             folders.map((folder) => (
                               <div 
                                 key={folder.id}
-                                className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded cursor-pointer"
+                                className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded cursor-pointer transition-colors"
                               >
                                 <Folder className="w-4 h-4" />
                                 {folder.name}
@@ -183,7 +256,10 @@ const WorkspacePage = () => {
                 Bạn chưa có workspace nào
               </div>
             )}
-            <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2 mt-6">
+            <Button 
+              onClick={() => setShowCreate(true)} 
+              className="flex items-center gap-2 mt-6"
+            >
               <Plus className="w-4 h-4" />
               Tạo workspace mới
             </Button>

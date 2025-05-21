@@ -1,11 +1,39 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 
 const LandingPage = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const animatedTextRef = useRef<HTMLSpanElement>(null);
   
+  const words = ["image", "video", "content", "article", "generation", "avatar", "essay"];
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Animation khi từ cũ biến mất
+      gsap.to(animatedTextRef.current, {
+        opacity: 0,
+        y: -20,
+        duration: 0.3,
+        onComplete: () => {
+          setCurrentWordIndex((prevIndex) => (prevIndex + 1) % words.length);
+          // Animation khi từ mới xuất hiện
+          gsap.to(animatedTextRef.current, {
+            opacity: 1,
+            y: 0,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        }
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const heroElement = heroRef.current;
     const featuresElement = featuresRef.current;
@@ -49,16 +77,16 @@ const LandingPage = () => {
           
           <nav className="hidden md:flex items-center space-x-6">
             <Link to="/" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              Home
+              TRANG CHỦ
             </Link>
             <Link to="#features" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              Features
+              TÍNH NĂNG
             </Link>
-            <Link to="#industries" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              Industries
+            <Link to="#blog" className="text-sm font-medium hover:text-teampal-500 transition-colors">
+              BÀI VIẾT
             </Link>
             <Link to="#pricing" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              Pricing
+              GIÁ CẢ
             </Link>
           </nav>
           
@@ -81,12 +109,18 @@ const LandingPage = () => {
       <section className="pt-24 pb-20 teampal-gradient" ref={heroRef}>
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Your AI Workforce Management Platform
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 flex flex-wrap justify-center items-center gap-2">
+              <span>The ultimate AI for top-tier</span>
+              <span 
+                ref={animatedTextRef}
+                className="inline-block min-w-[200px] text-teampal-500 transition-all duration-500 ease-in-out text-center"
+              >
+                {words[currentWordIndex]}
+              </span>
+              <span>generation.</span>
             </h1>
             <p className="text-lg md:text-xl mb-8">
-              Streamline your operations with our AI-powered team management solution.
-              Increase productivity, improve collaboration, and drive growth.
+            ✨ SuperAI là nền tảng AI tiên tiến dành cho mã hóa văn bản, lồng tiếng, nghiên cứu hình ảnh sáng tạo và nhiều ứng dụng vượt trội khác.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/login">
@@ -193,6 +227,30 @@ const LandingPage = () => {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+      
+      {/* Super AI Tools Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 text-center">
+          <Button variant="outline" className="rounded-full px-6 py-2 text-sm mb-8 bg-pink-100 border-pink-300 text-pink-800 hover:bg-pink-200">
+            Các công cụ Super AI phổ biến
+          </Button>
+          <p className="text-lg md:text-xl mb-8 max-w-3xl mx-auto">
+            Chào đón AI linh hoạt – được xây dựng để đáp ứng mọi nhu cầu của bạn.
+          </p>
+          <p className="text-muted-foreground max-w-3xl mx-auto mb-4">
+            Tại Superb AI, chúng tôi tin rằng mọi doanh nghiệp đều có thể vận hành hiệu quả và phát triển bền vững .
+          </p>
+          <p className="text-muted-foreground max-w-3xl mx-auto mb-4">
+            Chúng tôi không chỉ cung cấp phần mềm, mà mang đến những giải pháp AI ứng dụng thực tiễn, linh hoạt và sát với nhu cầu vận hành thực tế của các doanh nghiệp vừa và nhỏ.
+          </p>
+          <p className="text-muted-foreground max-w-3xl mx-auto mb-4">
+            Với đội ngũ chuyên gia dày dặn kinh nghiệm trong công nghệ, thương mại điện tử và marketing, Superb AI được thiết kế như một "cánh tay phải" - giúp doanh nghiệp chuyển đổi số dễ dàng mà không cần tái cấu trúc hay tuyển thêm nhân sự kỹ thuật.
+          </p>
+          <p className="text-muted-foreground max-w-3xl mx-auto">
+            Chúng tôi không chỉ triển khai công nghệ - mà còn cùng bạn biến công nghệ thành đòn bẩy vận hành, giúp doanh nghiệp tăng tốc, tiết kiệm chi phí và mở rộng quy mô một cách thông minh.
+          </p>
         </div>
       </section>
       

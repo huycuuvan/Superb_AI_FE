@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,10 @@ import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
 
 import { LanguageToggle } from "./LanguageToggle";
 
+// Import icons for plugins, share, and delete
+import { Puzzle, Share2, Trash2 } from 'lucide-react';
+import { agents } from '@/services/mockData'; // Assuming agents data is available
+
 const Header = () => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -27,6 +31,8 @@ const Header = () => {
   const navigate = useNavigate();
 
   const { workspace, isLoading: isWorkspaceLoading, error: workspaceError } = useSelectedWorkspace();
+  const { agentId } = useParams<{ agentId: string }>(); // Get agentId from params
+  const currentAgent = agents.find(agent => agent.id === agentId); // Find current agent
 
   console.log("Header: useQuery data:", workspace);
   console.log("Header: useQuery isLoading:", isWorkspaceLoading);
@@ -69,65 +75,100 @@ const Header = () => {
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <div className="hidden md:flex items-center gap-2 text-muted-foreground text-sm">
-            {breadcrumbs.length === 0 ? (
-              <span>{getGreeting()}, {user?.name || 'Guest'}</span>
-            ) : (
-              <>
-                {breadcrumbs[0]?.name.toLowerCase() !== 'dashboard' && (
-                  <>
-                    <Link to="/dashboard" className="hover:text-foreground transition-colors">
-                      Dashboard
-                    </Link>
-                    <span className="mx-1 text-muted-foreground">/</span>
-                  </>
-                )}
-                {breadcrumbs.map((crumb, i) => (
-                  <div key={i} className="flex items-center">
-                    {i > 0 && <span className="mx-1 text-muted-foreground">/</span>}
-                    <Link 
-                      to={crumb.path}
-                      className="hover:text-foreground transition-colors"
-                    >
-                      {crumb.name}
-                    </Link>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
+          {location.pathname.startsWith('/dashboard/agent-chat/') ? (
+            // Agent Chat Header
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <Avatar className="h-8 w-8 md:h-9 md:w-9">
+                <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+                <AvatarFallback className="bg-teampal-100 text-teampal-500 text-sm">
+                  {currentAgent?.name?.charAt(0) || 'A'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-base md:text-lg font-semibold">{currentAgent?.name || 'Agent'}</h1>
+                <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+              </div>
+            </div>
+          ) : (
+            // Default Header (Breadcrumbs/Greeting)
+            <div className="hidden md:flex items-center gap-2 text-muted-foreground text-sm">
+              {breadcrumbs.length === 0 ? (
+                <span>{getGreeting()}, {user?.name || 'Guest'}</span>
+              ) : (
+                <>
+                  {breadcrumbs[0]?.name.toLowerCase() !== 'dashboard' && (
+                    <>
+                      <Link to="/dashboard" className="hover:text-foreground transition-colors">
+                        Dashboard
+                      </Link>
+                      <span className="mx-1 text-muted-foreground">/</span>
+                    </>
+                  )}
+                  {breadcrumbs.map((crumb, i) => (
+                    <div key={i} className="flex items-center">
+                      {i > 0 && <span className="mx-1 text-muted-foreground">/</span>}
+                      <Link 
+                        to={crumb.path}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {crumb.name}
+                      </Link>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
-          <LanguageToggle />
-          <Button variant="outline" size="sm" className="hidden md:inline-flex">
-            {t('editBrand')}
-          </Button>
-          {workspace && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition">
-                  <Avatar className="bg-teampal-200 text-foreground w-8 h-8 flex items-center justify-center">
-                    <span className="font-bold text-base flex items-center justify-center">
-                      {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
-                    </span>
-                  </Avatar>
-                  <span className="font-semibold flex items-center justify-center">{workspace.name}{workspace.name && "'s workspace"}</span>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-4 py-2">
-                  <div className="font-bold">{workspace.name}</div>
-                  {workspace.description && (
-                    <div className="text-xs text-muted-foreground">{workspace.description}</div>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/workspace')}>
-                  Chọn workspace khác
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {location.pathname.startsWith('/dashboard/agent-chat/') ? (
+            // Agent Chat Icons
+            <div className="flex items-center gap-2 md:gap-3">
+              <Button variant="ghost" size="icon" aria-label="Plugins">
+                <Puzzle className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Share">
+                <Share2 className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Delete">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          ) : (
+            // Default Icons
+            <>
+              <LanguageToggle />
+              <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                {t('editBrand')}
+              </Button>
+              {workspace && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition">
+                      <Avatar className="bg-teampal-200 text-foreground w-8 h-8 flex items-center justify-center">
+                        <span className="font-bold text-base flex items-center justify-center">
+                          {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
+                        </span>
+                      </Avatar>
+                      <span className="font-semibold flex items-center justify-center">{workspace.name}{workspace.name && "'s workspace"}</span>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-4 py-2">
+                      <div className="font-bold">{workspace.name}</div>
+                      {workspace.description && (
+                        <div className="text-xs text-muted-foreground">{workspace.description}</div>
+                      )}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/workspace')}>
+                      Chọn workspace khác
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </>
           )}
         </div>
       </div>

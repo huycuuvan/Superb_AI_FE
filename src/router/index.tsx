@@ -12,6 +12,7 @@ import Register from '@/pages/Register';
 import WorkspacePage from '@/pages/Workspace';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import FolderDetail from '@/pages/FolderDetail';
+import AgentTaskConfig from '@/pages/AgentTaskConfig';
 
 const routes: RouteObject[] = [
   {
@@ -45,6 +46,10 @@ const routes: RouteObject[] = [
       {
         path: 'agents/:agentId',
         element: <AgentChat />,
+      },
+      {
+        path: 'agents/:agentId/task/config',
+        element: <AgentTaskConfig />,
       },
       {
         path: 'tasks',

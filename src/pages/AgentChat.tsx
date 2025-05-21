@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
-  ListPlus, CheckCircle2 
+  ListPlus, CheckCircle2, Camera, Edit, Share2, SlidersHorizontal, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,19 @@ import { agents } from '@/services/mockData';
 import { ChatTask, ChatMessage } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate } from 'react-router-dom';
+
+interface TaskInput {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'select';
+  options?: string[];
+  required?: boolean;
+}
+
+interface TaskWithInputs extends ChatTask {
+  inputs: TaskInput[];
+}
 
 const AgentChat = () => {
   const { theme } = useTheme();
@@ -20,12 +33,74 @@ const AgentChat = () => {
   const [message, setMessage] = useState('');
   const [showTaskPopup, setShowTaskPopup] = useState(false);
   const [currentAgent, setCurrentAgent] = useState(agents.find(agent => agent.id === agentId));
-  const [tasks, setTasks] = useState<ChatTask[]>([
-    { id: '1', title: 'Suggest upselling strategies for existing customers', completed: false, description: 'Đề xuất các chiến lược bán thêm cho khách hàng hiện tại.' },
-    { id: '2', title: 'Generate ideas for sales promotions and discounts', completed: false, description: 'Tạo ý tưởng cho các chương trình khuyến mãi và giảm giá.' },
-    { id: '3', title: 'Generate ideas for sales contests and incentives', completed: false, description: 'Tạo ý tưởng cho các cuộc thi và ưu đãi bán hàng.' },
-    { id: '4', title: 'Suggest cross-selling opportunities based on purchase history', completed: false, description: 'Đề xuất cơ hội bán chéo dựa trên lịch sử mua hàng.' },
-    { id: '5', title: 'Suggest strategies for handling difficult customers', completed: false, description: 'Đề xuất chiến lược xử lý khách hàng khó tính.' }
+  const [tasks, setTasks] = useState<TaskWithInputs[]>([
+    { 
+      id: 'design', 
+      title: 'Tạo thiết kế từ văn bản', 
+      completed: false, 
+      description: 'Nhập mô tả để tạo thiết kế giao diện.',
+      inputs: [
+        { id: 'height', label: 'Chiều cao (px)', type: 'number', required: true },
+        { id: 'width', label: 'Chiều rộng (px)', type: 'number', required: true },
+        { id: 'style', label: 'Phong cách', type: 'select', options: ['Minimal', 'Modern', 'Vintage', 'Professional'], required: true },
+        { id: 'description', label: 'Mô tả chi tiết', type: 'text', required: true }
+      ]
+    },
+    { 
+      id: '1', 
+      title: 'Suggest upselling strategies', 
+      completed: false, 
+      description: 'Đề xuất các chiến lược bán thêm cho khách hàng hiện tại.',
+      inputs: [
+        { id: 'customerType', label: 'Loại khách hàng', type: 'select', options: ['Cá nhân', 'Doanh nghiệp', 'Tổ chức'], required: true },
+        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
+        { id: 'preferences', label: 'Sở thích', type: 'text', required: true }
+      ]
+    },
+    { 
+      id: '2', 
+      title: 'Generate ideas for sales promotions and discounts', 
+      completed: false, 
+      description: 'Tạo ý tưởng cho các chương trình khuyến mãi và giảm giá.',
+      inputs: [
+        { id: 'promotionType', label: 'Loại khuyến mãi', type: 'select', options: ['Giảm giá', 'Tặng quà', 'Mua 1 tặng 1', 'Khác'], required: true },
+        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
+        { id: 'targetAudience', label: 'Đối tượng mục tiêu', type: 'text', required: true }
+      ]
+    },
+    { 
+      id: '3', 
+      title: 'Generate ideas for sales contests and incentives', 
+      completed: false, 
+      description: 'Tạo ý tưởng cho các cuộc thi và ưu đãi bán hàng.',
+      inputs: [
+        { id: 'contestType', label: 'Loại cuộc thi', type: 'select', options: ['Cá nhân', 'Nhóm', 'Phòng ban'], required: true },
+        { id: 'duration', label: 'Thời gian (ngày)', type: 'number', required: true },
+        { id: 'prize', label: 'Giải thưởng', type: 'text', required: true }
+      ]
+    },
+    { 
+      id: '4', 
+      title: 'Suggest cross-selling opportunities', 
+      completed: false, 
+      description: 'Đề xuất cơ hội bán chéo dựa trên lịch sử mua hàng.',
+      inputs: [
+        { id: 'productType', label: 'Loại sản phẩm', type: 'select', options: ['Điện tử', 'Thời trang', 'Nhà cửa', 'Khác'], required: true },
+        { id: 'customerSegment', label: 'Phân khúc khách hàng', type: 'text', required: true },
+        { id: 'budget', label: 'Ngân sách', type: 'number', required: true }
+      ]
+    },
+    { 
+      id: '5', 
+      title: 'Suggest strategies for handling difficult customers', 
+      completed: false, 
+      description: 'Đề xuất chiến lược xử lý khách hàng khó tính.',
+      inputs: [
+        { id: 'issueType', label: 'Loại vấn đề', type: 'select', options: ['Khiếu nại', 'Yêu cầu hoàn tiền', 'Chất lượng dịch vụ', 'Khác'], required: true },
+        { id: 'customerHistory', label: 'Lịch sử khách hàng', type: 'text', required: true },
+        { id: 'priority', label: 'Mức độ ưu tiên', type: 'select', options: ['Cao', 'Trung bình', 'Thấp'], required: true }
+      ]
+    }
   ]);
   
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -41,6 +116,10 @@ const AgentChat = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
+  const [inputAreaMode, setInputAreaMode] = useState<'chat' | 'taskList' | 'promptList' | 'taskInputs'>('chat');
+
+  const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
+  const [showTaskInputModal, setShowTaskInputModal] = useState(false);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -82,13 +161,34 @@ const AgentChat = () => {
     }
   };
   
-  const handleTaskSelect = (taskId: string) => {
-    // Add task to message input
-    const selectedTask = tasks.find(task => task.id === taskId);
+  const handleTaskSelect = (task: TaskWithInputs) => {
+    setSelectedTaskId(task.id);
+    setInputAreaMode('taskInputs');
+    setShowTaskInputModal(true);
+    setSelectedTaskInputs({});
+  };
+
+  const handleInputChange = (inputId: string, value: string) => {
+    setSelectedTaskInputs(prev => ({
+      ...prev,
+      [inputId]: value
+    }));
+  };
+
+  const handleSubmitTaskInputs = () => {
+    const selectedTask = tasks.find(t => t.id === selectedTaskId);
     if (selectedTask) {
-      setMessage(selectedTask.title);
+      const inputValues = Object.entries(selectedTaskInputs)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      setMessage(`${selectedTask.title}\n${inputValues}`);
+      setInputAreaMode('chat');
+      setShowTaskInputModal(false);
     }
-    setShowTaskPopup(false);
+  };
+
+  const handleActionClick = (action: 'screenshot' | 'text' | 'modify' | 'diagram' | 'prototype') => {
+    // This function is no longer used in this layout
   };
 
   // Get appropriate colors based on theme
@@ -104,6 +204,27 @@ const AgentChat = () => {
       if (theme === 'purple') return 'bg-white border shadow-sm';
       return 'bg-white border shadow-sm';
     }
+  };
+
+  const promptSuggestions = [
+    "Show me the temperature today",
+    "Why does it rain",
+    "Do you feel different because of weather",
+    "What kind of clouds are there",
+    "What is the weather forecast for the next five days in my area, including high and low temperatures"
+  ];
+
+  const handlePromptSuggestionClick = (suggestion: string) => {
+    setMessage(suggestion);
+    setInputAreaMode('chat');
+  };
+
+  // Initialize useNavigate
+  const navigate = useNavigate();
+
+  // Handler for daily task button click
+  const handleDailyTaskClick = () => {
+    navigate(`/dashboard/agents/${agentId}/task/config`);
   };
 
   return (
@@ -125,19 +246,19 @@ const AgentChat = () => {
       {/* Chat area */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-3 md:space-y-4 bg-accent/30"
+        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-accent/30"
       >
         {messages.map((msg) => (
           <div 
             key={msg.id}
             className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`max-w-[85%] md:max-w-3/4 ${getMessageStyle(msg.sender)} rounded-lg p-2 md:p-3`}>
+            <div className={`max-w-[85%] md:max-w-3/4 ${getMessageStyle(msg.sender)} rounded-lg p-2 md:p-3 text-sm md:text-base shadow-sm`}>
               {msg.sender === 'agent' && (
                 <div className="flex items-center space-x-2 mb-1">
-                  <Avatar className="h-5 w-5 md:h-6 md:w-6">
+                  <Avatar className="h-6 w-6 md:h-7 md:w-7">
                     <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-teampal-100 text-teampal-500 text-[10px] md:text-xs">
+                    <AvatarFallback className="bg-teampal-100 text-teampal-500 text-xs md:text-sm">
                       {currentAgent?.name?.charAt(0) || 'A'}
                     </AvatarFallback>
                   </Avatar>
@@ -151,52 +272,162 @@ const AgentChat = () => {
             </div>
           </div>
         ))}
+
+        {/* Daily Timer Button */}
+        {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && (
+          <div className="flex justify-start mt-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 text-sm"
+              onClick={handleDailyTaskClick}
+            >
+              <ListPlus className="h-4 w-4" />
+              Hẹn giờ hằng ngày
+            </Button>
+          </div>
+        )}
       </div>
       
-      {/* Task droplist và input động */}
+      {/* Input area */}
       <div className="p-3 md:p-4 border-t bg-background">
-        <div className="mb-3 md:mb-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-          <Select value={selectedTaskId || ''} onValueChange={setSelectedTaskId}>
-            <SelectTrigger className="w-full md:w-60">
-              <SelectValue placeholder="Chọn Task" />
-            </SelectTrigger>
-            <SelectContent>
-              {tasks.map(task => (
-                <SelectItem key={task.id} value={task.id} className="text-sm">{task.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedTask && (
-            <div className="flex flex-col gap-2 md:ml-4 w-full md:max-w-xl">
-              <Input
-                placeholder="Tiêu đề task"
-                value={selectedTask.title}
-                readOnly
-                className="text-sm"
-              />
-              <Textarea 
-                placeholder="Mô tả task (demo)" 
-                value={selectedTask.description || ''} 
-                readOnly 
-                className="text-sm min-h-[80px] md:min-h-[100px]"
-              />
-            </div>
-          )}
-        </div>
-        {/* Input chat */}
-        <div className="flex items-center gap-2">
-          <Input
-            className="flex-1 text-sm"
-            placeholder="Nhập tin nhắn của bạn..."
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Button className="bg-teampal-500 h-9 md:h-10 px-3 md:px-4" onClick={handleSendMessage}>
-            <Send className="h-4 w-4 md:h-5 md:w-5" />
+        {/* Task and Prompt buttons */}
+        <div className="flex gap-2 mb-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => setInputAreaMode(inputAreaMode === 'taskList' ? 'chat' : 'taskList')}
+          >
+            <ListPlus className="h-4 w-4" />
+            Task
+          </Button>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => setInputAreaMode(inputAreaMode === 'promptList' ? 'chat' : 'promptList')}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Prompt
           </Button>
         </div>
+
+        {/* Conditional Content Area (Task List, Prompt List, or Task Input Form) */}
+        {inputAreaMode === 'taskList' && (
+          <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
+            {tasks.map((task) => (
+              <div 
+                key={task.id}
+                className="p-2 hover:bg-accent cursor-pointer rounded-md"
+                onClick={() => handleTaskSelect(task)}
+              >
+                <div className="font-medium">{task.title}</div>
+                <div className="text-sm text-muted-foreground">{task.description}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {inputAreaMode === 'promptList' && (
+          <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
+            {promptSuggestions.map((prompt, index) => (
+              <div 
+                key={index}
+                className="p-2 hover:bg-accent cursor-pointer rounded-md"
+                onClick={() => {
+                  setMessage(prompt);
+                  setInputAreaMode('chat');
+                }}
+              >
+                {prompt}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Input chat */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-end gap-2 w-full">
+             {/* Input Textarea */}
+            <div className="relative flex-1">
+              <Textarea
+                className="flex-1 text-sm pr-16 min-h-[50px] max-h-[400px] resize-none"
+                placeholder="Ask AI anything..."
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              {/* Icons inside textarea */}
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                {/* <ListPlus className="h-5 w-5 text-muted-foreground cursor-pointer" /> */}
+                {/* <SlidersHorizontal className="h-5 w-5 text-muted-foreground cursor-pointer" /> */}
+              </div>
+            </div>
+            {/* Send Button */}
+            <Button className="bg-teampal-500 h-9 md:h-10 px-3 md:px-4 flex-shrink-0" onClick={handleSendMessage}>
+              <Send className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* Task Input Modal */}
+      {showTaskInputModal && selectedTaskId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-auto p-4 bg-background rounded-lg shadow-lg">
+            {/* Close button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-2 right-2"
+              onClick={() => setShowTaskInputModal(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="mb-4">
+              <h3 className="text-lg font-medium mb-2">{tasks.find(t => t.id === selectedTaskId)?.title}</h3>
+              <p className="text-sm text-muted-foreground">{tasks.find(t => t.id === selectedTaskId)?.description}</p>
+            </div>
+            <div className="space-y-3">
+              {tasks.find(t => t.id === selectedTaskId)?.inputs.map((input) => (
+                <div key={input.id} className="space-y-1">
+                  <label className="text-sm font-medium">{input.label}</label>
+                  {input.type === 'select' ? (
+                    <Select
+                      value={selectedTaskInputs[input.id] || ''}
+                      onValueChange={(value) => handleInputChange(input.id, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {input.options?.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type={input.type}
+                      value={selectedTaskInputs[input.id] || ''}
+                      onChange={(e) => handleInputChange(input.id, e.target.value)}
+                      placeholder={`Nhập ${input.label.toLowerCase()}`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowTaskInputModal(false)}>
+                Hủy
+              </Button>
+              <Button onClick={handleSubmitTaskInputs}>
+                Xác nhận
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

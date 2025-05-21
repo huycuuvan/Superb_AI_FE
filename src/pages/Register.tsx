@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import  {registerWithEmail}  from "@/services/api";
+import { Alert } from "@/components/ui/alert";
+import { registerWithEmail } from "@/services/api";
+import { ApiErrorException, isApiError } from "@/utils/errorHandler";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -22,22 +24,14 @@ const Register = () => {
     setError("");
     setSuccess("");
     try {
-      const data = await registerWithEmail({ email, password, name });
+      await registerWithEmail({ email, password, name });
       setSuccess("Đăng ký thành công!");
       setTimeout(() => navigate("/login"), 1500);
-    } catch (err: unknown) {
-      console.log("err", err);
-      const errorObj = err as Record<string, unknown>;
-      if (errorObj && typeof errorObj === 'object' && errorObj.error && errorObj.tag) {
-        if (errorObj.tag === 'REGISTER_EMAIL_EXISTS') {
-          setError('Email đã tồn tại. Vui lòng dùng email khác.');
-        } else {
-          setError(errorObj.error as string || 'Đăng ký thất bại');
-        }
-      } else if (err instanceof Error) {
+    } catch (err) {
+      if (isApiError(err)) {
         setError(err.message);
       } else {
-        setError('Đăng ký thất bại');
+        setError("Đăng ký thất bại. Vui lòng thử lại sau.");
       }
     } finally {
       setLoading(false);
@@ -64,23 +58,58 @@ const Register = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  {error}
+                </Alert>
+              )}
+              {success && (
+                <Alert variant="success" className="mb-4">
+                  {success}
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+                <Input 
+                  id="name" 
+                  type="text" 
+                  placeholder="Your name" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  required 
+                  disabled={loading}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  disabled={loading}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  disabled={loading}
+                />
               </div>
-              <Button type="submit" className="w-full teampal-button" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full teampal-button" 
+                disabled={loading}
+              >
                 {loading ? "Đang đăng ký..." : "Sign up"}
               </Button>
-              {error && <div className="text-red-500 text-sm text-center">{error}</div>}
-              {success && <div className="text-green-600 text-sm text-center">{success}</div>}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <Separator className="w-full" />
