@@ -1,5 +1,6 @@
-import { API_ENDPOINTS } from "@/config/api";
+import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
 import { Workspace, Agent } from "@/types";
+import { handleApiError } from "@/utils/errorHandler";
 
 export const registerWithEmail = async ({
   email,
@@ -15,17 +16,12 @@ export const registerWithEmail = async ({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name }),
   });
-  let data;
-  try {
-    data = await res.json();
-  } catch (err) {
-    // Nếu không parse được JSON (ví dụ 403 trả về rỗng)
-    throw new Error(
-      "Không thể đăng ký. Có thể bạn không có quyền truy cập hoặc server từ chối request."
-    );
+
+  if (!res.ok) {
+    await handleApiError(res);
   }
-  if (!res.ok) throw new Error(data.message || "Đăng ký thất bại");
-  return data;
+
+  return res.json();
 };
 
 // Thêm các hàm API khác ở đây
@@ -48,9 +44,12 @@ export const createWorkspace = async (workspaceData: {
     },
     body: JSON.stringify(workspaceData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Tạo workspace thất bại");
-  return data;
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
 };
 
 export const getAgents = async () => {
@@ -60,9 +59,12 @@ export const getAgents = async () => {
       Authorization: `Bearer ${token}`,
     },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Lấy danh sách agents thất bại");
-  return data;
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
 };
 
 export const createAgent = async (agentData: {
@@ -81,9 +83,12 @@ export const createAgent = async (agentData: {
     },
     body: JSON.stringify(agentData),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Tạo agent thất bại");
-  return data as Agent;
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json() as Promise<Agent>;
 };
 
 export const sendChatMessage = async (agentId: string, message: string) => {
@@ -96,9 +101,12 @@ export const sendChatMessage = async (agentId: string, message: string) => {
     },
     body: JSON.stringify({ agentId, message }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Gửi tin nhắn thất bại");
-  return data;
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
 };
 
 export interface FolderResponse {
@@ -117,7 +125,7 @@ export const getFolders = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch("http://localhost:3000/folders/list", {
+  const response = await fetch(`${API_BASE_URL}/folders/list`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -127,7 +135,7 @@ export const getFolders = async (
   });
 
   if (!response.ok) {
-    throw new Error("Lỗi khi lấy danh sách folder");
+    await handleApiError(response);
   }
 
   return response.json();
@@ -140,12 +148,16 @@ export interface WorkspaceResponse {
 
 export const getWorkspace = async (): Promise<WorkspaceResponse> => {
   const token = localStorage.getItem("token");
-  const res = await fetch("http://localhost:3000/workspaces", {
+  const res = await fetch(`${API_BASE_URL}/workspaces`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error("Lấy workspace thất bại");
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
   return res.json();
 };
 
@@ -164,7 +176,7 @@ export const createFolder = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch("http://localhost:3000/folders", {
+  const response = await fetch(`${API_BASE_URL}/folders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -174,7 +186,7 @@ export const createFolder = async (
   });
 
   if (!response.ok) {
-    throw new Error("Lỗi khi tạo folder");
+    await handleApiError(response);
   }
 
   return response.json();
@@ -182,7 +194,6 @@ export const createFolder = async (
 
 export interface FolderDetailResponse {
   data: {
-    // Assuming the data structure based on potential API response
     id: string;
     name: string;
     workspace_id: string;
@@ -190,7 +201,6 @@ export interface FolderDetailResponse {
     order?: number;
     pin?: number;
     status?: number;
-    // Add other potential fields like agents if the API returns them
   };
 }
 
@@ -201,9 +211,8 @@ export const getFolderDetail = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  // Using POST method based on the provided curl example, although GET is typical for detail
-  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
-    method: "GET", // Assuming POST based on the curl data field
+  const response = await fetch(`${API_BASE_URL}/folders/${folderId}`, {
+    method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -211,7 +220,7 @@ export const getFolderDetail = async (
   });
 
   if (!response.ok) {
-    throw new Error("Lỗi khi lấy chi tiết folder");
+    await handleApiError(response);
   }
 
   return response.json();
@@ -232,8 +241,8 @@ export const updateFolder = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
-    method: "PUT", // Assuming PUT method for update
+  const response = await fetch(`${API_BASE_URL}/folders/${folderId}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -242,7 +251,7 @@ export const updateFolder = async (
   });
 
   if (!response.ok) {
-    throw new Error("Lỗi khi cập nhật folder");
+    await handleApiError(response);
   }
 
   return response.json();
@@ -251,22 +260,19 @@ export const updateFolder = async (
 export const deleteFolder = async (
   folderId: string
 ): Promise<{ success: boolean }> => {
-  // Assuming API returns success status
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch(`http://localhost:3000/folders/${folderId}`, {
-    method: "DELETE", // Assuming DELETE method for deletion
+  const response = await fetch(`${API_BASE_URL}/folders/${folderId}`, {
+    method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error("Lỗi khi xóa folder");
+    await handleApiError(response);
   }
 
-  // Assuming successful deletion returns a simple success indicator
-  // You might need to adjust the return type and parsing based on actual API response
   return { success: true };
 };
