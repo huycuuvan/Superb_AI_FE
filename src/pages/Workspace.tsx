@@ -26,7 +26,7 @@ const WorkspacePage = () => {
   const [error, setError] = useState(""); // Local error state for create form
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
   // Fetch workspace using React Query
@@ -59,6 +59,13 @@ const WorkspacePage = () => {
   const handleGoToDashboard = (workspaceId: string) => {
     if (workspaceId) {
       localStorage.setItem('selectedWorkspace', workspaceId);
+      // Cập nhật thông tin user trong useAuth với workspace đã chọn
+      if (user && data && data.data) {
+        const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
+        if (selectedWorkspace) {
+          updateUser({ ...user, workspace: selectedWorkspace });
+        }
+      }
       navigate('/dashboard');
     }
   };
