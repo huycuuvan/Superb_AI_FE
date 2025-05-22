@@ -1,4 +1,4 @@
-export const API_BASE_URL = "/api";
+export const API_BASE_URL = "https://aiemployee.site/api";
 
 export const API_ENDPOINTS = {
   auth: {
@@ -7,7 +7,7 @@ export const API_ENDPOINTS = {
     logout: `${API_BASE_URL}/auth/logout`,
   },
   workspace: {
-    create: `${API_BASE_URL}/workspaces/create`,
+    create: `${API_BASE_URL}/workspaces`,
   },
   agents: {
     list: `${API_BASE_URL}/agents/list`,

@@ -2,50 +2,55 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const LandingPage = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const imageSectionRef = useRef<HTMLDivElement>(null);
   const animatedTextRef = useRef<HTMLSpanElement>(null);
-  
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const words = ["image", "video", "content", "article", "generation", "avatar", "essay"];
-  
+
+  // Animated word switching
   useEffect(() => {
     const interval = setInterval(() => {
-      // Animation khi từ cũ biến mất
       gsap.to(animatedTextRef.current, {
         opacity: 0,
         y: -20,
         duration: 0.3,
         onComplete: () => {
           setCurrentWordIndex((prevIndex) => (prevIndex + 1) % words.length);
-          // Animation khi từ mới xuất hiện
           gsap.to(animatedTextRef.current, {
             opacity: 1,
             y: 0,
             duration: 0.3,
-            ease: "power2.out"
+            ease: "power2.out",
           });
-        }
+        },
       });
     }, 2000);
-
     return () => clearInterval(interval);
   }, []);
 
+  // Hero, features, image reveal
   useEffect(() => {
     const heroElement = heroRef.current;
     const featuresElement = featuresRef.current;
-    
+    const imageSection = imageSectionRef.current;
+
+    // Hero fade in
     if (heroElement) {
       heroElement.classList.add("animate-fade-in");
     }
-    
+
+    // Features fade in
     if (featuresElement) {
       const observer = new IntersectionObserver(
         (entries) => {
-          entries.forEach(entry => {
+          entries.forEach((entry) => {
             if (entry.isIntersecting) {
               entry.target.classList.add("animate-fade-in");
               observer.unobserve(entry.target);
@@ -54,92 +59,114 @@ const LandingPage = () => {
         },
         { threshold: 0.1 }
       );
-      
       observer.observe(featuresElement);
+    }
+
+    // Image section reveal
+    if (imageSection) {
+      gsap.set(imageSection, {
+        opacity: 0,
+        rotateX: -90,
+        transformOrigin: "center center",
+        transformStyle: "preserve-3d",
+      });
       
-      return () => {
-        if (featuresElement) observer.unobserve(featuresElement);
-      };
+      ScrollTrigger.create({
+        trigger: imageSection,
+        start: "top 80%",
+        end: "bottom top",
+        toggleActions: "play reverse play reverse",
+        scrub: false,
+        onEnter: () => {
+          gsap.to(imageSection, {
+            opacity: 1,
+            rotateX: 0,
+            duration: 1.2,
+            ease: "power2.out",
+          });
+        },
+        onLeaveBack: () => {
+          gsap.to(imageSection, {
+            opacity: 0,
+            rotateX: -90,
+            duration: 1,
+            ease: "power2.in",
+          });
+        },
+      });
+      
+
+    
+      
     }
   }, []);
 
   return (
     <div className="min-h-screen">
-      {/* Header/Navigation */}
+      {/* Header */}
       <header className="fixed w-full bg-white/80 backdrop-blur-sm z-10 border-b border-border shadow-sm">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="bg-teampal-500 text-white p-1.5 rounded">
-              <span className="font-bold text-sm">TP</span>
-            </div>
-            <span className="font-bold text-xl">Superb AI</span>
+            <img src="/Superb_AI_Logo.svg" alt="Superb AI Logo" className="w-30 h-30" />
           </div>
-          
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              TRANG CHỦ
-            </Link>
-            <Link to="#features" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              TÍNH NĂNG
-            </Link>
-            <Link to="#blog" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              BÀI VIẾT
-            </Link>
-            <Link to="#pricing" className="text-sm font-medium hover:text-teampal-500 transition-colors">
-              GIÁ CẢ
-            </Link>
+            <Link to="/" className="text-sm font-medium hover:text-teampal-500">TRANG CHỦ</Link>
+            <Link to="#features" className="text-sm font-medium hover:text-teampal-500">TÍNH NĂNG</Link>
+            <Link to="#blog" className="text-sm font-medium hover:text-teampal-500">BÀI VIẾT</Link>
+            <Link to="#pricing" className="text-sm font-medium hover:text-teampal-500">GIÁ CẢ</Link>
           </nav>
-          
           <div className="flex items-center space-x-4">
-            <Link to="/login">
-              <Button variant="outline" size="sm">
-                Log in
-              </Button>
-            </Link>
-            <Link to="/dashboard">
-              <Button className="teampal-button">
-                Dashboard
-              </Button>
-            </Link>
+            <Link to="/login"><Button variant="outline" size="sm">Log in</Button></Link>
+            <Link to="/dashboard"><Button className="teampal-button">Dashboard</Button></Link>
           </div>
         </div>
       </header>
-      
+
       {/* Hero Section */}
-      <section className="pt-24 pb-20 teampal-gradient" ref={heroRef}>
+      <section className="min-h-screen flex items-center justify-center teampal-gradient" ref={heroRef}>
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 flex flex-wrap justify-center items-center gap-2">
+          <div className="max-w-2xl mx-auto text-center">
+            <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold mb-6 flex flex-col items-center gap-2">
               <span>The ultimate AI for top-tier</span>
-              <span 
-                ref={animatedTextRef}
-                className="inline-block min-w-[200px] text-teampal-500 transition-all duration-500 ease-in-out text-center"
-              >
-                {words[currentWordIndex]}
-              </span>
-              <span>generation.</span>
+              <div className="flex items-center gap-2">
+                <span
+                  ref={animatedTextRef}
+                  className="inline-block min-w-[200px] text-teampal-500 transition-all duration-500 ease-in-out text-center"
+                >
+                  {words[currentWordIndex]}
+                </span>
+                <span>generation.</span>
+              </div>
             </h1>
             <p className="text-lg md:text-xl mb-8">
-            ✨ SuperAI là nền tảng AI tiên tiến dành cho mã hóa văn bản, lồng tiếng, nghiên cứu hình ảnh sáng tạo và nhiều ứng dụng vượt trội khác.
+              ✨ SuperAI là nền tảng AI tiên tiến dành cho mã hóa văn bản, lồng tiếng, nghiên cứu hình ảnh sáng tạo và nhiều ứng dụng vượt trội khác.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link to="/login">
-                <Button size="lg" className="bg-white text-foreground hover:bg-gray-100">
-                  Get Started
-                </Button>
-              </Link>
-              <Link to="#features">
-                <Button size="lg" variant="outline" className="bg-white/20 backdrop-blur-sm border-white">
-                  Learn More
-                </Button>
-              </Link>
+              <Link to="/login"><Button size="lg" className="bg-white text-foreground hover:bg-gray-100">Get Started</Button></Link>
+              <Link to="#features"><Button size="lg" variant="outline" className="bg-white/20 backdrop-blur-sm border-white">Learn More</Button></Link>
             </div>
           </div>
         </div>
       </section>
-      
-      {/* Features Section */}
-      <section id="features" className="py-20" ref={featuresRef}>
+
+      {/* Image Reveal Section */}
+      <div
+        ref={imageSectionRef}
+        className="container mx-auto px-4 mt-[-100px] relative z-10"
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl border-8 border-gray-800">
+            <img
+              src="https://mynexusai.com/wp-content/uploads/nexus-dashboard.jpg"
+              alt="AI Dashboard Preview"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
+     {/* Features Section */}
+     <section id="features" className="py-20" ref={featuresRef}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Key Features</h2>
