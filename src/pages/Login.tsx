@@ -15,27 +15,43 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loading, user } = useAuth();
+  const { login, loading, user, hasWorkspace } = useAuth();
 
   // Lấy đường dẫn trước đó từ state (nếu có)
   const from = location.state?.from?.pathname || "/dashboard";
+
+  // Nếu đã đăng nhập và đã có workspace, chuyển hướng về dashboard ngay lập tức
+  if (user && hasWorkspace) {
+    return <Navigate to={from} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       await login(email, password);
-      navigate("/workspace", { replace: true });
+      // Sau khi đăng nhập thành công, kiểm tra lại trạng thái user và workspace
+      // useAuth hook sẽ cập nhật user và hasWorkspace sau khi login thành công
+      // Chuyển hướng dựa trên trạng thái workspace
+      // Cần một chút delay hoặc đảm bảo user và hasWorkspace đã được cập nhật
+      // Tuy nhiên, do await login đã hoàn thành, user state trong context thường đã cập nhật
+      // Nếu user có workspace, chuyển hướng đến trang gốc (from) hoặc dashboard
+      // Nếu user chưa có workspace, chuyển hướng đến trang workspace
+
+      // Lấy user và hasWorkspace mới nhất sau khi login
+      // Có thể cần một useEffect hoặc logic khác để đợi state cập nhật nếu cần
+      // Tuy nhiên, dựa trên cách useAuth hoạt động, user state thường được cập nhật ngay sau await login
+      if (user?.workspace?.id) { // Kiểm tra trực tiếp từ user object vừa cập nhật
+          navigate(from, { replace: true });
+      } else {
+          navigate("/workspace", { replace: true });
+      }
+
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError("Đăng nhập thất bại");
     }
   };
-
-  // Nếu đã đăng nhập và đã chọn workspace, chuyển hướng về dashboard
-  if (user && localStorage.getItem('selectedWorkspace')) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

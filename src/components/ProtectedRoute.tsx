@@ -1,16 +1,16 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect, useState } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireWorkspace?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, requireWorkspace = true }: ProtectedRouteProps) => {
+  const { user, loading, hasWorkspace } = useAuth();
   const location = useLocation();
 
-  // Nếu đang loading hoặc đang kiểm tra workspace, hiển thị loading spinner
+  // Nếu đang loading, hiển thị loading spinner
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -19,18 +19,19 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Nếu chưa đăng nhập, chuyển hướng về trang login
+  // Nếu user chưa đăng nhập, chuyển hướng về trang login
   if (!user) {
-    // Lưu lại đường dẫn hiện tại để sau khi đăng nhập có thể chuyển hướng về
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Nếu đã đăng nhập và có workspace, nhưng chưa chọn workspace, chuyển hướng về trang /workspace
-  if (user && !localStorage.getItem('selectedWorkspace')) {
-    return <Navigate to="/workspace" replace />;
+  // Nếu user đã đăng nhập nhưng chưa có workspace và route yêu cầu workspace
+  // Và route hiện tại không phải là trang workspace
+  if (user && requireWorkspace && !hasWorkspace && location.pathname !== '/workspace') {
+    return <Navigate to="/workspace" state={{ from: location }} replace />;
   }
 
-  // Nếu đã đăng nhập, có workspace và đã chọn workspace, render children
+  // Nếu user đã đăng nhập và có workspace (hoặc không yêu cầu workspace)
+  // Hoặc user đã đăng nhập, chưa có workspace nhưng route hiện tại là /workspace
   return <>{children}</>;
 };
 

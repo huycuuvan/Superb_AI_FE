@@ -6,6 +6,10 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
+  workspace?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface AuthContextType {
@@ -15,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
+  hasWorkspace: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,11 +33,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     if (token && userStr) {
-      setUser(JSON.parse(userStr));
-      setLoading(false);
-    } else {
-      setLoading(false);
+      const userData = JSON.parse(userStr);
+      setUser(userData);
     }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -74,8 +78,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
+  const hasWorkspace = Boolean(user?.workspace?.id);
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, error, login, logout, updateUser, hasWorkspace }}>
       {children}
     </AuthContext.Provider>
   );
