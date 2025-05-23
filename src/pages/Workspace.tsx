@@ -39,6 +39,7 @@ const WorkspacePage = () => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
+    retry: 3,
   });
 
   // Fetch folders when workspace is selected
@@ -107,17 +108,26 @@ const WorkspacePage = () => {
   }
 
   if (fetchError) {
-    const errorMessage = isApiError(fetchError) 
-      ? fetchError.message 
-      : 'Lỗi khi tải workspace. Vui lòng thử lại sau.';
+    let errorMessage = 'Lỗi khi tải workspace. Vui lòng thử lại sau.';
+
+    if (isApiError(fetchError)) {
+      if (fetchError.status === 502) {
+        errorMessage = 'Không thể kết nối đến máy chủ (Bad Gateway). Vui lòng thử lại sau.';
+      } else {
+        errorMessage = fetchError.message;
+      }
+    } else if (fetchError instanceof Error) {
+      errorMessage = fetchError.message;
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
         <div className="w-full max-w-md">
           <Alert variant="destructive">
             {errorMessage}
           </Alert>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full mt-4"
             onClick={() => refetch()}
           >

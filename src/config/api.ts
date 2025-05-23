@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
     login: `${API_BASE_URL}/auth/login`,
     register: `${API_BASE_URL}/auth/register`,
     logout: `${API_BASE_URL}/auth/logout`,
+    refresh: `${API_BASE_URL}/auth/refresh`,
   },
   workspace: {
     create: `${API_BASE_URL}/workspaces`,
@@ -17,5 +18,12 @@ export const API_ENDPOINTS = {
   tasks: {
     list: `${API_BASE_URL}/tasks/list`,
     create: `${API_BASE_URL}/tasks/create`,
+  },
+  folders: {
+    create: `${API_BASE_URL}/folders`,
+    list: `${API_BASE_URL}/folders`,
+    getById: (id: string) => `${API_BASE_URL}/folders/${id}`,
+    update: (id: string) => `${API_BASE_URL}/folders/${id}`,
+    delete: (id: string) => `${API_BASE_URL}/folders/${id}`,
   },
 };

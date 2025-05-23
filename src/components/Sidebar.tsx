@@ -43,8 +43,9 @@ import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 
-interface SidebarProps {
-  className?: string;
+
+  interface SidebarProps {
+    className?: string;
 }
 
 interface FolderType {
@@ -166,11 +167,9 @@ const Sidebar = ({ className }: SidebarProps) => {
       >
         <div className="flex items-center p-4 border-b border-border">
           <div className="flex items-center space-x-2">
-            <div className="bg-teampal-500 text-white p-1.5 rounded">
-              <span className="font-bold text-sm">TP</span>
-            </div>
+            
             {!collapsed && (
-              <span className="font-bold text-lg">Superb AI</span>
+             <img src="/Superb_AI_Logo.svg" alt="logo" className="w-30 h-30" />
             )}
           </div>
           <button 

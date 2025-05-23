@@ -164,10 +164,9 @@ export const getWorkspace = async (): Promise<WorkspaceResponse> => {
 export interface CreateFolderRequest {
   workspace_id: string;
   name: string;
-  description?: string;
-  order?: number;
-  pin?: number;
-  status?: number;
+  description: string;
+  folder_type: "custom";
+  status: "workspace_shared";
 }
 
 export const createFolder = async (

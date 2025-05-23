@@ -40,9 +40,8 @@ export const AddFolderDialog = ({ open: openProp, onOpenChange, onSuccess }: Add
         workspace_id: workspace.id,
         name: folderName.trim(),
         description: '',
-        order: 0,
-        pin: 0,
-        status: 1
+        folder_type: 'custom',
+        status: 'workspace_shared'
       });
       
       setFolderName('');
