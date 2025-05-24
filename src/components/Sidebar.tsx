@@ -79,7 +79,7 @@ const Sidebar = ({ className }: SidebarProps) => {
 
   useEffect(() => {
     if (workspace?.id) {
-      fetchFolders(workspace.id);
+      // fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id, fetchFolders]);
 

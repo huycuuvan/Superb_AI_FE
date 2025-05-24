@@ -11,9 +11,12 @@ export const API_ENDPOINTS = {
     create: `${API_BASE_URL}/workspaces`,
   },
   agents: {
-    list: `${API_BASE_URL}/agents/list`,
-    create: `${API_BASE_URL}/agents/create`,
+    list: `${API_BASE_URL}/agents/all`,
+    create: `${API_BASE_URL}/agents`,
     chat: `${API_BASE_URL}/agents/chat`,
+    byFolder: `${API_BASE_URL}/agents/by-folder`,
+    delete: (id: string) => `${API_BASE_URL}/agents/${id}`,
+    getById: (id: string) => `${API_BASE_URL}/agents/${id}`,
   },
   tasks: {
     list: `${API_BASE_URL}/tasks/list`,

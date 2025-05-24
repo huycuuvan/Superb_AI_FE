@@ -1,5 +1,5 @@
 import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
-import { Workspace, Agent } from "@/types";
+import { Workspace, Agent, ModelConfig } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
 export const registerWithEmail = async ({
@@ -52,10 +52,14 @@ export const createWorkspace = async (workspaceData: {
   return res.json();
 };
 
-export const getAgents = async () => {
+export const getAgents = async (
+  workspaceId: string
+): Promise<{ data: Agent[] }> => {
   const token = localStorage.getItem("token");
   const res = await fetch(API_ENDPOINTS.agents.list, {
+    method: "GET",
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
@@ -69,10 +73,12 @@ export const getAgents = async () => {
 
 export const createAgent = async (agentData: {
   name: string;
-  type: string;
-  description: string;
-  category: string;
-  avatar?: string;
+  workspace_id: string;
+  folder_id: string;
+  role_description: string;
+  instructions: string;
+  status: string;
+  model_config?: ModelConfig;
 }) => {
   const token = localStorage.getItem("token");
   const res = await fetch(API_ENDPOINTS.agents.create, {
@@ -88,7 +94,7 @@ export const createAgent = async (agentData: {
     await handleApiError(res);
   }
 
-  return res.json() as Promise<Agent>;
+  return res.json();
 };
 
 export const sendChatMessage = async (agentId: string, message: string) => {
@@ -274,4 +280,100 @@ export const deleteFolder = async (
   }
 
   return { success: true };
+};
+
+export const getAgentsByFolder = async (folderId: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.agents.byFolder, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+export const getAgentById = async (
+  agentId: string
+): Promise<{ data: Agent }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.agents.getById(agentId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export interface UpdateAgentRequest {
+  name?: string;
+  role_description?: string;
+  instructions?: string;
+  status?: string;
+  model_config?: ModelConfig;
+  folder_id?: string;
+}
+
+export const updateAgent = async (
+  agentId: string,
+  agentData: UpdateAgentRequest
+): Promise<{ data: Agent }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.agents.list}/${agentId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(agentData),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const deleteAgent = async (
+  agentId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_ENDPOINTS.agents.delete(agentId)}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  // Assuming the delete endpoint returns a success indicator, adjust if needed.
+  // For simplicity, assuming a successful response means deletion was successful.
+  return { success: response.ok };
 };

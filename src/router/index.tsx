@@ -2,8 +2,7 @@ import { createBrowserRouter, RouteObject } from 'react-router-dom';
 import LandingPage from '@/pages/LandingPage';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import Dashboard from '@/pages/Dashboard';
-import Agents from '@/pages/Agents';
-import Tasks from '@/pages/Tasks';
+import { Agents } from '@/pages/Agents';
 import Settings from '@/pages/Settings';
 import Login from '@/pages/Login';
 import NotFound from '@/pages/NotFound';
@@ -13,6 +12,7 @@ import WorkspacePage from '@/pages/Workspace';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import FolderDetail from '@/pages/FolderDetail';
 import AgentTaskConfig from '@/pages/AgentTaskConfig';
+import { Tasks } from '@/pages/Tasks';
 
 const routes: RouteObject[] = [
   {

@@ -18,11 +18,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getFolders, updateFolder, deleteFolder } from '@/services/api';
+import { getFolders, updateFolder, deleteFolder, getAgentsByFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
+import { useQuery } from '@tanstack/react-query';
 
 interface FolderType {
   id: string;
@@ -71,7 +72,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (workspace?.id) {
-      fetchFolders(workspace.id);
+      // fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id, fetchFolders]);
 
@@ -225,6 +226,7 @@ const Dashboard = () => {
                 </DropdownMenu>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                <AgentsForFolder folderId={folder.id} />
                 <Card 
                   className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
                   onClick={() => {
@@ -298,6 +300,49 @@ const Dashboard = () => {
 
       <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
     </div>
+  );
+};
+
+// New component to fetch and display agents for a folder
+const AgentsForFolder: React.FC<{ folderId: string }> = ({ folderId }) => {
+  const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
+    queryKey: ['agentsByFolder', folderId],
+    queryFn: () => {
+      return getAgentsByFolder(folderId);
+    },
+    enabled: !!folderId,
+  });
+
+  console.log('Rendering AgentsForFolder for folder', folderId, '; isLoading:', isLoadingAgents, '; agentsData:', agentsData); // Log on render
+
+  if (isLoadingAgents) {
+    return <Skeleton className="h-32 w-full" />;
+  }
+
+  if (agentsError) {
+    console.error('Lỗi khi tải agents cho folder', folderId, ':', agentsError);
+    return <div className="text-sm text-red-500">Lỗi tải agents.</div>;
+  }
+
+  const agents = agentsData?.data || [];
+
+  return (
+    <>
+      {agents.map((agent: Agent) => (
+        <Card key={agent.id} className="flex items-center p-4 space-x-4">
+          <Avatar className="w-12 h-12">
+             {/* Replace with actual agent avatar if available */}
+            <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-blue-800 text-lg font-medium">
+              {agent.name.charAt(0)}
+            </div>
+          </Avatar>
+          <div>
+            <CardTitle className="text-lg">{agent.name}</CardTitle>
+            <CardDescription>{agent.role_description}</CardDescription>
+          </div>
+        </Card>
+      ))}
+    </>
   );
 };
 

@@ -19,32 +19,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreateTaskRequest, TaskType } from '@/services/taskService';
+import { CreateTaskRequest, TaskType, UpdateTaskRequest } from '@/services/taskService';
 import { X, Upload } from 'lucide-react';
 import { getAgents } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { Agent } from '@/types';
+import { Agent, Task } from '@/types';
 import { toast } from "sonner";
 
-interface AddTaskDialogProps {
+interface EditTaskDialogProps {
+  task: Task;
   onClose: () => void;
-  onSubmit: (taskData: CreateTaskRequest) => Promise<void>;
+  onSubmit: (taskData: UpdateTaskRequest) => Promise<void>;
 }
 
-export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
+export const EditTaskDialog = ({ task, onClose, onSubmit }: EditTaskDialogProps) => {
   const { t } = useLanguage();
   const { workspace } = useSelectedWorkspace();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(task.name || task.title || '');
+  const [description, setDescription] = useState(task.description || '');
   const [taskType, setTaskType] = useState<TaskType>('pretrained_configurable');
   const [executionConfig, setExecutionConfig] = useState('');
-  const [promptContent, setPromptContent] = useState('');
   const [category, setCategory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [creditCost, setCreditCost] = useState(20);
   const [isSystemTask, setIsSystemTask] = useState(true);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(task.assignedAgentId || '');
 
   const creditCostOptions = [
     { value: 20, label: 'Normal (20 credits)' },
@@ -78,14 +78,14 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
           setExecutionConfig(content);
         } catch (error) {
           console.error('Lỗi khi đọc file JSON:', error);
-          alert('File không phải là JSON hợp lệ');
+          toast.error("File không phải là JSON hợp lệ");
         }
       };
       reader.readAsText(file);
     }
   };
 
-  const handleCreateTask = async () => {
+  const handleUpdateTask = async () => {
     if (!name.trim() || !description.trim() || !category.trim() || !selectedAgentId) {
       toast.error("Vui lòng điền đầy đủ thông tin", {
         description: "Tên task, mô tả, danh mục và agent là bắt buộc"
@@ -99,17 +99,11 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
       });
       return;
     }
-
-    if (taskType === 'prompt_template' && !promptContent.trim()) {
-      toast.error("Vui lòng nhập prompt template", {
-        description: "Prompt template là bắt buộc cho loại task này"
-      });
-      return;
-    }
     
     try {
       setIsLoading(true);
-      const taskData: CreateTaskRequest = {
+      const taskData: UpdateTaskRequest = {
+        id: task.id,
         name: name.trim(),
         description: description.trim(),
         task_type: taskType,
@@ -121,21 +115,10 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
       };
       
       await onSubmit(taskData);
-      
-      // Reset form
-      setName('');
-      setDescription('');
-      setTaskType('pretrained_configurable');
-      setExecutionConfig('');
-      setPromptContent('');
-      setCategory('');
-      setCreditCost(20);
-      setIsSystemTask(true);
-      setSelectedAgentId('');
       onClose();
     } catch (error) {
-      console.error('Lỗi khi tạo task:', error);
-      toast.error("Lỗi khi tạo task", {
+      console.error('Lỗi khi cập nhật task:', error);
+      toast.error("Lỗi khi cập nhật task", {
         description: "Vui lòng kiểm tra lại thông tin và thử lại"
       });
     } finally {
@@ -147,9 +130,9 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
-          <DialogTitle>{t('addTask')}</DialogTitle>
+          <DialogTitle>{t('editTask')}</DialogTitle>
           <DialogDescription>
-            {t('createTask')}
+            {t('updateTask')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -208,7 +191,6 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
                 <SelectValue placeholder="Chọn loại task" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="prompt_template">Prompt Template</SelectItem>
                 <SelectItem value="pretrained_configurable">Pretrained Configurable</SelectItem>
               </SelectContent>
             </Select>
@@ -244,21 +226,6 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
                   className="font-mono text-sm"
                 />
               </div>
-            </div>
-          )}
-
-          {taskType === 'prompt_template' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
-                Prompt
-              </Label>
-              <Textarea
-                value={promptContent}
-                onChange={(e) => setPromptContent(e.target.value)}
-                placeholder="Nhập prompt template..."
-                rows={6}
-                className="col-span-3"
-              />
             </div>
           )}
 
@@ -313,21 +280,20 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
             {t('cancel')}
           </Button>
           <Button 
-            onClick={handleCreateTask} 
+            onClick={handleUpdateTask} 
             disabled={
               isLoading || 
               !name.trim() || 
               !description.trim() || 
               !category.trim() ||
               !selectedAgentId ||
-              (taskType === 'pretrained_configurable' && !executionConfig.trim()) ||
-              (taskType === 'prompt_template' && !promptContent.trim())
+              (taskType === 'pretrained_configurable' && !executionConfig.trim())
             }
           >
-            {isLoading ? 'Đang tạo...' : t('create')}
+            {isLoading ? 'Đang cập nhật...' : t('update')}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}; 

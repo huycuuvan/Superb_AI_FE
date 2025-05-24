@@ -12,23 +12,36 @@ export interface Workspace {
   description?: string;
 }
 
+export interface ModelConfig {
+  webhooks?: string;
+  // Add other model config properties here if needed
+}
+
 export interface Agent {
   id: string;
   name: string;
   type: string;
   avatar?: string;
-  description?: string;
   category?: string;
+  role_description?: string;
+  instructions?: string;
+  status?: string;
+  model_config?: ModelConfig;
 }
 
 export interface Task {
   id: string;
-  title: string;
-  description?: string;
+  name: string;
+  description: string;
+  task_type: string;
+  execution_config: Record<string, unknown>;
+  credit_cost: number;
+  category: string;
+  is_system_task: boolean;
   assignedAgentId?: string;
-  status: "todo" | "in-progress" | "completed";
-  createdAt: string;
-  dueDate?: string;
+  status?: "todo" | "in-progress" | "completed";
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ChatTask {
@@ -57,5 +70,5 @@ export interface SidebarItem {
 export interface Folder {
   id: string;
   name: string;
-  path: string;
+  path?: string;
 }

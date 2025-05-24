@@ -61,7 +61,7 @@ const Login = () => {
             <div className="bg-teampal-500 text-white p-1.5 rounded">
               <span className="font-bold text-sm">TP</span>
             </div>
-            <span className="font-bold text-xl">Superb AI</span>
+            <img src="/Superb-AI-Logo.svg" alt="Superb AI" className="w-6 h-6" />
           </Link>
         </div>
         
