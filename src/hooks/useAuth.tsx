@@ -123,6 +123,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         setIsTokenExpired(false);
+        
+        // Invalidate all queries after successful login
+        queryClient.invalidateQueries();
       } else {
         throw new Error('Không nhận được token hoặc user từ server');
       }

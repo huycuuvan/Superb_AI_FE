@@ -30,23 +30,16 @@ const Login = () => {
     setError("");
     try {
       await login(email, password);
-      // Sau khi đăng nhập thành công, kiểm tra lại trạng thái user và workspace
-      // useAuth hook sẽ cập nhật user và hasWorkspace sau khi login thành công
-      // Chuyển hướng dựa trên trạng thái workspace
-      // Cần một chút delay hoặc đảm bảo user và hasWorkspace đã được cập nhật
-      // Tuy nhiên, do await login đã hoàn thành, user state trong context thường đã cập nhật
-      // Nếu user có workspace, chuyển hướng đến trang gốc (from) hoặc dashboard
-      // Nếu user chưa có workspace, chuyển hướng đến trang workspace
-
+      
+      // Đợi một chút để đảm bảo queries được refetch
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Lấy user và hasWorkspace mới nhất sau khi login
-      // Có thể cần một useEffect hoặc logic khác để đợi state cập nhật nếu cần
-      // Tuy nhiên, dựa trên cách useAuth hoạt động, user state thường được cập nhật ngay sau await login
-      if (user?.workspace?.id) { // Kiểm tra trực tiếp từ user object vừa cập nhật
-          navigate(from, { replace: true });
+      if (user?.workspace?.id) {
+        navigate(from, { replace: true });
       } else {
-          navigate("/workspace", { replace: true });
+        navigate("/workspace", { replace: true });
       }
-
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError("Đăng nhập thất bại");
