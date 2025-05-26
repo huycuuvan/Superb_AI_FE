@@ -12,12 +12,14 @@ interface User {
     id: string;
     name: string;
   };
+  role?: string;
 }
 
 interface DecodedToken {
   exp: number;
   iat: number;
   sub: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -30,6 +32,8 @@ interface AuthContextType {
   hasWorkspace: boolean;
   isTokenExpired: boolean;
   refreshToken: () => Promise<boolean>;
+  role?: string | null;
+  canCreateAgent: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,6 +104,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } else {
         const userData = JSON.parse(userStr);
+        try {
+          const decodedToken = jwtDecode<DecodedToken>(token);
+          userData.role = decodedToken.role;
+        } catch (e) {
+          console.error("Failed to decode token for role:", e);
+          userData.role = null;
+        }
         setUser(userData);
       }
     }
@@ -120,6 +131,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (data.token && data.user) {
         localStorage.setItem('token', data.token);
+        
+        try {
+          const decodedToken = jwtDecode<DecodedToken>(data.token);
+          data.user.role = decodedToken.role;
+        } catch (e) {
+          console.error("Failed to decode token for role:", e);
+          data.user.role = null;
+        }
+
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         setIsTokenExpired(false);
@@ -154,10 +174,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    const updatedUser = { ...JSON.parse(localStorage.getItem('user') || '{}'), ...newUser };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const hasWorkspace = Boolean(user?.workspace?.id);
+  const canCreateAgent = user?.role !== 'user';
 
   return (
     <AuthContext.Provider value={{ 
@@ -169,7 +191,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       updateUser, 
       hasWorkspace,
       isTokenExpired,
-      refreshToken
+      refreshToken,
+      role: user?.role,
+      canCreateAgent,
     }}>
       {children}
     </AuthContext.Provider>
@@ -181,5 +205,5 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context;
+  return context as AuthContextType;
 }; 

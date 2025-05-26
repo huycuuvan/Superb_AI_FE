@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { AddAgentDialog } from '@/components/AddAgentDialog';
 import { getFolderDetail, FolderDetailResponse, getAgentsByFolder } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 
 // Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
 interface FolderType {
@@ -37,6 +38,7 @@ const FolderDetail = () => {
 
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedAgentFolderId, setSelectedAgentFolderId] = useState<string | undefined>(undefined);
+  const { canCreateAgent } = useAuth(); // Lấy canCreateAgent từ useAuth
 
   // Logic fetch folder detail
   useEffect(() => {
@@ -143,15 +145,18 @@ const FolderDetail = () => {
            </div>
            {/* Thêm dropdown filter/sort nếu cần */}
            {/* <DropdownMenu>...</DropdownMenu> */}
-            <Button
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
-               onClick={() => {
-                setSelectedAgentFolderId(folder.id);
-                setShowAddAgentDialog(true);
-               }}
-            >
-              <span className="text-lg">+</span> Create agent
-            </Button>
+            {/* Sử dụng canCreateAgent để điều kiện hiển thị button */}
+            {canCreateAgent && (
+              <Button
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
+                 onClick={() => {
+                  setSelectedAgentFolderId(folder?.id);
+                  setShowAddAgentDialog(true);
+                 }}
+              >
+                <span className="text-lg">+</span> Create agent
+              </Button>
+            )}
          </div>
       </div>
 
@@ -164,21 +169,29 @@ const FolderDetail = () => {
           ))
         ) : filteredAgents.length === 0 ? (
           // Empty state
-          <Card 
-            className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
-            onClick={() => {
-              setSelectedAgentFolderId(folder.id);
-              setShowAddAgentDialog(true);
-            }}
-          >
-            <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
-                <Plus className="h-6 w-6 text-teampal-500" />
-              </div>
-              <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
-              <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này.</p>
-            </CardContent>
-          </Card>
+          <>
+            {/* Sử dụng canCreateAgent để điều kiện hiển thị Card thêm agent */}
+            {canCreateAgent && folder?.id && (
+              <Card 
+                className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
+                onClick={() => {
+                  setSelectedAgentFolderId(folder.id);
+                  setShowAddAgentDialog(true);
+                }}
+              >
+                <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
+                  <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
+                    <Plus className="h-6 w-6 text-teampal-500" />
+                  </div>
+                  <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
+                  <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này.</p>
+                </CardContent>
+              </Card>
+            )}
+            {!canCreateAgent && (
+               <div className="text-muted-foreground text-center w-full col-span-full">Không có agent nào trong thư mục này.</div>
+            )}
+          </>
         ) : (
           // Agent cards
           filteredAgents.map((agent) => (
@@ -199,16 +212,16 @@ const FolderDetail = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-sm md:text-base font-semibold">{agent.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{agent.type}</p>
+                    <CardTitle className="text-base md:text-lg font-semibold">{agent.name}</CardTitle>
+                    {agent.role_description && (
+                      <CardDescription className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {agent.role_description}
+                      </CardDescription>
+                    )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="line-clamp-2 text-xs md:text-sm text-foreground/80">
-                  {agent.role_description || "Chưa có mô tả cho agent này."}
-                </CardDescription>
-              </CardContent>
+              {/* Có thể thêm CardContent cho agent details nếu cần */}
             </Card>
           ))
         )}

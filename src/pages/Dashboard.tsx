@@ -24,6 +24,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
 
 interface FolderType {
   id: string;
@@ -38,6 +40,7 @@ const Dashboard = () => {
   const { workspace } = useSelectedWorkspace();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canCreateAgent } = useAuth();
 
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
@@ -64,6 +67,8 @@ const Dashboard = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1200);
@@ -178,17 +183,22 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-          <button
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
-            onClick={() => setShowAddAgentDialog(true)}
-          >
-            <span className="text-lg">+</span> Create agent
-          </button>
+          {canCreateAgent && (
+            <button
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
+              onClick={() => setShowAddAgentDialog(true)}
+            >
+              <span className="text-lg">+</span> Create agent
+            </button>
+          )}
           <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-border bg-white font-medium hover:bg-accent/50 transition w-full sm:w-auto">
             <span className="text-lg">+</span> Create folder
           </button>
         </div>
       </div>
+
+      {/* Separate Search Input Component */}
+      <SearchInput onSearchChange={setSearchQuery} />
 
       <div className="grid gap-4">
         {loadingFolders ? (
@@ -226,22 +236,24 @@ const Dashboard = () => {
                 </DropdownMenu>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                <AgentsForFolder folderId={folder.id} />
-                <Card 
-                  className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
-                  onClick={() => {
-                    setSelectedFolderId(folder.id);
-                    setShowAddAgentDialog(true);
-                  }}
-                >
-                  <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                    <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
-                      <Plus className="h-6 w-6 text-teampal-500" />
-                    </div>
-                    <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
-                    <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này</p>
-                  </CardContent>
-                </Card>
+                <AgentsForFolder folderId={folder.id} navigate={navigate} />
+                {canCreateAgent && (
+                  <Card 
+                    className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      setSelectedFolderId(folder.id);
+                      setShowAddAgentDialog(true);
+                    }}
+                  >
+                    <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
+                      <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
+                        <Plus className="h-6 w-6 text-teampal-500" />
+                      </div>
+                      <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
+                      <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           ))
@@ -303,14 +315,58 @@ const Dashboard = () => {
   );
 };
 
+// New component for Search Input
+interface SearchInputProps {
+  onSearchChange: (query: string) => void;
+}
+
+const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) => {
+  const [query, setQuery] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    onSearchChange(newQuery);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="relative w-full md:w-96">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <Input
+          type="search"
+          placeholder="Search agents..."
+          className="pl-9"
+          value={query}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
+  );
+});
+
 // New component to fetch and display agents for a folder
-const AgentsForFolder: React.FC<{ folderId: string }> = ({ folderId }) => {
+const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.memo(({ folderId, navigate }) => {
   const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
     queryKey: ['agentsByFolder', folderId],
     queryFn: () => {
+      console.log('Fetching agents for folder:', folderId);
       return getAgentsByFolder(folderId);
     },
     enabled: !!folderId,
+    staleTime: 300000, // Keep data fresh for 5 minutes
   });
 
   console.log('Rendering AgentsForFolder for folder', folderId, '; isLoading:', isLoadingAgents, '; agentsData:', agentsData); // Log on render
@@ -326,10 +382,19 @@ const AgentsForFolder: React.FC<{ folderId: string }> = ({ folderId }) => {
 
   const agents = agentsData?.data || [];
 
+  // Hiển thị thông báo nếu không có agent nào trong thư mục
+  if (agents.length === 0) {
+    return <div className="text-muted-foreground text-center w-full">Chưa có agent nào trong thư mục này.</div>;
+  }
+
   return (
     <>
       {agents.map((agent: Agent) => (
-        <Card key={agent.id} className="flex items-center p-4 space-x-4">
+        <Card 
+          key={agent.id} 
+          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+        >
           <Avatar className="w-12 h-12">
              {/* Replace with actual agent avatar if available */}
             <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-blue-800 text-lg font-medium">
@@ -344,6 +409,6 @@ const AgentsForFolder: React.FC<{ folderId: string }> = ({ folderId }) => {
       ))}
     </>
   );
-};
+});
 
 export default Dashboard;

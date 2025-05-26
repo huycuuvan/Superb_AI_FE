@@ -7,11 +7,6 @@ export const useSelectedWorkspace = () => {
       ? localStorage.getItem("selectedWorkspace")
       : null;
 
-  console.log(
-    "Hook: useSelectedWorkspace - Reading selectedWorkspaceId from localStorage",
-    selectedWorkspaceId
-  );
-
   // Sử dụng useQuery với cùng key của danh sách workspaces để truy cập cache
   // Hook này chỉ tìm kiếm trong dữ liệu đã fetch bởi query ['workspaces']
   const {
@@ -29,12 +24,6 @@ export const useSelectedWorkspace = () => {
     retry: 1,
   });
 
-  console.log("Hook: useSelectedWorkspace - useQuery ['workspaces'] state", {
-    isLoading: isWorkspacesLoading,
-    error: workspacesError,
-    data: workspacesData,
-  });
-
   // Tìm workspace đang chọn từ dữ liệu danh sách
   const workspaces =
     workspacesData && workspacesData.data
@@ -44,12 +33,6 @@ export const useSelectedWorkspace = () => {
       : [];
   const workspace =
     workspaces.find((ws) => ws.id === selectedWorkspaceId) || null;
-
-  console.log(
-    "Hook: useSelectedWorkspace - Extracted selected workspace object",
-    workspace
-  );
-
   // Trả về thông tin workspace đang chọn và trạng thái loading/error từ query danh sách
   return { workspace, isLoading: isWorkspacesLoading, error: workspacesError };
 };

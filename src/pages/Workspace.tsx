@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse } from "@/services/api";
+import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse, getWorkspaceProfile, WorkspaceProfile } from "@/services/api";
 import { Plus, LogOut, Folder } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +42,22 @@ const WorkspacePage = () => {
     retry: 3,
   });
 
+  // Fetch workspace profile for selected workspace
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useQuery<{
+    data: WorkspaceProfile | null
+  } | null>({
+    queryKey: ['workspaceProfile', selectedWorkspaceId],
+    queryFn: () => selectedWorkspaceId ? getWorkspaceProfile(selectedWorkspaceId) : Promise.resolve(null),
+    enabled: !!selectedWorkspaceId,
+  });
+
+  // Redirect if profile doesn't exist for selected workspace
+  useEffect(() => {
+    if (!isLoadingProfile && !profileError && selectedWorkspaceId && profileData && profileData.data === null) {
+      navigate(`/workspace/${selectedWorkspaceId}/profile`);
+    }
+  }, [isLoadingProfile, profileError, selectedWorkspaceId, profileData, navigate]);
+
   // Fetch folders when workspace is selected
   const { data: foldersData, isLoading: isLoadingFolders } = useQuery<FolderResponse | null>({
     queryKey: ['folders', selectedWorkspaceId],
@@ -57,17 +73,32 @@ const WorkspacePage = () => {
     setSelectedWorkspaceId(workspaceId);
   };
 
-  const handleGoToDashboard = (workspaceId: string) => {
+  const handleGoToDashboard = async (workspaceId: string) => {
     if (workspaceId) {
-      localStorage.setItem('selectedWorkspace', workspaceId);
-      // Cập nhật thông tin user trong useAuth với workspace đã chọn
-      if (user && data && data.data) {
-        const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
-        if (selectedWorkspace) {
-          updateUser({ ...user, workspace: selectedWorkspace });
+      // Kiểm tra profile trước khi vào dashboard
+      try {
+        const profileResponse = await getWorkspaceProfile(workspaceId);
+        if (profileResponse && profileResponse.data !== null) {
+          // Profile tồn tại, lưu workspace đã chọn và vào dashboard
+          localStorage.setItem('selectedWorkspace', workspaceId);
+          if (user && data && data.data) {
+            const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
+            if (selectedWorkspace) {
+              updateUser({ ...user, workspace: selectedWorkspace });
+            }
+          }
+          navigate('/dashboard');
+        } else {
+          // Profile không tồn tại, điều hướng đến trang tạo profile
+          navigate(`/workspace/${workspaceId}/profile`);
         }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra profile:', error);
+        // Xử lý lỗi hoặc thông báo cho người dùng nếu cần
+        // Có thể vẫn cho vào dashboard hoặc ở lại trang workspace tùy luồng mong muốn
+        // Hiện tại, tôi sẽ điều hướng về trang profile nếu có lỗi khi kiểm tra.
+         navigate(`/workspace/${workspaceId}/profile`);
       }
-      navigate('/dashboard');
     }
   };
 
@@ -81,7 +112,7 @@ const WorkspacePage = () => {
         localStorage.setItem('selectedWorkspace', ws.data.id);
         await refetch();
         setShowCreate(false);
-        navigate('/dashboard');
+        navigate(`/workspace/${ws.data.id}/profile`);
       } else {
         setError('Tạo workspace thành công nhưng không nhận được ID.');
       }

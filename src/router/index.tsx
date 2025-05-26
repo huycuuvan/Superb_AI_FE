@@ -13,6 +13,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import FolderDetail from '@/pages/FolderDetail';
 import AgentTaskConfig from '@/pages/AgentTaskConfig';
 import { Tasks } from '@/pages/Tasks';
+import WorkspaceProfilePage from '@/pages/WorkspaceProfilePage';
 
 const routes: RouteObject[] = [
   {
@@ -68,6 +69,10 @@ const routes: RouteObject[] = [
   {
     path: '/workspace',
     element: <WorkspacePage />,
+  },
+  {
+    path: '/workspace/:workspaceId/profile',
+    element: <WorkspaceProfilePage />,
   },
   {
     path: '*',

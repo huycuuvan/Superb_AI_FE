@@ -377,3 +377,92 @@ export const deleteAgent = async (
   // For simplicity, assuming a successful response means deletion was successful.
   return { success: response.ok };
 };
+
+export interface WorkspaceProfile {
+  workspace_id: string;
+  brand_name: string;
+  business_type: string;
+  default_language_code: string;
+  default_location_code: string;
+  brand_description: string;
+  brand_products_services: string;
+  website_url?: string;
+  brand_logo_url?: string;
+}
+
+export const createWorkspaceProfile = async (
+  profileData: WorkspaceProfile
+): Promise<{ data: WorkspaceProfile }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.workspace.profile, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const getWorkspaceProfile = async (
+  workspaceId: string
+): Promise<{ data: WorkspaceProfile | null }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    API_ENDPOINTS.workspace.getProfile(workspaceId),
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  // Handle 404 specifically - means profile doesn't exist
+  if (response.status === 404) {
+    return { data: null };
+  }
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const updateWorkspaceProfile = async (
+  workspaceId: string,
+  profileData: Partial<WorkspaceProfile>
+): Promise<{ data: WorkspaceProfile }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    API_ENDPOINTS.workspace.updateProfile(workspaceId),
+    {
+      method: "PUT", // Hoặc PATCH tùy thuộc vào API server
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};

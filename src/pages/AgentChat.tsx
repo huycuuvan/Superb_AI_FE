@@ -27,6 +27,8 @@ interface TaskInput {
 
 interface TaskWithInputs extends ApiTaskType {
   inputs?: TaskInput[];
+  title?: string;
+  name: string;
 }
 
 const AgentChat = () => {
@@ -223,6 +225,13 @@ const AgentChat = () => {
     // navigate('/daily-tasks');
   };
 
+  // Giả lập dữ liệu lịch sử chat
+  const chatHistory = [
+    { id: '1', title: 'Tra cứu thời tiết', lastMessage: 'Nhiệt độ hôm nay là 30°C', time: '10:00' },
+    { id: '2', title: 'Tư vấn AI', lastMessage: 'Bạn cần gì về AI?', time: '11:00' },
+    { id: '3', title: 'Hỏi đáp chung', lastMessage: 'Xin chào, tôi có thể giúp gì?', time: '12:00' },
+  ];
+
   // Render loading state for agent
   if (loadingAgent) {
     return (
@@ -245,192 +254,206 @@ const AgentChat = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Agent Header */}
-      <div className={`flex items-center justify-between p-4 border-b ${theme === 'teampal-pink' ? 'bg-teampal-50' : 'bg-secondary'}`}>
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={currentAgent.avatar} alt={currentAgent.name} />
-            <AvatarFallback className="bg-teampal-100 text-teampal-500">{currentAgent.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-lg font-semibold">{currentAgent.name}</h2>
-            <p className="text-sm text-muted-foreground">{currentAgent.type}</p>
+    <div className="flex flex-row h-full w-full" style={{height: '100vh'}}>
+      {/* Khu vực chat chính */}
+      <div className="flex flex-col flex-1 h-full">
+        {/* Agent Header */}
+        <div className={`flex items-center justify-between p-4 border-b ${theme === 'teampal-pink' ? 'bg-teampal-50' : 'bg-secondary'}`}>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={currentAgent.avatar} alt={currentAgent.name} />
+              <AvatarFallback className="bg-teampal-100 text-teampal-500">{currentAgent.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-semibold">{currentAgent.name}</h2>
+              <p className="text-sm text-muted-foreground">{currentAgent.type}</p>
+            </div>
+          </div>
+          {/* Agent actions */}
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon"><Edit className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon"><Share2 className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon"><SlidersHorizontal className="h-5 w-5" /></Button>
           </div>
         </div>
-        {/* Agent actions */}
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon"><Edit className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon"><Share2 className="h-5 w-5" /></Button>
-          <Button variant="ghost" size="icon"><SlidersHorizontal className="h-5 w-5" /></Button>
-        </div>
-      </div>
 
-      {/* Chat area */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <div 
-            key={msg.id}
-            className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {msg.sender === 'agent' && (
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={currentAgent.avatar} alt={currentAgent.name} />
-                <AvatarFallback className="bg-teampal-100 text-teampal-500">{currentAgent.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            )}
-            <div className={`p-3 rounded-lg max-w-xs break-words ${getMessageStyle(msg.sender)}`}>
-              {msg.content}
-              <div className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-right' : 'text-left'} text-muted-foreground`}>
-                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-             {msg.sender === 'user' && (
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-blue-100 text-blue-800">You</AvatarFallback>
-              </Avatar>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Input area */}
-      <div className="p-4 border-t bg-background">
-        {
-          inputAreaMode === 'chat' && (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('taskList')}>
-                <ListPlus className="h-5 w-5" /> {/* Task icon */}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('promptList')}>
-                 <MessageSquare className="h-5 w-5" /> {/* Prompt icon */}
-              </Button>
-              <Input
-                placeholder="Ask AI anything..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1"
-              />
-              <Button size="icon" onClick={handleSendMessage} disabled={!message.trim()} className="teampal-button">
-                <Send className="h-5 w-5" />
-              </Button>
-            </div>
-          )
-        }
-        {
-          inputAreaMode === 'taskList' && (
-            <div className="flex flex-col">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">Chọn Task</h3>
-                <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('chat')}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              {loadingTasks ? (
-                <div className="text-center text-muted-foreground">Đang tải tasks...</div>
-              ) : tasks.length === 0 ? (
-                 <div className="text-center text-muted-foreground">Không tìm thấy tasks nào cho agent này.</div>
-              ) : (
-                <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
-                  {tasks.map((task) => (
-                    <div 
-                      key={task.id}
-                      className="p-2 hover:bg-accent cursor-pointer rounded-md"
-                      onClick={() => handleTaskSelect(task)}
-                    >
-                      <div className="font-medium">{task.title || task.name}</div>
-                      {task.description && <div className="text-sm text-muted-foreground">{task.description}</div>}
-                    </div>
-                  ))}
-                </div>
+        {/* Chat area */}
+        <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 space-y-4 bg-background">
+          {messages.map((msg) => (
+            <div 
+              key={msg.id}
+              className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.sender === 'agent' && (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={currentAgent.avatar} alt={currentAgent.name} />
+                  <AvatarFallback className="bg-teampal-100 text-teampal-500">{currentAgent.name.charAt(0)}</AvatarFallback>
+                </Avatar>
               )}
-              
+              <div className={`p-3 rounded-lg max-w-xs break-words ${getMessageStyle(msg.sender)}`}>
+                {msg.content}
+                <div className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-right' : 'text-left'} text-muted-foreground`}>
+                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+               {msg.sender === 'user' && (
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-blue-100 text-blue-800">You</AvatarFallback>
+                </Avatar>
+              )}
             </div>
-          )
-        }
-         {
-          inputAreaMode === 'promptList' && (
-            <div className="flex flex-col">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">Gợi ý Prompt</h3>
-                <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('chat')}>
+          ))}
+        </div>
+
+        {/* Input area */}
+        <div className="p-4 border-t bg-background flex-shrink-0">
+          {
+            inputAreaMode === 'chat' && (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('taskList')}>
+                  <ListPlus className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('promptList')}>
+                   <MessageSquare className="h-5 w-5" />
+                </Button>
+                <Input
+                  placeholder="Ask AI anything..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1"
+                />
+                <Button size="icon" onClick={handleSendMessage} disabled={!message.trim()} className="teampal-button">
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            )
+          }
+          {
+            inputAreaMode === 'taskList' && (
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-semibold">Chọn Task</h3>
+                  <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('chat')}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                {loadingTasks ? (
+                  <div className="text-center text-muted-foreground">Đang tải tasks...</div>
+                ) : tasks.length === 0 ? (
+                   <div className="text-center text-muted-foreground">Không tìm thấy tasks nào cho agent này.</div>
+                ) : (
+                  <div className="mb-2 p-2 border rounded-lg bg-background max-h-[30vh] overflow-y-auto">
+                    {tasks.map((task) => (
+                      <div 
+                        key={task.id}
+                        className="p-2 hover:bg-accent cursor-pointer rounded-md"
+                        onClick={() => handleTaskSelect(task)}
+                      >
+                        <div className="font-medium">{task.title || task.name}</div>
+                        {task.description && <div className="text-sm text-muted-foreground">{task.description}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }
+           {
+            inputAreaMode === 'promptList' && (
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-semibold">Gợi ý Prompt</h3>
+                  <Button variant="ghost" size="icon" onClick={() => setInputAreaMode('chat')}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                 <div className="mb-2 p-2 border rounded-lg bg-background max-h-[30vh] overflow-y-auto space-y-2">
+                   {promptSuggestions.map((suggestion, index) => (
+                     <div 
+                       key={index}
+                       className="p-2 hover:bg-accent cursor-pointer rounded-md text-sm text-muted-foreground"
+                       onClick={() => handlePromptSuggestionClick(suggestion)}
+                     >
+                       {suggestion}
+                     </div>
+                   ))}
+                 </div>
+              </div>
+            )
+          }
+        </div>
+        {/* Task Input Modal */}
+        {showTaskInputModal && selectedTask && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">{selectedTask.title || selectedTask.name}</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowTaskInputModal(false)}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-               <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto space-y-2">
-                 {promptSuggestions.map((suggestion, index) => (
-                   <div 
-                     key={index}
-                     className="p-2 hover:bg-accent cursor-pointer rounded-md text-sm text-muted-foreground"
-                     onClick={() => handlePromptSuggestionClick(suggestion)}
-                   >
-                     {suggestion}
-                   </div>
-                 ))}
-               </div>
-            </div>
-          )
-        }
-      </div>
-
-      {/* Task Input Modal */}
-      {showTaskInputModal && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{selectedTask.title || selectedTask.name}</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowTaskInputModal(false)}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <p className="text-muted-foreground mb-4">{selectedTask.description}</p>
-            <div className="space-y-4">
-              {selectedTask.inputs?.map(input => (
-                <div key={input.id}>
-                  <Label htmlFor={input.id}>{input.label}</Label>
-                  {input.type === 'text' && (
-                    <Input
-                      id={input.id}
-                      value={selectedTaskInputs[input.id] || ''}
-                      onChange={(e) => handleInputChange(input.id, e.target.value)}
-                      required={input.required}
-                    />
-                  )}
-                  {input.type === 'number' && (
-                    <Input
-                      id={input.id}
-                      type="number"
-                      value={selectedTaskInputs[input.id] || ''}
-                      onChange={(e) => handleInputChange(input.id, e.target.value)}
-                      required={input.required}
-                    />
-                  )}
-                  {input.type === 'select' && input.options && (
-                     <Select 
-                       value={selectedTaskInputs[input.id] || ''}
-                       onValueChange={(value) => handleInputChange(input.id, value)}
-                     >
-                       <SelectTrigger>
-                         <SelectValue placeholder={`Select ${input.label}`} />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {input.options.map(option => (
-                           <SelectItem key={option} value={option}>{option}</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowTaskInputModal(false)}>Cancel</Button>
-              <Button onClick={handleSubmitTaskInputs}>Submit Task</Button>
+              <p className="text-muted-foreground mb-4">{selectedTask.description}</p>
+              <div className="space-y-4">
+                {selectedTask.inputs?.map(input => (
+                  <div key={input.id}>
+                    <Label htmlFor={input.id}>{input.label}</Label>
+                    {input.type === 'text' && (
+                      <Input
+                        id={input.id}
+                        value={selectedTaskInputs[input.id] || ''}
+                        onChange={(e) => handleInputChange(input.id, e.target.value)}
+                        required={input.required}
+                      />
+                    )}
+                    {input.type === 'number' && (
+                      <Input
+                        id={input.id}
+                        type="number"
+                        value={selectedTaskInputs[input.id] || ''}
+                        onChange={(e) => handleInputChange(input.id, e.target.value)}
+                        required={input.required}
+                      />
+                    )}
+                    {input.type === 'select' && input.options && (
+                       <Select 
+                         value={selectedTaskInputs[input.id] || ''}
+                         onValueChange={(value) => handleInputChange(input.id, value)}
+                       >
+                         <SelectTrigger>
+                           <SelectValue placeholder={`Select ${input.label}`} />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {input.options.map(option => (
+                             <SelectItem key={option} value={option}>{option}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowTaskInputModal(false)}>Cancel</Button>
+                <Button onClick={handleSubmitTaskInputs}>Submit Task</Button>
+              </div>
             </div>
           </div>
+        )}
+      </div>
+      {/* Cột lịch sử chat bên phải */}
+      <div className="w-72 border-l bg-white h-full flex flex-col">
+        <div className="p-4 border-b font-semibold text-lg">Lịch sử chat</div>
+        <div className="flex-1 overflow-y-auto">
+          {chatHistory.map((item) => (
+            <div key={item.id} className="p-4 border-b hover:bg-accent cursor-pointer">
+              <div className="font-medium">{item.title}</div>
+              <div className="text-xs text-muted-foreground truncate">{item.lastMessage}</div>
+              <div className="text-xs text-muted-foreground">{item.time}</div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };

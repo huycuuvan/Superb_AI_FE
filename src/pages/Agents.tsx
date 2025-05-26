@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { updateAgent, deleteAgent } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 
 export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,24 +39,28 @@ export const Agents = () => {
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const { canCreateAgent } = useAuth();
 
   const queryClient = useQueryClient();
 
-  const { data: agents = [], isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['agents', workspace?.id],
     queryFn: () => getAgents(workspace?.id || ''),
     enabled: !!workspace?.id, // Only fetch if workspaceId is available
   });
 
+  // Ensure data.data is an array before processing
+  const agentsData: Agent[] = Array.isArray(data?.data) ? data?.data : [];
+
   // Group agents by category
-  const categories = Array.from(new Set(agents.map(agent => agent.category || 'Other')));
+  const categories = Array.from(new Set(agentsData.map(agent => agent.category || 'Other')));
   
   // Filter agents based on search query
-  const filteredAgents = agents.filter(agent => 
+  const filteredAgents = agentsData.filter(agent => 
     agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
     agent.type?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
     (agent.role_description && agent.role_description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  ) || [];
   
   const getAgentsByCategory = (category: string) => {
     return filteredAgents.filter(agent => (agent.category || 'Other') === category);
@@ -157,9 +162,11 @@ export const Agents = () => {
           <h1 className="text-3xl font-bold">Agents</h1>
           <p className="text-muted-foreground">Manage and interact with your AI agents</p>
         </div>
-        <Button className="teampal-button" onClick={() => setShowAddAgentDialog(true)}>
-          Create agent
-        </Button>
+        {canCreateAgent && (
+          <Button className="teampal-button" onClick={() => setShowAddAgentDialog(true)}>
+            Create agent
+          </Button>
+        )}
       </div>
       
       <div className="flex flex-col md:flex-row items-center gap-4">
@@ -306,7 +313,7 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => navigate(`/agent/${agent.id}/chat`)}
+                onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
               >
                 Chat
               </Button>

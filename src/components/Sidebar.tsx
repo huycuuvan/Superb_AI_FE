@@ -42,6 +42,7 @@ import { getFolders, updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
+import React from 'react';
 
 
   interface SidebarProps {
@@ -54,7 +55,7 @@ interface FolderType {
   workspace_id: string;
 }
 
-const Sidebar = ({ className }: SidebarProps) => {
+const Sidebar = React.memo(({ className }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -148,13 +149,25 @@ const Sidebar = ({ className }: SidebarProps) => {
     }
   };
 
-  console.log(user);
   const menuItems = [
     { icon: Home, label: t('home'), path: '/dashboard' },
     { icon: Users, label: t('agents'), path: '/dashboard/agents' },
     { icon: CheckCircle, label: t('tasks'), path: '/dashboard/tasks' },
     { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
   ];
+
+  // Lọc menuItems dựa trên quyền hạn
+  const filteredMenuItems = menuItems.filter(item => {
+    // Ẩn mục Agent nếu user có role là 'user'
+    if (item.label === t('agents') && user?.role === 'user') {
+      return false; 
+    }
+    // Ẩn mục Tasks nếu user có role là 'user'
+    if (item.label === t('tasks') && user?.role === 'user') {
+      return false;
+    }
+    return true; // Hiển thị các mục khác hoặc user không có role là 'user'
+  });
 
   return (
     <>
@@ -257,30 +270,28 @@ const Sidebar = ({ className }: SidebarProps) => {
               </div>
             ))
           )}
+
+          {/* Thêm đường kẻ phân cách */}
+          <div className="border-t border-border my-2 mx-2"></div>
+
+          {/* Render filtered menu items */}
+          {filteredMenuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center px-3 py-2 mx-2 rounded-md text-sm font-medium",
+                "transition-colors hover:bg-muted/50",
+                location.pathname === item.path ? "bg-muted" : "transparent",
+                collapsed ? "justify-center" : ""
+              )}
+            >
+              <item.icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
+              {!collapsed && item.label}
+            </Link>
+          ))}
         </div>
         
-        <div className="border-t border-border p-2 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm",
-                  isActive 
-                    ? "bg-accent text-accent-foreground" 
-                    : "hover:bg-accent/50 hover:text-accent-foreground",
-                  "transition-colors"
-                )}
-              >
-                <item.icon className="sidebar-icon mr-2" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </div>
-
         <div className="border-t border-border p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -361,7 +372,7 @@ const Sidebar = ({ className }: SidebarProps) => {
       )}
     </>
   );
-};
+});
 
 export default Sidebar;
 

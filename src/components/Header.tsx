@@ -15,14 +15,20 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
+import { useQuery } from "@tanstack/react-query";
+import { getWorkspaceProfile, updateWorkspaceProfile, WorkspaceProfile } from "@/services/api";
 
 import { LanguageToggle } from "./LanguageToggle";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
 
 // Import icons for plugins, share, and delete
-import { Puzzle, Share2, Trash2 } from 'lucide-react';
+import { Puzzle, Share2, Trash2, Edit } from 'lucide-react';
 import { agents } from '@/services/mockData'; // Assuming agents data is available
 
-const Header = () => {
+import React from "react";
+
+const Header = React.memo(() => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
@@ -34,9 +40,22 @@ const Header = () => {
   const { agentId } = useParams<{ agentId: string }>(); // Get agentId from params
   const currentAgent = agents.find(agent => agent.id === agentId); // Find current agent
 
-  console.log("Header: useQuery data:", workspace);
-  console.log("Header: useQuery isLoading:", isWorkspaceLoading);
-  console.log("Header: useQuery error:", workspaceError);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const { data: profileData, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery<{
+    data: WorkspaceProfile | null
+  } | null>({
+    queryKey: ['headerWorkspaceProfile', workspace?.id],
+    queryFn: () => workspace?.id ? getWorkspaceProfile(workspace.id) : Promise.resolve(null),
+    enabled: isEditDialogOpen && !!workspace?.id,
+  });
+
+  const handleEditProfileSubmit = async (data: WorkspaceProfile) => {
+    if (!workspace?.id) return;
+    await updateWorkspaceProfile(workspace.id, data);
+    setIsEditDialogOpen(false);
+    refetchProfile();
+  };
 
   // Generate breadcrumb segments
   const breadcrumbs = pathSegments.map((segment, index) => {
@@ -139,9 +158,33 @@ const Header = () => {
             // Default Icons
             <>
               <LanguageToggle />
-              <Button variant="outline" size="sm" className="hidden md:inline-flex">
-                {t('editBrand')}
-              </Button>
+              {workspace && (
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                      <Edit className="mr-2 h-4 w-4" />
+                      {t('editBrand')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Chỉnh sửa thông tin Brand</DialogTitle>
+                    </DialogHeader>
+                    {isLoadingProfile ? (
+                      <div>Đang tải thông tin profile...</div>
+                    ) : profileData?.data ? (
+                       <WorkspaceProfileForm
+                        workspaceId={workspace.id}
+                        initialData={profileData.data}
+                        onSubmit={handleEditProfileSubmit}
+                        onSuccess={() => refetchProfile()}
+                      />
+                    ) : (
+                       <div>Không tìm thấy thông tin profile.</div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              )}
               {workspace && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -205,6 +248,6 @@ const Header = () => {
      
     </header>
   );
-};
+});
 
 export default Header;

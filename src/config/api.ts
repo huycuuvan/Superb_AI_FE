@@ -9,6 +9,11 @@ export const API_ENDPOINTS = {
   },
   workspace: {
     create: `${API_BASE_URL}/workspaces`,
+    profile: `${API_BASE_URL}/workspaces/profile`,
+    getProfile: (workspaceId: string) =>
+      `${API_BASE_URL}/workspaces/${workspaceId}/profile`,
+    updateProfile: (workspaceId: string) =>
+      `${API_BASE_URL}/workspaces/${workspaceId}/profile`,
   },
   agents: {
     list: `${API_BASE_URL}/agents/all`,
