@@ -1,0 +1,10 @@
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="superbai-gradient" x1="0" y1="0" x2="120" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7B6BE5"/>
+      <stop offset="1" stop-color="#03DAC5"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="40" rx="12" fill="url(#superbai-gradient)"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#fff">Superb AI</text>
+</svg> 

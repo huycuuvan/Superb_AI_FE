@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,17 +6,47 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
-import { registerWithEmail } from "@/services/api";
+import { registerWithEmail, registerWithGoogle } from "@/services/api";
 import { ApiErrorException, isApiError } from "@/utils/errorHandler";
+import gsap from 'gsap';
+
+// Simple Superb AI Logo Component
+const SuperbAiLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+  const sizeClasses = {
+    sm: "text-xl",
+    md: "text-2xl",
+    lg: "text-3xl",
+  };
+  return (
+    <Link to="/" className="flex items-center space-x-2.5 group relative z-10">
+      <div className={`p-2 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 rounded-lg shadow-md group-hover:opacity-90 transition-opacity`}>
+        <svg className={`w-7 h-7 text-white`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <span className={`font-bold ${sizeClasses[size]} text-white group-hover:opacity-80 transition-opacity`}>Superb AI</span>
+    </Link>
+  );
+};
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const registerCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if(registerCardRef.current){
+      gsap.from(registerCardRef.current, {opacity: 0, y: 20, duration: 0.7, ease: 'power2.out', delay: 0.2});
+    }
+  },[]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,26 +68,42 @@ const Register = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError("");
+    try {
+      await registerWithGoogle();
+      // The navigation will be handled by the auth state change
+    } catch (err) {
+      if (isApiError(err)) {
+        setError(err.message);
+      } else {
+        setError("Đăng ký bằng Google thất bại. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-6">
-        <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="bg-teampal-500 text-white p-1.5 rounded">
-              <span className="font-bold text-sm">TP</span>
-            </div>
-            <span className="font-bold text-xl">Superb AI</span>
-          </Link>
-        </div>
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Sign up</CardTitle>
-            <CardDescription className="text-center">
-              Create your Superb AI account
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative">
+      {/* Subtle animated background shapes */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
+        <div className="absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 bg-sky-300/30 rounded-full filter blur-3xl opacity-40 animate-pulse-slow animation-delay-500"></div>
+      </div>
+
+      <div ref={registerCardRef} className="w-full max-w-md relative z-10">
+        <Card className="shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20">
+          <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-white/20">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800">Create Account</CardTitle>
+            <CardDescription className="text-center text-slate-600 text-sm sm:text-base">
+              Join Superb AI and start your journey
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6 p-6 sm:p-8">
               {error && (
                 <Alert variant="destructive" className="mb-4">
                   {error}
@@ -68,74 +114,84 @@ const Register = () => {
                   {success}
                 </Alert>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="font-medium text-sm text-slate-700">Full Name</Label>
                 <Input 
                   id="name" 
                   type="text" 
-                  placeholder="Your name" 
+                  placeholder="John Doe" 
                   value={name} 
                   onChange={e => setName(e.target.value)} 
                   required 
-                  disabled={loading}
+                  disabled={loading || googleLoading}
+                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="font-medium text-sm text-slate-700">Email Address</Label>
                 <Input 
                   id="email" 
                   type="email" 
-                  placeholder="name@example.com" 
+                  placeholder="you@example.com" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   required 
-                  disabled={loading}
+                  disabled={loading || googleLoading}
+                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="font-medium text-sm text-slate-700">Password</Label>
                 <Input 
                   id="password" 
                   type="password" 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
                   required 
-                  disabled={loading}
+                  disabled={loading || googleLoading}
+                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full teampal-button" 
-                disabled={loading}
+                className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40" 
+                size="lg"
+                disabled={loading || googleLoading}
               >
-                {loading ? "Đang đăng ký..." : "Sign up"}
+                {loading ? "Đang đăng ký..." : "Create Account"}
               </Button>
-              <div className="relative">
+              <div className="relative pt-2 pb-1">
                 <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
+                  <Separator className="w-full bg-white/40" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">
+                  <span className="bg-white/30 px-2 text-slate-500 backdrop-blur-sm rounded-sm">
                     Or continue with
                   </span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full" type="button" disabled>
-                <svg className="mr-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+              <Button 
+                variant="outline" 
+                className="w-full border-white/40 !text-slate-700 hover:bg-white/50 focus:ring-purple-500/30 py-2.5 bg-white/60"
+                type="button" 
+                onClick={handleGoogleSignIn}
+                disabled={loading || googleLoading}
+              >
+                <svg className="mr-2.5" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Google
+                {googleLoading ? "Đang xử lý..." : "Sign up with Google"}
               </Button>
             </CardContent>
           </form>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-muted-foreground">
-              Đã có tài khoản?{" "}
-              <Link to="/login" className="text-teampal-500 hover:underline">
-                Đăng nhập
+          <CardFooter className="flex justify-center p-6 bg-inherit border-t border-white/20 rounded-b-xl">
+            <p className="text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link to="/login" className="font-medium text-purple-600 hover:text-purple-700 hover:underline">
+                Sign in
               </Link>
             </p>
           </CardFooter>
