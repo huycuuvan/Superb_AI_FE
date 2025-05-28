@@ -117,15 +117,6 @@ const HeroSection: React.FC = () => {
           </svg>
           Get Started - It's free
         </button>
-        <div className="hero-lovedby mt-8 flex items-center justify-center space-x-2 text-gray-500 text-xs sm:text-sm">
-          <div className="flex -space-x-2">
-            {/* THAY THẾ BẰNG AVATAR THẬT */}
-            <img className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white ring-1 ring-gray-200" src="https://placehold.co/40x40/E9D5FF/6D28D9?text=U1" alt="User 1"/>
-            <img className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white ring-1 ring-gray-200" src="https://placehold.co/40x40/FBCFE8/A21CAF?text=U2" alt="User 2"/>
-            <img className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white ring-1 ring-gray-200" src="https://placehold.co/40x40/C7D2FE/4338CA?text=U3" alt="User 3"/>
-          </div>
-          <span>Loved by over 40,000+ people</span>
-        </div>
       </div>
     </section>
   );
@@ -166,12 +157,11 @@ const DashboardPreviewSection: React.FC = () => {
     <section ref={sectionRef} className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="dashboard-image-wrapper max-w-4xl lg:max-w-5xl mx-auto mb-16 md:mb-20">
-          {/* THAY THẾ BẰNG HÌNH ẢNH DASHBOARD THẬT */}
           <img 
-            src="https://placehold.co/1200x675/1F2937/FFFFFF?text=Nexus+AI+Dashboard" 
+            src={dashboardImageUrl}
             alt="Superb AI Dashboard Preview" 
-            className="rounded-xl shadow-2xl border-4 md:border-8 border-gray-800 object-cover w-full"
-            onError={(e) => (e.currentTarget.src = 'https://placehold.co/1200x675/1F2937/FFFFFF?text=Image+Error')}
+            className="rounded-xl shadow-2xl border-gray-800 object-cover w-full"
+            onError={(e) => (e.currentTarget.src = '/image.png')}
           />
         </div>
         <div className="text-center">
@@ -956,5 +946,7 @@ const LandingPage: React.FC = () => {
     </div>
   );
 };
+
+const dashboardImageUrl = (typeof window !== 'undefined' && (window as any).dashboardImageUrl) ? (window as any).dashboardImageUrl : '/image.png';
 
 export default LandingPage;
