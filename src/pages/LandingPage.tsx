@@ -1,59 +1,52 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom'; // Hoặc thay thế bằng thẻ <a> nếu không dùng React Router
+import { Link } from 'react-router-dom'; 
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; // QUAN TRỌNG: Cần plugin này từ Club GSAP
+import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; 
 import { Button } from '@/components/ui/button';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
 
-// Đăng ký plugin GSAP (thường làm ở file App.tsx hoặc file khởi tạo GSAP của dự án)
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
 }
 
-// Placeholder cho Icon (bạn nên thay thế bằng SVG thật hoặc thư viện icon)
 const PlaceholderIcon: React.FC<{ className?: string; path?: string }> = ({ className, path }) => (
   <svg className={`w-6 h-6 ${className}`} fill="currentColor" viewBox="0 0 20 20">
     <path d={path || "M10 3a7 7 0 100 14 7 7 0 000-14zM2 10a8 8 0 1116 0 8 8 0 01-16 0z"} />
   </svg>
 );
 
-// === HEADER ===
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10); // Trigger sớm hơn một chút
+      setIsScrolled(window.scrollY > 10); 
     };
     window.addEventListener('scroll', handleScroll);
-    // Thiết lập trạng thái ban đầu
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <>
-      {/* ĐÃ XÓA BANNER JOIN NOW */}
-      {/* Main Header */}
       <header 
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ease-in-out 
                     ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-lg py-3 top-0' : 'py-4 top-0'}`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <Link to="/" className="text-2xl font-bold text-gray-800">
-            {/* THAY THẾ BẰNG LOGO SVG HOẶC IMG */}
             Superb AI
           </Link>
           <nav className="hidden md:flex items-center space-x-5 lg:space-x-7">
-            <a href="#pricing" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
-            <a href="#about" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
-            <a href="#affiliates" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Affiliates</a>
-            <a href="#blog" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
+            <a href="#pricing" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
+            <a href="#about" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
+            <a href="#affiliates" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Affiliates</a>
+            <a href="#blog" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
           </nav>
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
+            <Link to="/login" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
             <Link to="/signup" className="bg-purple-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center group">
               Sign up
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transform transition-transform duration-200 group-hover:translate-x-0.5">
@@ -74,7 +67,6 @@ const HeroSection: React.FC = () => {
   useEffect(() => {
     if (!heroRef.current) return;
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' }});
-    // Clear previous animations on this element if any, to prevent conflicts on hot reloads
     gsap.killTweensOf(heroRef.current.querySelectorAll(".hero-plus, h1, .hero-subtitle, .hero-cta, .hero-lovedby"));
 
     tl.from(heroRef.current.querySelectorAll(".hero-plus"), {
@@ -82,7 +74,7 @@ const HeroSection: React.FC = () => {
         opacity: 0,
         stagger: 0.15,
         duration: 0.7,
-        delay: 0.3 // Slight delay for elements to be ready
+        delay: 0.3 
       })
       .from(heroRef.current.querySelector("h1"), { y: 60, opacity: 0, duration: 0.9 }, "-=0.4")
       .from(heroRef.current.querySelector(".hero-subtitle"), { y: 40, opacity: 0, duration: 0.7 }, "-=0.6")
@@ -91,16 +83,16 @@ const HeroSection: React.FC = () => {
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-36 sm:pt-40 pb-16 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
-      {/* Decorative plus signs - more subtle and varied */}
-      <div className="hero-plus absolute top-[20%] left-[15%] w-5 h-5 text-purple-400 opacity-60 transform rotate-12 animate-pulse-slow"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute top-[30%] right-[20%] w-7 h-7 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[35%] left-[25%] w-4 h-4 text-indigo-400 opacity-50 transform rotate-45 animate-pulse-slow delay-200"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[25%] right-[30%] w-6 h-6 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center  pb-16 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
+      <div className="hero-plus absolute top-[20%] right-[20%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute top-[22%] right-[30%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[50%] left-[25%] w-4 h-4 md:w-6 md:h-6 text-indigo-400 opacity-50 transform rotate-45 animate-pulse-slow delay-200 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[40%] right-[30%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[55%] right-[70%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <p className="text-xs sm:text-sm font-medium text-purple-600 mb-2 sm:mb-3 tracking-wider uppercase">COMPLETE YOUR WORK IN MINUTES</p>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-5 sm:mb-6 leading-tight">
+        <p className="text-2xl sm:text-sm font-medium text-purple-600 mb-2 sm:mb-3 tracking-wider uppercase">COMPLETE YOUR WORK IN MINUTES</p>
+        <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-6xl font-extrabold text-gray-900 mb-5 sm:mb-6 leading-tight">
         Your AI Workforce Management Platform<br className="hidden sm:block"/>
           <span className="relative inline-block mx-1">
             every
