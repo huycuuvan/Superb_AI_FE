@@ -69,6 +69,18 @@ const WorkspacePage = () => {
   const workspaces = (data && data.data) ? (Array.isArray(data.data) ? data.data : [data.data]) : [];
   const folders = foldersData?.data || [];
 
+  // Auto show create form if no workspace exists
+  useEffect(() => {
+    if (workspaces.length === 0 && !showCreate) {
+      setShowCreate(true);
+    }
+    // Nếu đã có workspace thì không tự động show form nữa
+    if (workspaces.length > 0 && showCreate) {
+      setShowCreate(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaces.length]);
+
   const handleSelectWorkspace = (workspaceId: string) => {
     setSelectedWorkspaceId(workspaceId);
   };
@@ -132,7 +144,7 @@ const WorkspacePage = () => {
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-teampal-500" />
-          <div className="text-gray-600">Đang tải workspace...</div>
+          <div className="text-gray-600">Loading workspace...</div>
         </div>
       </div>
     );
@@ -169,10 +181,6 @@ const WorkspacePage = () => {
     );
   }
 
-  if (!isLoading && !fetchError && workspaces.length === 0 && !showCreate) {
-    setShowCreate(true);
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-white relative">
       <Button 
@@ -187,17 +195,17 @@ const WorkspacePage = () => {
         Đăng xuất
       </Button>
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center p-4">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">Workspace của bạn</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">Your Workspace</h1>
         {showCreate ? (
           <form onSubmit={handleCreateWorkspace} className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center">
-            <h2 className="text-xl font-semibold mb-4">Tạo workspace mới</h2>
+            <h2 className="text-xl font-semibold mb-4">Create a new workspace</h2>
             {error && (
               <Alert variant="destructive" className="w-full mb-4">
                 {error}
               </Alert>
             )}
             <div className="w-full mb-4">
-              <Label htmlFor="name">Tên workspace</Label>
+              <Label htmlFor="name">Workspace name</Label>
               <Input 
                 id="name" 
                 value={name} 
@@ -207,7 +215,7 @@ const WorkspacePage = () => {
               />
             </div>
             <div className="w-full mb-4">
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea 
                 id="description" 
                 value={description} 
@@ -217,16 +225,16 @@ const WorkspacePage = () => {
             </div>
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full bg-gray-900 hover:bg-black text-white"
               disabled={loading}
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang tạo...
+                  Creating...
                 </>
               ) : (
-                'Tạo mới'
+                'Create' 
               )}
             </Button>
             {(workspaces.length > 0 || isLoading) && (
@@ -237,80 +245,78 @@ const WorkspacePage = () => {
                 onClick={() => setShowCreate(false)}
                 disabled={loading}
               >
-                Quay lại danh sách workspace
+                Back to workspace list
               </Button>
             )}
           </form>
         ) : (
           <>
-            {workspaces.length > 0 ? (
-              <div className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center">
-                <div className="w-full space-y-4">
-                  {workspaces.map((workspace) => (
-                    <div key={workspace.id}>
-                      <div
-                        className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleSelectWorkspace(workspace.id)}
-                      >
-                        <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
-                          <span className="font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium text-base">{workspace.name}</div>
-                          {workspace.description && (
-                            <div className="text-sm text-gray-500">{workspace.description}</div>
-                          )}
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGoToDashboard(workspace.id);
-                          }}
+            {/* Only show list if there is at least one workspace */}
+            {workspaces.length > 0 && (
+              <>
+                <div className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center">
+                  <div className="w-full space-y-4">
+                    {workspaces.map((workspace) => (
+                      <div key={workspace.id}>
+                        <div
+                          className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSelectWorkspace(workspace.id)}
                         >
-                          Vào Dashboard
-                        </Button>
-                      </div>
-                      
-                      {selectedWorkspaceId === workspace.id && (
-                        <div className="mt-4 ml-12 space-y-2">
-                          {isLoadingFolders ? (
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Đang tải folders...
-                            </div>
-                          ) : folders.length > 0 ? (
-                            folders.map((folder) => (
-                              <div 
-                                key={folder.id}
-                                className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                              >
-                                <Folder className="w-4 h-4" />
-                                {folder.name}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-sm text-gray-500">Chưa có folder nào</div>
-                          )}
+                          <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
+                            <span className="font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="font-medium text-base">{workspace.name}</div>
+                            {workspace.description && (
+                              <div className="text-sm text-gray-500">{workspace.description}</div>
+                            )}
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGoToDashboard(workspace.id);
+                            }}
+                          >
+                            Go to Dashboard
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {selectedWorkspaceId === workspace.id && (
+                          <div className="mt-4 ml-12 space-y-2">
+                            {isLoadingFolders ? (
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading folders...
+                              </div>
+                            ) : folders.length > 0 ? (
+                              folders.map((folder) => (
+                                <div 
+                                  key={folder.id}
+                                  className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                                >
+                                  <Folder className="w-4 h-4" />
+                                  {folder.name}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-sm text-gray-500">No folders yet</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="w-full max-w-md bg-white rounded-xl shadow border p-8 flex flex-col items-center text-gray-500 text-center">
-                Bạn chưa có workspace nào
-              </div>
+                <Button 
+                  onClick={() => setShowCreate(true)} 
+                  className="flex items-center gap-2 mt-6 text-white bg-gray-900 hover:bg-black"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create a new workspace
+                </Button>
+              </>
             )}
-            <Button 
-              onClick={() => setShowCreate(true)} 
-              className="flex items-center gap-2 mt-6"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo workspace mới
-            </Button>
           </>
         )}
       </div>

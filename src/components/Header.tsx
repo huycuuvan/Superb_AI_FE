@@ -194,7 +194,7 @@ const Header = React.memo(() => {
                           {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
                         </span>
                       </Avatar>
-                      <span className="font-semibold flex items-center justify-center">{workspace.name}{workspace.name && "'s workspace"}</span>
+                      <span className="font-semibold flex items-center justify-center md:text-sm">{workspace.name}{workspace.name && "'s workspace"}</span>
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">

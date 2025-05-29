@@ -19,7 +19,8 @@ import {
   MoreVertical,
   Edit,
   Pin,
-  Trash
+  Trash,
+  Book
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,6 +154,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     { icon: Home, label: t('home'), path: '/dashboard' },
     { icon: Users, label: t('agents'), path: '/dashboard/agents' },
     { icon: CheckCircle, label: t('tasks'), path: '/dashboard/tasks' },
+    { icon: Book, label: 'Knowledge', path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
   ];
 
@@ -173,7 +175,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     <>
       <aside 
         className={cn(
-          "bg-white border-r border-border flex flex-col h-full transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
+          "relative flex flex-col h-full bg-white border-r border-border transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
           collapsed ? "w-16" : "w-64",
           className
         )}
@@ -229,7 +231,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           )}
         </div>
         
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {loadingFolders ? (
             <div className="px-3 py-2 text-muted-foreground text-sm">Đang tải thư mục...</div>
           ) : (

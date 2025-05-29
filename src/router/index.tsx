@@ -14,11 +14,33 @@ import FolderDetail from '@/pages/FolderDetail';
 import AgentTaskConfig from '@/pages/AgentTaskConfig';
 import { Tasks } from '@/pages/Tasks';
 import WorkspaceProfilePage from '@/pages/WorkspaceProfilePage';
+import ForgotPassword from '@/pages/ForgotPassword';
+import WhatsNews from '@/pages/WhatsNews';
+import Roadmap from '@/pages/Roadmap';
+import TermsOfUse from '@/pages/TermsOfUse';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import Knowledge from '@/pages/Knowledge';
 
 const routes: RouteObject[] = [
   {
     path: '/',
     element: <LandingPage />,
+  },
+  {
+    path: '/whats-news',
+    element: <WhatsNews />,
+  },
+  {
+    path: '/roadmap',
+    element: <Roadmap />,
+  },
+  {
+    path: '/terms',
+    element: <TermsOfUse />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPolicy />,
   },
   {
     path: '/login',
@@ -27,6 +49,10 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
   },
   {
     path: '/dashboard',
@@ -55,6 +81,10 @@ const routes: RouteObject[] = [
       {
         path: 'tasks',
         element: <Tasks />,
+      },
+      {
+        path: 'knowledge',
+        element: <Knowledge />,
       },
       {
         path: 'settings',
