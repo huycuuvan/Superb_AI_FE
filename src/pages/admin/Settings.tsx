@@ -105,27 +105,22 @@ const Settings = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Palette className="h-5 w-5" />
-              <span>Appearance</span>
+              <span>Workspace Appearance</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable dark theme
-                </p>
+            <div className="space-y-2">
+              <Label>Select Theme</Label>
+              <div className="flex items-center space-x-4">
+                <div className="flex flex-col items-center cursor-pointer">
+                  <div className="w-16 h-16 rounded-md border shadow-md bg-background"></div>
+                  <span className="text-sm text-muted-foreground mt-1">Light Theme</span>
+                </div>
+                <div className="flex flex-col items-center cursor-pointer">
+                  <div className="w-16 h-16 rounded-md border shadow-md bg-foreground border-border"></div>
+                  <span className="text-sm text-muted-foreground mt-1">Dark Theme</span>
+                </div>
               </div>
-              <Switch />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Compact Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Reduce spacing and padding
-                </p>
-              </div>
-              <Switch />
             </div>
             <Button className="w-full">Save Changes</Button>
           </CardContent>

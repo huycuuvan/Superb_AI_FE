@@ -14,6 +14,8 @@ import { ChatTask, ChatMessage } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface TaskInput {
   id: string;
@@ -194,15 +196,9 @@ const AgentChat = () => {
   // Get appropriate colors based on theme
   const getMessageStyle = (sender: string) => {
     if (sender === 'user') {
-      if (theme === 'teampal-pink') return 'bg-teampal-100 text-foreground';
-      if (theme === 'blue') return 'bg-blue-100 text-foreground';
-      if (theme === 'purple') return 'bg-purple-100 text-foreground';
-      return 'bg-accent text-foreground';
+      return 'bg-primary text-primary-foreground';
     } else {
-      if (theme === 'teampal-pink') return 'bg-white border shadow-sm';
-      if (theme === 'blue') return 'bg-white border shadow-sm';
-      if (theme === 'purple') return 'bg-white border shadow-sm';
-      return 'bg-white border shadow-sm';
+      return 'bg-card text-card-foreground';
     }
   };
 
@@ -227,18 +223,20 @@ const AgentChat = () => {
     navigate(`/dashboard/agents/${agentId}/task/config`);
   };
 
+  const { t } = useLanguage();
+
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
       {/* Agent header */}
-      <div className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 border-b">
+      <div className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 border-b bg-background">
         <Avatar className="h-10 w-10 md:h-12 md:w-12">
           <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-          <AvatarFallback className="bg-teampal-100 text-teampal-500">
+          <AvatarFallback className="bg-secondary text-secondary-foreground">
             {currentAgent?.name?.charAt(0) || 'A'}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-lg md:text-xl font-semibold">{currentAgent?.name || 'Agent'}</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h1>
           <p className="text-xs md:text-sm text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
         </div>
       </div>
@@ -246,35 +244,50 @@ const AgentChat = () => {
       {/* Chat area */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-accent/30"
+        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background pb-[80px]"
       >
         {messages.map((msg) => (
-          <div 
+          <div
             key={msg.id}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={
+              cn(
+                "flex items-start",
+                msg.sender === 'user' ? 'justify-end' : 'justify-start'
+              )
+            }
           >
-            <div className={`max-w-[85%] md:max-w-3/4 ${getMessageStyle(msg.sender)} rounded-lg p-2 md:p-3 text-sm md:text-base shadow-sm`}>
-              {msg.sender === 'agent' && (
-                <div className="flex items-center space-x-2 mb-1">
-                  <Avatar className="h-6 w-6 md:h-7 md:w-7">
-                    <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-teampal-100 text-teampal-500 text-xs md:text-sm">
-                      {currentAgent?.name?.charAt(0) || 'A'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium text-xs md:text-sm">{currentAgent?.name}</span>
-                </div>
-              )}
-              <p className="whitespace-pre-wrap text-sm md:text-base">{msg.content}</p>
-              <div className="text-[10px] md:text-xs text-muted-foreground mt-1 text-right">
-                {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-              </div>
+            {msg.sender === 'agent' && (
+              <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
+                 <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+                <AvatarFallback className="bg-secondary text-secondary-foreground">
+                   {currentAgent?.name?.charAt(0) || 'A'}
+                 </AvatarFallback>
+              </Avatar>
+            )}
+            <div className={cn(
+              "max-w-[70%] p-3 rounded-lg shadow-md break-words",
+              getMessageStyle(msg.sender)
+            )}>
+              <p>{msg.content}</p>
+              <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
+                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
+            {msg.sender === 'user' && (
+              <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
+                 {/* User avatar image if available */}
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                   {/* User initial or fallback */}
+                   {/* Replace with actual user initial/fallback logic */}
+                   U
+                 </AvatarFallback>
+              </Avatar>
+            )}
           </div>
         ))}
 
         {/* Daily Timer Button */}
-        {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && (
+        {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
           <div className="flex justify-start mt-2">
             <Button 
               variant="outline" 
@@ -289,145 +302,110 @@ const AgentChat = () => {
       </div>
       
       {/* Input area */}
-      <div className="p-3 md:p-4 border-t bg-background">
-        {/* Task and Prompt buttons */}
-        <div className="flex gap-2 mb-2">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={() => setInputAreaMode(inputAreaMode === 'taskList' ? 'chat' : 'taskList')}
-          >
-            <ListPlus className="h-4 w-4" />
-            Task
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={() => setInputAreaMode(inputAreaMode === 'promptList' ? 'chat' : 'promptList')}
-          >
-            <MessageSquare className="h-4 w-4" />
-            Prompt
-          </Button>
-        </div>
+      <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 border-t bg-background z-10">
+        {inputAreaMode === 'chat' && (
+          <div className="flex items-center space-x-2 md:space-x-3 p-2 border border-border rounded-lg bg-card">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="flex-shrink-0"
+              onClick={() => setInputAreaMode('taskList')}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            {/* Removed file attachment button */}
+            
+            <Textarea
+              placeholder={t('askAI')}
+              className="flex-1 resize-none min-h-[24px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              style={{ overflowY: 'hidden', height: 'auto' }}
+            />
+            
+            <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
-        {/* Conditional Content Area (Task List, Prompt List, or Task Input Form) */}
         {inputAreaMode === 'taskList' && (
           <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
-            {tasks.map((task) => (
-              <div 
-                key={task.id}
-                className="p-2 hover:bg-accent cursor-pointer rounded-md"
-                onClick={() => handleTaskSelect(task)}
-              >
-                <div className="font-medium">{task.title}</div>
-                <div className="text-sm text-muted-foreground">{task.description}</div>
-              </div>
-            ))}
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Tasks</h3>
+            <div className="space-y-2">
+              {tasks.map((task) => (
+                <Button 
+                  key={task.id} 
+                  variant="outline"
+                  className="w-full justify-start border-border"
+                  onClick={() => handleTaskSelect(task)}
+                >
+                  {task.title}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
 
         {inputAreaMode === 'promptList' && (
           <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
-            {promptSuggestions.map((prompt, index) => (
-              <div 
-                key={index}
-                className="p-2 hover:bg-accent cursor-pointer rounded-md"
-                onClick={() => {
-                  setMessage(prompt);
-                  setInputAreaMode('chat');
-                }}
-              >
-                {prompt}
-              </div>
-            ))}
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Prompt Suggestions</h3>
+            <div className="space-y-2">
+              {promptSuggestions.map((suggestion, index) => (
+                <Button 
+                  key={index} 
+                  variant="outline"
+                  className="w-full justify-start border-border"
+                  onClick={() => handlePromptSuggestionClick(suggestion)}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Input chat */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-end gap-2 w-full">
-             {/* Input Textarea */}
-            <div className="relative flex-1">
-              <Textarea
-                className="flex-1 text-sm pr-16 min-h-[50px] max-h-[400px] resize-none"
-                placeholder="Ask AI anything..."
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              {/* Icons inside textarea */}
-              <div className="absolute bottom-2 right-2 flex gap-2">
-                {/* <ListPlus className="h-5 w-5 text-muted-foreground cursor-pointer" /> */}
-                {/* <SlidersHorizontal className="h-5 w-5 text-muted-foreground cursor-pointer" /> */}
+        {inputAreaMode === 'taskInputs' && selectedTask && (
+          <div className="space-y-3 p-2 border rounded-lg bg-background">
+            <h3 className="text-lg font-semibold text-foreground">{selectedTask.title} Inputs</h3>
+            {selectedTask.inputs.map((input) => (
+              <div key={input.id} className="space-y-1">
+                <label htmlFor={input.id} className="text-sm font-medium text-foreground">{input.label}</label>
+                {input.type === 'select' ? (
+                  <Select
+                    value={selectedTaskInputs[input.id] || ''}
+                    onValueChange={(value) => handleInputChange(input.id, value)}
+                  >
+                    <SelectTrigger className="bg-card text-card-foreground border-border">
+                      <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {input.options?.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id={input.id}
+                    type={input.type}
+                    value={selectedTaskInputs[input.id] || ''}
+                    onChange={(e) => handleInputChange(input.id, e.target.value)}
+                    placeholder={`Nhập ${input.label.toLowerCase()}`}
+                    className="bg-card text-card-foreground border-border"
+                  />
+                )}
               </div>
-            </div>
-            {/* Send Button */}
-            <Button className="bg-teampal-500 h-9 md:h-10 px-3 md:px-4 flex-shrink-0" onClick={handleSendMessage}>
-              <Send className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
+            ))}
+            <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
+            <Button variant="outline" className="w-full border-border" onClick={() => setInputAreaMode('taskList')}>Back to Tasks</Button>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Task Input Modal */}
-      {showTaskInputModal && selectedTaskId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-md mx-auto p-4 bg-background rounded-lg shadow-lg">
-            {/* Close button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-2 right-2"
-              onClick={() => setShowTaskInputModal(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="mb-4">
-              <h3 className="text-lg font-medium mb-2">{tasks.find(t => t.id === selectedTaskId)?.title}</h3>
-              <p className="text-sm text-muted-foreground">{tasks.find(t => t.id === selectedTaskId)?.description}</p>
-            </div>
-            <div className="space-y-3">
-              {tasks.find(t => t.id === selectedTaskId)?.inputs.map((input) => (
-                <div key={input.id} className="space-y-1">
-                  <label className="text-sm font-medium">{input.label}</label>
-                  {input.type === 'select' ? (
-                    <Select
-                      value={selectedTaskInputs[input.id] || ''}
-                      onValueChange={(value) => handleInputChange(input.id, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {input.options?.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      type={input.type}
-                      value={selectedTaskInputs[input.id] || ''}
-                      onChange={(e) => handleInputChange(input.id, e.target.value)}
-                      placeholder={`Nhập ${input.label.toLowerCase()}`}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setShowTaskInputModal(false)}>
-                Hủy
-              </Button>
-              <Button onClick={handleSubmitTaskInputs}>
-                Xác nhận
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -168,7 +168,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-background text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -177,15 +177,12 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-          <button
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
-            onClick={() => setShowAddAgentDialog(true)}
-          >
+          <Button className="flex items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
             <span className="text-lg">+</span> Create agent
-          </button>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-border bg-white font-medium hover:bg-accent/50 transition w-full sm:w-auto">
+          </Button>
+          <Button variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto">
             <span className="text-lg">+</span> Create folder
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -197,7 +194,7 @@ const Dashboard = () => {
             <div key={folder.id} className="mb-8 md:mb-10">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Folder className="h-5 w-5 text-teampal-500" />
+                  <Folder className="h-5 w-5 text-primary" />
                   <h2 
                     className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
                     onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
@@ -207,9 +204,9 @@ const Dashboard = () => {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none">
+                    <Button variant="ghost" className="rounded-full p-1.5 focus:outline-none">
                       <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                    </button>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
@@ -218,7 +215,7 @@ const Dashboard = () => {
                     <DropdownMenuItem onClick={() => handlePin(folder.name)}>
                       <Pin className="h-4 w-4 mr-2" /> Ghim
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-red-600 focus:text-red-600">
+                    <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-destructive focus:text-destructive">
                       <Trash className="h-4 w-4 mr-2" /> Xoá
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -226,18 +223,18 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 <Card 
-                  className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
+                  className="border-dashed border-2 rounded-xl transition-colors cursor-pointer group bg-muted/30 border-border hover:border-primary"
                   onClick={() => {
                     setSelectedFolderId(folder.id);
                     setShowAddAgentDialog(true);
                   }}
                 >
                   <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                    <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
-                      <Plus className="h-6 w-6 text-teampal-500" />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-accent">
+                      <Plus className="h-6 w-6 text-primary" />
                     </div>
-                    <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
-                    <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này</p>
+                    <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
+                    <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
                   </CardContent>
                 </Card>
               </div>

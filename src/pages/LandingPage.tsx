@@ -6,6 +6,8 @@ import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
 import { Button } from '@/components/ui/button';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
+import { createAvatar } from '@dicebear/core';
+import { openPeeps } from '@dicebear/collection';
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
@@ -181,9 +183,10 @@ interface FeatureCardProps {
   title: string;
   description: string;
   animationDelay?: number;
+  avatarSvg?: string; // Add new prop for avatar SVG
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0 }) => {
+const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0, avatarSvg }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if(!cardRef.current) return;
@@ -202,13 +205,23 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-p
     })
   }, [animationDelay]);
 
+  // Conditionally define icon content
+  let iconContent;
+  if (avatarSvg) {
+    iconContent = <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: avatarSvg }} />;
+  } else {
+    iconContent = <PlaceholderIcon className="w-7 h-7" path={iconPath} />;
+  }
+
   return (
-    <div ref={cardRef} className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-200/50 h-full text-left">
-      <div className={`w-12 h-12 rounded-lg ${iconBgColor} flex items-center justify-center mb-5 ${iconColor}`}>
-        <PlaceholderIcon className="w-7 h-7" path={iconPath} />
+    <div ref={cardRef} className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-200/50 h-full text-left flex flex-col items-center"> {/* Use flexbox flex-col and center items */}
+      <div className={`w-20 h-20 rounded-lg ${avatarSvg ? '' : iconBgColor} flex-shrink-0 flex items-center justify-center mb-4 ${avatarSvg ? '' : iconColor}`}> {/* Icon container, larger size, mb-4 */}
+        {iconContent}
       </div>
-      <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
-      <p className="text-gray-600 text-sm">{description}</p>
+      <div className="flex-1 text-center"> {/* Text content container, centered text */}
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+        <p className="text-gray-600 text-sm">{description}</p>
+      </div>
     </div>
   );
 };
@@ -232,33 +245,42 @@ const FeaturesGridSection: React.FC = () => {
   }, []);
 
   const featuresData = [
-    { title: 'AI Article Writer', description: 'Write factually-accurate articles with real-time data that drive traffic. Generate articles 100x faster and boost your SEO with Superb AI.', iconBgColor: 'bg-blue-100', iconColor: 'text-blue-600', iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
-    { title: 'AI Academic Writing', description: 'Nexus makes writing and researching for essays easy, fast, and fun while delivering the best results with Academic Citations.', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', iconPath: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.051 0 4.006-.804 5.442-2.202m0 0A8.967 8.967 0 0121 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0015 18c-2.051 0-4.006-.804-5.442-2.202m0 0A8.953 8.953 0 0112 15c-2.051 0-4.006.804-5.442 2.202m5.442-2.202a8.953 8.953 0 005.442-2.202m-5.442 2.202L12 15m0 0L9.558 12.798M15 18a8.967 8.967 0 00-6-14.25m0 14.25a8.967 8.967 0 01-6-14.25m6 14.25v-2.202c0-.39.157-.768.442-1.048M15 18V5.958c0-.39-.157-.768-.442-1.048A8.953 8.953 0 0012 3c-2.051 0-4.006.804-5.442 2.202A8.953 8.953 0 003 7.5c0 4.142 3.358 7.5 7.5 7.5s7.5-3.358 7.5-7.5c0-1.052-.218-2.054-.617-2.958' },
-    { title: 'AI Image Generator', description: 'Create something that has never been seen before. Bring your imagination to life, use our generative AI to create stock images and art.', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', iconPath: 'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
-    { title: 'AI Text to Speech', description: 'With seamless delivery, natural intonation and unrivaled versatility, Superb AI voiceover & text-to-speech is the perfect choice for any project.', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', iconPath: 'M10.343 3.94c.09-.542.56-1.007 1.052-1.007.492 0 .962.465 1.052 1.007a4.5 4.5 0 01-2.104 0zM6.896 3.94c.09-.542.56-1.007 1.052-1.007.492 0 .962.465 1.052 1.007a4.5 4.5 0 01-2.104 0zM12 12.75a1.5 1.5 0 001.5-1.5v-4.5a1.5 1.5 0 00-3 0v4.5a1.5 1.5 0 001.5 1.5zM12 18.75a.75.75 0 00.75-.75V15.75h-1.5v2.25a.75.75 0 00.75.75zM7.5 12.75a.75.75 0 00.75-.75v-4.5a.75.75 0 00-1.5 0v4.5a.75.75 0 00.75.75zM16.5 12.75a.75.75 0 00.75-.75v-4.5a.75.75 0 00-1.5 0v4.5a.75.75 0 00.75.75zM4.875 15H3.375A1.125 1.125 0 012.25 13.875v-1.5A1.125 1.125 0 013.375 11.25h1.5c.094 0 .186.013.274.039a4.501 4.501 0 013.702 0A4.501 4.501 0 0112 11.25c1.232 0 2.375.504 3.151 1.313a4.501 4.501 0 013.702 0c.088-.026.18-.039.274-.039h1.5a1.125 1.125 0 011.125 1.125v1.5a1.125 1.125 0 01-1.125 1.125h-1.5a4.501 4.501 0 01-3.702 0A4.501 4.501 0 0112 15.75c-1.232 0-2.375-.504-3.151-1.313a4.501 4.501 0 01-3.702 0z' },
+   
+    { title: 'AI IT Agent', description: 'Provides technical support, troubleshoots issues, and manages IT systems.', avatarSeed: 'IT' },
+    { title: 'AI Sales Agent', description: 'Optimizes sales processes, interacts with potential customers, and closes deals effectively.', avatarSeed: 'Sale' },
+    { title: 'AI Marketing Agent', description: 'Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.', avatarSeed: 'Marketing' },
+    { title: 'AI Accountant Agent', description: 'Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.', avatarSeed: 'Accountant' },
   ];
 
   return (
     <section ref={sectionRef} className="py-16 md:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span className="section-tag inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-          Popular Superb AI Tools
+          Popular Superb AI Tools & Agents
         </span>
         <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-12 md:mb-16">
           Say hello to AI that is <br className="sm:hidden"/> built for every scenario
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {featuresData.map((feature, index) => (
-            <FeatureCard 
-              key={feature.title} 
-              title={feature.title} 
-              description={feature.description}
-              iconPath={feature.iconPath}
-              iconBgColor={feature.iconBgColor}
-              iconColor={feature.iconColor}
-              animationDelay={index * 0.1} 
-            />
-          ))}
+          {featuresData.map((feature, index) => {
+            let avatarSvgString = undefined;
+            if (feature.avatarSeed) {
+              const avatar = createAvatar(openPeeps, {
+                seed: feature.avatarSeed,
+              });
+              avatarSvgString = avatar.toString();
+            }
+
+            return (
+              <FeatureCard
+                key={feature.title}
+                title={feature.title}
+                description={feature.description}
+                animationDelay={index * 0.1}
+                avatarSvg={avatarSvgString} // Pass the generated SVG string
+              />
+            );
+          })}
         </div>
       </div>
     </section>
