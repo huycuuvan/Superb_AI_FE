@@ -1,59 +1,54 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom'; // Hoặc thay thế bằng thẻ <a> nếu không dùng React Router
+import { Link } from 'react-router-dom'; 
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; // QUAN TRỌNG: Cần plugin này từ Club GSAP
+import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; 
 import { Button } from '@/components/ui/button';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
+import { createAvatar } from '@dicebear/core';
+import { openPeeps } from '@dicebear/collection';
 
-// Đăng ký plugin GSAP (thường làm ở file App.tsx hoặc file khởi tạo GSAP của dự án)
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
 }
 
-// Placeholder cho Icon (bạn nên thay thế bằng SVG thật hoặc thư viện icon)
 const PlaceholderIcon: React.FC<{ className?: string; path?: string }> = ({ className, path }) => (
   <svg className={`w-6 h-6 ${className}`} fill="currentColor" viewBox="0 0 20 20">
     <path d={path || "M10 3a7 7 0 100 14 7 7 0 000-14zM2 10a8 8 0 1116 0 8 8 0 01-16 0z"} />
   </svg>
 );
 
-// === HEADER ===
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10); // Trigger sớm hơn một chút
+      setIsScrolled(window.scrollY > 10); 
     };
     window.addEventListener('scroll', handleScroll);
-    // Thiết lập trạng thái ban đầu
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <>
-      {/* ĐÃ XÓA BANNER JOIN NOW */}
-      {/* Main Header */}
       <header 
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ease-in-out 
                     ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-lg py-3 top-0' : 'py-4 top-0'}`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <Link to="/" className="text-2xl font-bold text-gray-800">
-            {/* THAY THẾ BẰNG LOGO SVG HOẶC IMG */}
             Superb AI
           </Link>
           <nav className="hidden md:flex items-center space-x-5 lg:space-x-7">
-            <a href="#pricing" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
-            <a href="#about" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
-            <a href="#affiliates" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Affiliates</a>
-            <a href="#blog" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
+            <a href="#pricing" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
+            <a href="#about" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
+            <a href="#affiliates" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Affiliates</a>
+            <a href="#blog" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
           </nav>
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
+            <Link to="/login" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
             <Link to="/signup" className="bg-purple-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center group">
               Sign up
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transform transition-transform duration-200 group-hover:translate-x-0.5">
@@ -74,7 +69,6 @@ const HeroSection: React.FC = () => {
   useEffect(() => {
     if (!heroRef.current) return;
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' }});
-    // Clear previous animations on this element if any, to prevent conflicts on hot reloads
     gsap.killTweensOf(heroRef.current.querySelectorAll(".hero-plus, h1, .hero-subtitle, .hero-cta, .hero-lovedby"));
 
     tl.from(heroRef.current.querySelectorAll(".hero-plus"), {
@@ -82,7 +76,7 @@ const HeroSection: React.FC = () => {
         opacity: 0,
         stagger: 0.15,
         duration: 0.7,
-        delay: 0.3 // Slight delay for elements to be ready
+        delay: 0.3 
       })
       .from(heroRef.current.querySelector("h1"), { y: 60, opacity: 0, duration: 0.9 }, "-=0.4")
       .from(heroRef.current.querySelector(".hero-subtitle"), { y: 40, opacity: 0, duration: 0.7 }, "-=0.6")
@@ -91,16 +85,16 @@ const HeroSection: React.FC = () => {
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-36 sm:pt-40 pb-16 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
-      {/* Decorative plus signs - more subtle and varied */}
-      <div className="hero-plus absolute top-[20%] left-[15%] w-5 h-5 text-purple-400 opacity-60 transform rotate-12 animate-pulse-slow"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute top-[30%] right-[20%] w-7 h-7 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[35%] left-[25%] w-4 h-4 text-indigo-400 opacity-50 transform rotate-45 animate-pulse-slow delay-200"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[25%] right-[30%] w-6 h-6 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center  pb-16 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
+      <div className="hero-plus absolute top-[20%] right-[20%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute top-[22%] right-[30%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[50%] left-[25%] w-4 h-4 md:w-6 md:h-6 text-indigo-400 opacity-50 transform rotate-45 animate-pulse-slow delay-200 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[40%] right-[30%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
+      <div className="hero-plus absolute bottom-[55%] right-[70%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <p className="text-xs sm:text-sm font-medium text-purple-600 mb-2 sm:mb-3 tracking-wider uppercase">COMPLETE YOUR WORK IN MINUTES</p>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-5 sm:mb-6 leading-tight">
+        <p className="text-2xl sm:text-sm font-medium text-purple-600 mb-2 sm:mb-3 tracking-wider uppercase">COMPLETE YOUR WORK IN MINUTES</p>
+        <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-6xl font-extrabold text-gray-900 mb-5 sm:mb-6 leading-tight">
         Your AI Workforce Management Platform<br className="hidden sm:block"/>
           <span className="relative inline-block mx-1">
             every
@@ -189,9 +183,10 @@ interface FeatureCardProps {
   title: string;
   description: string;
   animationDelay?: number;
+  avatarSvg?: string; // Add new prop for avatar SVG
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0 }) => {
+const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0, avatarSvg }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if(!cardRef.current) return;
@@ -210,13 +205,23 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-p
     })
   }, [animationDelay]);
 
+  // Conditionally define icon content
+  let iconContent;
+  if (avatarSvg) {
+    iconContent = <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: avatarSvg }} />;
+  } else {
+    iconContent = <PlaceholderIcon className="w-7 h-7" path={iconPath} />;
+  }
+
   return (
-    <div ref={cardRef} className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-200/50 h-full text-left">
-      <div className={`w-12 h-12 rounded-lg ${iconBgColor} flex items-center justify-center mb-5 ${iconColor}`}>
-        <PlaceholderIcon className="w-7 h-7" path={iconPath} />
+    <div ref={cardRef} className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-200/50 h-full text-left flex flex-col items-center"> {/* Use flexbox flex-col and center items */}
+      <div className={`w-20 h-20 rounded-lg ${avatarSvg ? '' : iconBgColor} flex-shrink-0 flex items-center justify-center mb-4 ${avatarSvg ? '' : iconColor}`}> {/* Icon container, larger size, mb-4 */}
+        {iconContent}
       </div>
-      <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
-      <p className="text-gray-600 text-sm">{description}</p>
+      <div className="flex-1 text-center"> {/* Text content container, centered text */}
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+        <p className="text-gray-600 text-sm">{description}</p>
+      </div>
     </div>
   );
 };
@@ -240,33 +245,42 @@ const FeaturesGridSection: React.FC = () => {
   }, []);
 
   const featuresData = [
-    { title: 'AI Article Writer', description: 'Write factually-accurate articles with real-time data that drive traffic. Generate articles 100x faster and boost your SEO with Superb AI.', iconBgColor: 'bg-blue-100', iconColor: 'text-blue-600', iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
-    { title: 'AI Academic Writing', description: 'Nexus makes writing and researching for essays easy, fast, and fun while delivering the best results with Academic Citations.', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', iconPath: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.051 0 4.006-.804 5.442-2.202m0 0A8.967 8.967 0 0121 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0015 18c-2.051 0-4.006-.804-5.442-2.202m0 0A8.953 8.953 0 0112 15c-2.051 0-4.006.804-5.442 2.202m5.442-2.202a8.953 8.953 0 005.442-2.202m-5.442 2.202L12 15m0 0L9.558 12.798M15 18a8.967 8.967 0 00-6-14.25m0 14.25a8.967 8.967 0 01-6-14.25m6 14.25v-2.202c0-.39.157-.768.442-1.048M15 18V5.958c0-.39-.157-.768-.442-1.048A8.953 8.953 0 0012 3c-2.051 0-4.006.804-5.442 2.202A8.953 8.953 0 003 7.5c0 4.142 3.358 7.5 7.5 7.5s7.5-3.358 7.5-7.5c0-1.052-.218-2.054-.617-2.958' },
-    { title: 'AI Image Generator', description: 'Create something that has never been seen before. Bring your imagination to life, use our generative AI to create stock images and art.', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', iconPath: 'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
-    { title: 'AI Text to Speech', description: 'With seamless delivery, natural intonation and unrivaled versatility, Superb AI voiceover & text-to-speech is the perfect choice for any project.', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', iconPath: 'M10.343 3.94c.09-.542.56-1.007 1.052-1.007.492 0 .962.465 1.052 1.007a4.5 4.5 0 01-2.104 0zM6.896 3.94c.09-.542.56-1.007 1.052-1.007.492 0 .962.465 1.052 1.007a4.5 4.5 0 01-2.104 0zM12 12.75a1.5 1.5 0 001.5-1.5v-4.5a1.5 1.5 0 00-3 0v4.5a1.5 1.5 0 001.5 1.5zM12 18.75a.75.75 0 00.75-.75V15.75h-1.5v2.25a.75.75 0 00.75.75zM7.5 12.75a.75.75 0 00.75-.75v-4.5a.75.75 0 00-1.5 0v4.5a.75.75 0 00.75.75zM16.5 12.75a.75.75 0 00.75-.75v-4.5a.75.75 0 00-1.5 0v4.5a.75.75 0 00.75.75zM4.875 15H3.375A1.125 1.125 0 012.25 13.875v-1.5A1.125 1.125 0 013.375 11.25h1.5c.094 0 .186.013.274.039a4.501 4.501 0 013.702 0A4.501 4.501 0 0112 11.25c1.232 0 2.375.504 3.151 1.313a4.501 4.501 0 013.702 0c.088-.026.18-.039.274-.039h1.5a1.125 1.125 0 011.125 1.125v1.5a1.125 1.125 0 01-1.125 1.125h-1.5a4.501 4.501 0 01-3.702 0A4.501 4.501 0 0112 15.75c-1.232 0-2.375-.504-3.151-1.313a4.501 4.501 0 01-3.702 0z' },
+   
+    { title: 'AI IT Agent', description: 'Provides technical support, troubleshoots issues, and manages IT systems.', avatarSeed: 'IT' },
+    { title: 'AI Sales Agent', description: 'Optimizes sales processes, interacts with potential customers, and closes deals effectively.', avatarSeed: 'Sale' },
+    { title: 'AI Marketing Agent', description: 'Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.', avatarSeed: 'Marketing' },
+    { title: 'AI Accountant Agent', description: 'Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.', avatarSeed: 'Accountant' },
   ];
 
   return (
     <section ref={sectionRef} className="py-16 md:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span className="section-tag inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-          Popular Superb AI Tools
+          Popular Superb AI Tools & Agents
         </span>
         <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-12 md:mb-16">
           Say hello to AI that is <br className="sm:hidden"/> built for every scenario
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {featuresData.map((feature, index) => (
-            <FeatureCard 
-              key={feature.title} 
-              title={feature.title} 
-              description={feature.description}
-              iconPath={feature.iconPath}
-              iconBgColor={feature.iconBgColor}
-              iconColor={feature.iconColor}
-              animationDelay={index * 0.1} 
-            />
-          ))}
+          {featuresData.map((feature, index) => {
+            let avatarSvgString = undefined;
+            if (feature.avatarSeed) {
+              const avatar = createAvatar(openPeeps, {
+                seed: feature.avatarSeed,
+              });
+              avatarSvgString = avatar.toString();
+            }
+
+            return (
+              <FeatureCard
+                key={feature.title}
+                title={feature.title}
+                description={feature.description}
+                animationDelay={index * 0.1}
+                avatarSvg={avatarSvgString} // Pass the generated SVG string
+              />
+            );
+          })}
         </div>
       </div>
     </section>

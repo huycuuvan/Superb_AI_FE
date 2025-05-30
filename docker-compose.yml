@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  frontend:
+    build:
+      context: .
+    ports:
+      - "3001:80"
+    container_name: employeeai-frontend
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway" 

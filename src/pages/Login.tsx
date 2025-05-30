@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from "@/hooks/useAuth";
 import gsap from 'gsap';
 
-// Màu sắc cho các thành phần khác (giữ lại để có thể tùy chỉnh)
 const loginPageColors = {
   accentPrimary: 'text-purple-600',
   accentPrimaryHover: 'hover:text-purple-700',

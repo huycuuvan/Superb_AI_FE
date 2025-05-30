@@ -166,17 +166,17 @@ const Sidebar = ({ className }: SidebarProps) => {
           className
         )}
       >
-        <div className="flex items-center p-4 border-b border-border">
+        <div className="flex items-center p-[14px] border-b border-border dark:border-slate-800">
           <div className="flex items-center space-x-2">
             <div className="bg-teampal-500 text-white p-1.5 rounded">
               <span className="font-bold text-sm">TP</span>
             </div>
             {!collapsed && (
-              <span className="font-bold text-lg">Superb AI</span>
+              <span className="font-bold text-lg text-foreground dark:text-white">Superb AI</span>
             )}
           </div>
           <button 
-            className="ml-auto text-gray-500 hover:text-gray-700"
+            className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             onClick={() => setCollapsed(!collapsed)}
           >
             <ChevronRight className={cn("h-4 w-4 transition-transform", collapsed ? "" : "rotate-180")} />
@@ -186,17 +186,17 @@ const Sidebar = ({ className }: SidebarProps) => {
         {!collapsed && (
           <div className="p-3">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
               <Input 
                 type="search" 
                 placeholder={t('search')}
-                className="pl-8 bg-muted/50"
+                className="pl-8 bg-muted/50 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400"
               />
             </div>
           </div>
         )}
 
-        <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border dark:border-slate-800">
           <div className="flex items-center space-x-2 max-w-[140px]">
             {workspace?.name.startsWith('AI') && (
               <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
@@ -204,14 +204,14 @@ const Sidebar = ({ className }: SidebarProps) => {
               </div>
             )}
             {!collapsed && (
-              <div className="text-lg font-bold truncate max-w-[100px]">{workspace?.name}'s workspace</div>
+              <div className="text-lg font-bold truncate max-w-[100px] text-foreground dark:text-white">{workspace?.name}'s workspace</div>
             )}
           </div>
           {!collapsed && (
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-6 w-6 ml-1 border-teampal-500 text-teampal-500 hover:bg-teampal-100 hover:text-teampal-700"
+              className="h-6 w-6 ml-1 border-teampal-500 text-teampal-500 hover:bg-teampal-100 hover:text-teampal-700 dark:border-teampal-700 dark:text-teampal-300 dark:hover:bg-teampal-900 dark:hover:text-teampal-100"
               onClick={() => setShowAddFolderDialog(true)}
             >
               <Plus className="h-4 w-4" />
@@ -228,18 +228,24 @@ const Sidebar = ({ className }: SidebarProps) => {
                 key={folder.id}
                 className={cn(
                   "flex items-center px-3 py-2 mx-2 rounded-md text-sm cursor-pointer",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "transition-colors"
+                  "hover:bg-accent/50 hover:text-accent-foreground",
+                  "transition-colors",
+                  location.pathname === `/dashboard/folder/${folder.id}`
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
               >
                 <div className="flex items-center w-full">
-                  <Folder className="sidebar-icon mr-2" />
+                  <Folder className="sidebar-icon mr-2 text-muted-foreground" />
                   {!collapsed && <span className="truncate flex-1">{folder.name}</span>}
                   {!collapsed && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" onClick={e => e.stopPropagation()}>
+                        <button 
+                          className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" 
+                          onClick={e => e.stopPropagation()}
+                        >
                           <MoreVertical className="sidebar-icon text-muted-foreground" />
                         </button>
                       </DropdownMenuTrigger>
@@ -250,8 +256,11 @@ const Sidebar = ({ className }: SidebarProps) => {
                         <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
                           <Pin className="sidebar-icon mr-2" /> Ghim
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-red-600 focus:text-red-600">
-                          <Trash className="sidebar-icon mr-2" /> Xoá
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(folder)}
+                          className="text-red-500 focus:text-red-500"
+                        >
+                          <Trash className="sidebar-icon mr-2" /> Xóa
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -262,8 +271,7 @@ const Sidebar = ({ className }: SidebarProps) => {
           )}
         </div>
         
-        {/* fixed in the bottom of the sidebar */}
-        <div className="absolute bottom-0 left-0 w-full bg-white border-t border-border pt-2 pb-3 z-10">
+        <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">
           <div className="border-b border-border p-2 space-y-1">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -299,57 +307,53 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
       </aside>
 
-      {/* Dialog: Rename Folder */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle>Đổi tên Folder</DialogTitle>
-            <DialogDescription>
-              Nhập tên mới cho folder "{folderToRename?.name}".
+            <DialogTitle className="dark:text-white">Đổi tên thư mục</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Nhập tên mới cho thư mục "{folderToRename?.name}".
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-folder-name" className="text-right">
+              <Label htmlFor="new-folder-name" className="text-right dark:text-white">
                 Tên mới
               </Label>
               <Input
                 id="new-folder-name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                className="col-span-3"
-                disabled={isRenaming}
+                className="col-span-3 dark:bg-slate-800 dark:text-white dark:border-slate-700"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRenameDialog(false)} disabled={isRenaming}>Hủy</Button>
-            <Button onClick={handleRenameFolder} disabled={!newFolderName.trim() || isRenaming}>
-              {isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+            </DialogClose>
+            <Button onClick={handleRenameFolder} disabled={isRenaming} className="teampal-button">{isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Confirm Delete Folder */}
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa Folder</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn xóa folder "{folderToDelete?.name}"? Hành động này không thể hoàn tác.
+            <DialogTitle className="dark:text-white">Xác nhận xóa thư mục</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Bạn có chắc chắn muốn xóa thư mục "{folderToDelete?.name}" không? Thao tác này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
-            <Button variant="destructive" onClick={handleDeleteFolder} disabled={isDeleting}>
-               {isDeleting ? 'Đang xóa...' : 'Xóa'}
-            </Button>
+            <DialogClose asChild>
+               <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+            </DialogClose>
+            <Button onClick={handleDeleteFolder} disabled={isDeleting} variant="destructive">{isDeleting ? 'Đang xóa...' : 'Xóa'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Add Folder (existing) */}
       {showAddFolderDialog && (
         <AddFolderDialog 
           open={showAddFolderDialog} 
@@ -358,9 +362,8 @@ const Sidebar = ({ className }: SidebarProps) => {
         />
       )}
 
-      {/* Dialog: Add Agent (existing) */}
       {showAddAgentDialog.open && (
-        <AddAgentDialog open={showAddAgentDialog.open} onOpenChange={open => setShowAddAgentDialog({open, folderId: undefined})} folderId={showAddAgentDialog.folderId} />
+        <AddAgentDialog open={showAddAgentDialog.open} onOpenChange={open => setShowAddAgentDialog({...showAddAgentDialog, open})} folderId={showAddAgentDialog.folderId} />
       )}
     </>
   );
