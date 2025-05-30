@@ -123,11 +123,11 @@ const Knowledge: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-background text-foreground">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage and organize your knowledge files</p>
+          <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage and organize your knowledge files</p>
         </div>
         <Button 
           onClick={() => setShowUploadDialog(true)}
@@ -140,19 +140,19 @@ const Knowledge: React.FC = () => {
 
       <div className="grid gap-4">
         {knowledgeFiles.map((file) => (
-          <Card key={file.id} className="p-4 hover:shadow-md transition-shadow">
+          <Card key={file.id} className="p-4 hover:shadow-md transition-shadow bg-card text-card-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
+                <div className="p-2 bg-accent/10 rounded-lg">
                   <FileText className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900">{file.name}</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 className="font-medium text-foreground">{file.name}</h3>
+                  <p className="text-sm text-muted-foreground">
                     {file.type} • {file.size} • Uploaded {file.uploadDate}
                   </p>
                   {file.description && (
-                    <p className="text-sm text-gray-600 mt-1">{file.description}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{file.description}</p>
                   )}
                 </div>
               </div>
@@ -172,7 +172,7 @@ const Knowledge: React.FC = () => {
                     View
                   </DropdownMenuItem>
                   <DropdownMenuItem 
-                    className="text-red-600"
+                    className="text-destructive"
                     onClick={() => handleDelete(file.id)}
                   >
                     <Trash className="mr-2 h-4 w-4" />

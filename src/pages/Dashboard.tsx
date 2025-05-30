@@ -177,10 +177,10 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-          <Button className="flex items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
+          <Button className="flex hover:bg-gray-900 color-black items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
             <span className="text-lg">+</span> Create agent
           </Button>
-          <Button variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="flex items-center  justify-center gap-2 w-full sm:w-auto hover:bg-gray">
             <span className="text-lg">+</span> Create folder
           </Button>
         </div>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -26,7 +26,7 @@ const Header = () => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -62,6 +62,12 @@ const Header = () => {
     { icon: "✓", label: t('tasks'), path: '/dashboard/tasks' },
     { icon: "⚙️", label: t('settings'), path: '/dashboard/settings' },
   ];
+
+  // Handle logout
+  const handleLogout = () => {
+    logout(); // Call the logout function from useAuth
+    navigate('/login'); // Navigate to the login page after logout
+  };
 
   return (
     <header className="bg-background border-b border-border">
@@ -139,13 +145,18 @@ const Header = () => {
             // Default Icons
             <>
               <LanguageToggle />
-              <Button variant="outline" size="sm" className="hidden md:inline-flex">
+              {/* Credit Display */}
+              <div className="flex items-center gap-1 text-foreground text-sm">
+                 <Sparkles className="h-4 w-4 text-yellow-400" /> {/* Sparkling star icon */}
+                 <span>10000 Credits</span> {/* Placeholder for credit amount */}
+              </div>
+              <Button variant="outline" size="sm" className="hidden md:inline-flex hover:bg-muted hover:text-foreground">
                 {t('editBrand')}
               </Button>
               {workspace && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition">
+                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-400 transition">
                       <Avatar className="bg-teampal-200 text-foreground w-8 h-8 flex items-center justify-center">
                         <span className="font-bold text-base flex items-center justify-center">
                           {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
@@ -168,6 +179,10 @@ const Header = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              {/* Logout Button */}
+              <Button variant="outline" size="sm" onClick={handleLogout} className="hover:bg-muted hover:text-foreground">
+                 Logout
+              </Button>
             </>
           )}
         </div>

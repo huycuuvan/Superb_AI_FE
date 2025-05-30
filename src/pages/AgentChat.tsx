@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
-  ListPlus, CheckCircle2, Camera, Edit, Share2, SlidersHorizontal, MessageSquare,
+  ListPlus, Book
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,6 @@ const AgentChat = () => {
   const { theme } = useTheme();
   const { agentId } = useParams<{ agentId: string }>();
   const [message, setMessage] = useState('');
-  const [showTaskPopup, setShowTaskPopup] = useState(false);
   const [currentAgent, setCurrentAgent] = useState(agents.find(agent => agent.id === agentId));
   const [tasks, setTasks] = useState<TaskWithInputs[]>([
     { 
@@ -118,10 +117,10 @@ const AgentChat = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
-  const [inputAreaMode, setInputAreaMode] = useState<'chat' | 'taskList' | 'promptList' | 'taskInputs'>('chat');
+  const [inputAreaMode, setInputAreaMode] = useState<'chat' | 'promptList'>('chat');
+  const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
-  const [showTaskInputModal, setShowTaskInputModal] = useState(false);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -153,6 +152,13 @@ const AgentChat = () => {
         
         setMessages(prev => [...prev, agentResponse]);
       }, 1000);
+    } else if (aboveInputContent === 'knowledge') {
+       // Handle sending message with knowledge files if implemented
+       console.log("Sending message with knowledge context:", selectedTaskInputs);
+       // Clear message and knowledge selection after sending
+       setMessage('');
+       setAboveInputContent('none'); // Hide knowledge selection
+       // Add logic to actually send message with selected files
     }
   };
   
@@ -165,8 +171,7 @@ const AgentChat = () => {
   
   const handleTaskSelect = (task: TaskWithInputs) => {
     setSelectedTaskId(task.id);
-    setInputAreaMode('taskInputs');
-    setShowTaskInputModal(true);
+    setAboveInputContent('taskInputs');
     setSelectedTaskInputs({});
   };
 
@@ -184,8 +189,7 @@ const AgentChat = () => {
         .map(([key, value]) => `${key}: ${value}`)
         .join('\n');
       setMessage(`${selectedTask.title}\n${inputValues}`);
-      setInputAreaMode('chat');
-      setShowTaskInputModal(false);
+      setAboveInputContent('none');
     }
   };
 
@@ -196,7 +200,7 @@ const AgentChat = () => {
   // Get appropriate colors based on theme
   const getMessageStyle = (sender: string) => {
     if (sender === 'user') {
-      return 'bg-primary text-primary-foreground';
+      return 'bg-primary color-black';
     } else {
       return 'bg-card text-card-foreground';
     }
@@ -226,185 +230,269 @@ const AgentChat = () => {
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
-      {/* Agent header */}
-      <div className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 border-b bg-background">
-        <Avatar className="h-10 w-10 md:h-12 md:w-12">
-          <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-          <AvatarFallback className="bg-secondary text-secondary-foreground">
-            {currentAgent?.name?.charAt(0) || 'A'}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-lg md:text-xl font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col">
+        {/* Agent Selection / Header in Sidebar */}
+        <div className="p-4 border-b flex items-center space-x-3">
+           <Avatar className="h-10 w-10">
+             <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+             <AvatarFallback className="bg-secondary text-secondary-foreground">
+               {currentAgent?.name?.charAt(0) || 'A'}
+             </AvatarFallback>
+           </Avatar>
+           <div>
+             <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
+             <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+           </div>
         </div>
-      </div>
-      
-      {/* Chat area */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background pb-[80px]"
-      >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={
-              cn(
-                "flex items-start",
-                msg.sender === 'user' ? 'justify-end' : 'justify-start'
-              )
-            }
-          >
-            {msg.sender === 'agent' && (
-              <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
-                 <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                <AvatarFallback className="bg-secondary text-secondary-foreground">
-                   {currentAgent?.name?.charAt(0) || 'A'}
-                 </AvatarFallback>
-              </Avatar>
-            )}
-            <div className={cn(
-              "max-w-[70%] p-3 rounded-lg shadow-md break-words",
-              getMessageStyle(msg.sender)
-            )}>
-              <p>{msg.content}</p>
-              <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            {msg.sender === 'user' && (
-              <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
-                 {/* User avatar image if available */}
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                   {/* User initial or fallback */}
-                   {/* Replace with actual user initial/fallback logic */}
-                   U
-                 </AvatarFallback>
-              </Avatar>
-            )}
+        {/* New Chat Button */}
+        <div className="p-4 border-b">
+          <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+            <Plus className="h-4 w-4" />
+            <span>New chat</span>
+          </Button>
+        </div>
+        {/* Chat History List (Placeholder) */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {/* Map through chat history here */}
+          <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+             <p className="text-sm font-medium">Chat with {currentAgent?.name}</p>
+             <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
           </div>
-        ))}
+           {/* Example of another chat item */}
+          <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+             <p className="text-sm font-medium">Previous Chat</p>
+             <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+          </div>
+           {/* Add more chat items as needed */}
+        </div>
+        {/* Sidebar Footer (Optional) */}
+        {/* <div className="p-4 border-t">
+          <p className="text-xs text-muted-foreground text-center">Sidebar Footer</p>
+        </div> */}
+      </aside>
 
-        {/* Daily Timer Button */}
-        {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
-          <div className="flex justify-start mt-2">
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2 text-sm"
-              onClick={handleDailyTaskClick}
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-background">
+         {/* Agent header (moved to sidebar) */}
+         {/* <div className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 border-b bg-background">
+           <Avatar className="h-10 w-10 md:h-12 md:w-12">
+             <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+             <AvatarFallback className="bg-secondary text-secondary-foreground">
+               {currentAgent?.name?.charAt(0) || 'A'}
+             </AvatarFallback>
+           </Avatar>
+           <div>
+             <h1 className="text-lg md:text-xl font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h1>
+             <p className="text-xs md:text-sm text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+           </div>
+         </div> */}
+
+        {/* Chat area */}
+        <div
+          ref={chatContainerRef}
+          className={cn(
+            "flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
+            aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]' // Adjust padding based on whether content is above input
+          )}
+        >
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={
+                cn(
+                  "flex items-start",
+                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                )
+              }
             >
-              <ListPlus className="h-4 w-4" />
-              Hẹn giờ hằng ngày
-            </Button>
-          </div>
-        )}
-      </div>
-      
-      {/* Input area */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 border-t bg-background z-10">
-        {inputAreaMode === 'chat' && (
-          <div className="flex items-center space-x-2 md:space-x-3 p-2 border border-border rounded-lg bg-card">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="flex-shrink-0"
-              onClick={() => setInputAreaMode('taskList')}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            {/* Removed file attachment button */}
-            
-            <Textarea
-              placeholder={t('askAI')}
-              className="flex-1 resize-none min-h-[24px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              style={{ overflowY: 'hidden', height: 'auto' }}
-            />
-            
-            <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {inputAreaMode === 'taskList' && (
-          <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-2 text-foreground">Tasks</h3>
-            <div className="space-y-2">
-              {tasks.map((task) => (
-                <Button 
-                  key={task.id} 
-                  variant="outline"
-                  className="w-full justify-start border-border"
-                  onClick={() => handleTaskSelect(task)}
-                >
-                  {task.title}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {inputAreaMode === 'promptList' && (
-          <div className="mb-2 p-2 border rounded-lg bg-background max-h-40 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-2 text-foreground">Prompt Suggestions</h3>
-            <div className="space-y-2">
-              {promptSuggestions.map((suggestion, index) => (
-                <Button 
-                  key={index} 
-                  variant="outline"
-                  className="w-full justify-start border-border"
-                  onClick={() => handlePromptSuggestionClick(suggestion)}
-                >
-                  {suggestion}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {inputAreaMode === 'taskInputs' && selectedTask && (
-          <div className="space-y-3 p-2 border rounded-lg bg-background">
-            <h3 className="text-lg font-semibold text-foreground">{selectedTask.title} Inputs</h3>
-            {selectedTask.inputs.map((input) => (
-              <div key={input.id} className="space-y-1">
-                <label htmlFor={input.id} className="text-sm font-medium text-foreground">{input.label}</label>
-                {input.type === 'select' ? (
-                  <Select
-                    value={selectedTaskInputs[input.id] || ''}
-                    onValueChange={(value) => handleInputChange(input.id, value)}
-                  >
-                    <SelectTrigger className="bg-card text-card-foreground border-border">
-                      <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {input.options?.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    id={input.id}
-                    type={input.type}
-                    value={selectedTaskInputs[input.id] || ''}
-                    onChange={(e) => handleInputChange(input.id, e.target.value)}
-                    placeholder={`Nhập ${input.label.toLowerCase()}`}
-                    className="bg-card text-card-foreground border-border"
-                  />
-                )}
+              {msg.sender === 'agent' && (
+                <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
+                   <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+                  <AvatarFallback className="bg-secondary text-secondary-foreground">
+                     {currentAgent?.name?.charAt(0) || 'A'}
+                   </AvatarFallback>
+                </Avatar>
+              )}
+              <div className={cn(
+                "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
+                getMessageStyle(msg.sender)
+              )}>
+                <p>{msg.content}</p>
+                <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-            ))}
-            <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
-            <Button variant="outline" className="w-full border-border" onClick={() => setInputAreaMode('taskList')}>Back to Tasks</Button>
-          </div>
-        )}
+              {msg.sender === 'user' && (
+                <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
+                   {/* User avatar image if available */}
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                     {/* User initial or fallback */}
+                     {/* Replace with actual user initial/fallback logic */}
+                     U
+                   </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          ))}
+
+          {/* Daily Timer Button (Keep this within the main chat area) */}
+          {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
+            <div className="flex justify-start mt-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-sm"
+                onClick={handleDailyTaskClick}
+              >
+                <ListPlus className="h-4 w-4" />
+                Hẹn giờ hằng ngày
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Area above the main input for Tasks/Knowledge */}
+        <div className="p-3 md:p-4 bg-background">
+           {/* Task List or Task Inputs */}
+           {aboveInputContent === 'taskList' && (
+             <div className="mb-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
+               <h3 className="text-lg font-semibold mb-2 text-foreground">Tasks</h3>
+               <div className="space-y-2">
+                 {tasks.map((task) => (
+                   <Button
+                     key={task.id}
+                     variant="outline"
+                     className="w-full justify-start border-border"
+                     onClick={() => handleTaskSelect(task)}
+                   >
+                     {task.title}
+                   </Button>
+                 ))}
+               </div>
+               <Button variant="outline" className="w-full border-border mt-2" onClick={() => setAboveInputContent('none')}>Close Tasks</Button>
+             </div>
+           )}
+
+           {aboveInputContent === 'taskInputs' && selectedTask && (
+             <div className="mb-3 space-y-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
+               <h3 className="text-lg font-semibold text-foreground">{selectedTask.title} Inputs</h3>
+               {selectedTask.inputs.map((input) => (
+                 <div key={input.id} className="space-y-1">
+                   <label htmlFor={input.id} className="text-sm font-medium text-foreground">{input.label}</label>
+                   {input.type === 'select' ? (
+                     <Select
+                       value={selectedTaskInputs[input.id] || ''}
+                       onValueChange={(value) => handleInputChange(input.id, value)}
+                     >
+                       <SelectTrigger className="bg-background text-card-foreground border-border">
+                         <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {input.options?.map((option) => (
+                           <SelectItem key={option} value={option}>
+                             {option}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   ) : (
+                     <Input
+                       id={input.id}
+                       type={input.type}
+                       value={selectedTaskInputs[input.id] || ''}
+                       onChange={(e) => handleInputChange(input.id, e.target.value)}
+                       placeholder={`Nhập ${input.label.toLowerCase()}`}
+                       className="bg-background text-card-foreground border-border"
+                     />
+                   )}
+                 </div>
+               ))}
+               <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
+               <Button variant="outline" className="w-full border-border" onClick={() => setAboveInputContent('taskList')}>Back to Tasks</Button>
+             </div>
+           )}
+
+           {/* Knowledge File Selection (Placeholder) */}
+            {aboveInputContent === 'knowledge' && (
+              <div className="mb-3 p-4 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
+                <h3 className="text-lg font-semibold mb-2 text-foreground">Knowledge Files</h3>
+                <p className="text-sm text-muted-foreground">Select knowledge files to provide context to the agent.</p>
+                {/* Add file selection UI here */}
+                 <div className="mt-4 space-y-2">
+                   <div className="flex items-center space-x-2">
+                      <input type="checkbox" id="file1" />
+                      <label htmlFor="file1" className="text-sm text-foreground">Document_A.pdf</label>
+                   </div>
+                    <div className="flex items-center space-x-2">
+                      <input type="checkbox" id="file2" />
+                      <label htmlFor="file2" className="text-sm text-foreground">KnowledgeBase.txt</label>
+                   </div>
+                    {/* Add more files as needed */}
+                 </div>
+                <Button variant="outline" className="w-full border-border mt-4" onClick={() => setAboveInputContent('none')}>Close Knowledge</Button>
+              </div>
+            )}
+
+           {/* Main Input Area Structure */}
+           <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
+             {/* Textarea Row */}
+             <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
+                <Textarea
+                  placeholder={t('askAI')}
+                  className="flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={1}
+                  style={{ overflowY: 'hidden', height: 'auto' }}
+                />
+
+             </div>
+
+             {/* Tool Buttons and Send Button Row with Descriptions */}
+             <div className="flex items-center space-x-2 pt-2 justify-between">
+                <div className="flex items-center space-x-4">
+                   {/* Knowledge Button with Description */}
+                   <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                      onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
+                   >
+                      <Book className="h-4 w-4" />
+                      <span className="text-sm">Knowledge</span>
+                   </Button>
+
+                   {/* Task Button with Description */}
+                   <Button
+                      variant="outline"
+                       size="sm"
+                      className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                      onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
+                   >
+                      <ListPlus className="h-4 w-4" />
+                      <span className="text-sm">Task</span>
+                   </Button>
+
+                   {/* Attach File Button with Description */}
+                   <Button
+                      variant="outline"
+                       size="sm"
+                      className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                   >
+                      <Paperclip className="h-4 w-4" />
+                      <span className="text-sm">Attach file</span>
+                   </Button>
+                </div>
+
+                {/* Send Button (Moved to the second row) */}
+                <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage}>
+                  <Send className="h-4 w-4" />
+                </Button>
+             </div>
+           </div>
+        </div>
       </div>
     </div>
   );

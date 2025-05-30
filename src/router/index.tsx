@@ -33,6 +33,10 @@ import AdminFolders from "@/pages/admin/Folders";
 import AdminAgents from "@/pages/admin/Agents";
 import AdminAgentConfigs from "@/pages/admin/AgentConfigs";
 import AdminAgentDetail from "@/pages/admin/AgentDetail";
+import PricingPage from '@/pages/Pricing';
+import AboutPage from '@/pages/About';
+import DocsPage from '@/pages/Docs';
+import BlogPage from '@/pages/Blog';
 
 const routes: RouteObject[] = [
   {
@@ -178,6 +182,22 @@ const routes: RouteObject[] = [
         element: <AdminAgentConfigs />,
       },
     ],
+  },
+  {
+    path: '/pricing',
+    element: <PricingPage />,
+  },
+  {
+    path: '/about',
+    element: <AboutPage />,
+  },
+  {
+    path: '/docs/*',
+    element: <DocsPage />,
+  },
+  {
+    path: '/blog',
+    element: <BlogPage />,
   },
   {
     path: '*',

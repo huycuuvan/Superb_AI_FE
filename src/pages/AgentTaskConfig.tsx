@@ -14,10 +14,10 @@ const AgentTaskConfig = () => {
   const { agentId } = useParams<{ agentId: string }>();
 
   // State for scheduler settings
-  const [frequency, setFrequency] = useState('daily'); // Default to Hàng ngày
-  const [time, setTime] = useState('07:00'); // Default to 7h
+  const [frequency, setFrequency] = useState('daily'); // Default to Daily
+  const [time, setTime] = useState('07:00'); // Default to 7:00
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  // Default to use timezone, though specific +7 isn't set without input field
+  // Default to use timezone
   const [useTimezone, setUseTimezone] = useState(true);
   const [timeLimit, setTimeLimit] = useState('60');
 
@@ -28,9 +28,9 @@ const AgentTaskConfig = () => {
 
   // Define steps for the indicator
   const steps = [
-    { label: 'Thiết lập bộ hẹn giờ', icon: Clock },
-    { label: 'Chọn dữ liệu đầu vào', icon: Database },
-    { label: 'Xem lại và xác nhận', icon: CheckCircle },
+    { label: 'Scheduler Settings', icon: Clock },
+    { label: 'Select Input Data', icon: Database },
+    { label: 'Review and Confirm', icon: CheckCircle },
   ];
 
   const [currentStep, setCurrentStep] = useState(0); // State to manage current step
@@ -94,18 +94,18 @@ const AgentTaskConfig = () => {
   const dataColumns = Object.keys(dataToPreview.length > 0 ? dataToPreview[0] : {});
 
   return (
-    <div className="flex">
+    <div className="flex h-full">
       {/* Step Indicator Sidebar */}
-      <div className="w-64 p-6 border-r bg-gray-50">
-        <h2 className="text-lg font-semibold mb-4">Các bước</h2>
-        <div className="space-y-4">
+      <div className="w-64 p-6 border-r bg-card text-card-foreground flex flex-col">
+        <h2 className="text-lg font-semibold mb-4">Steps</h2>
+        <div className="space-y-4 flex-grow">
           {steps.map((step, index) => (
             <div 
               key={index} 
-              className={`flex items-center space-x-3 cursor-pointer ${index === currentStep ? 'text-primary font-bold' : 'text-muted-foreground'}`}
+              className={`flex items-center space-x-3 cursor-pointer ${index === currentStep ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'}`}
               onClick={() => setCurrentStep(index)}
             >
-              <step.icon className={`h-5 w-5 ${index === currentStep ? 'text-primary' : 'text-muted-foreground'}`} />
+              <step.icon className={`h-5 w-5 ${index === currentStep ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
               <span>{step.label}</span>
             </div>
           ))}
@@ -113,50 +113,51 @@ const AgentTaskConfig = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 bg-white">
+      <div className="flex-1 p-6 bg-background text-foreground flex flex-col overflow-y-auto">
         {currentStep === 0 && (
           <>
-            <h1 className="text-2xl font-bold mb-2">Thiết lập bộ hẹn giờ</h1>
-            <p className="text-muted-foreground mb-6">Cấu hình lịch trình cho việc tạo nội dung tự động.</p>
+            <h1 className="text-2xl font-bold mb-2">Scheduler Settings</h1>
+            <p className="text-muted-foreground mb-6">Configure the schedule for automated content generation.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Lịch trình & Thời gian */}
-              <Card>
+              {/* Schedule & Time */}
+              <Card className="bg-card text-card-foreground">
                 <CardHeader>
-                  <CardTitle>Lịch trình & Thời gian</CardTitle>
-                  <p className="text-sm text-muted-foreground">Đặt tần suất và thời gian cụ thể cho việc tạo nội dung.</p>
+                  <CardTitle>Schedule & Time</CardTitle>
+                  <p className="text-sm text-muted-foreground">Set the frequency and specific time for content generation.</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="frequency">Tần suất</Label>
+                    <Label htmlFor="frequency">Frequency</Label>
                     <Select value={frequency} onValueChange={setFrequency}>
-                      <SelectTrigger id="frequency">
-                        <SelectValue placeholder="Chọn tần suất" />
+                      <SelectTrigger id="frequency" className="bg-background text-foreground">
+                        <SelectValue placeholder="Select frequency" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="daily">Hàng ngày</SelectItem>
-                        <SelectItem value="weekly">Hàng tuần</SelectItem>
-                        <SelectItem value="monthly">Hàng tháng</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="time">Thời gian</Label>
+                    <Label htmlFor="time">Time</Label>
                     <Input 
                       id="time" 
                       type="time" 
                       value={time} 
                       onChange={(e) => setTime(e.target.value)}
+                      className="bg-background text-foreground"
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Ngày lặp lại */}
-              <Card>
+              {/* Repeat Days */}
+              <Card className="bg-card text-card-foreground">
                 <CardHeader>
-                  <CardTitle>Ngày lặp lại</CardTitle>
-                  <p className="text-sm text-muted-foreground">Chọn các ngày trong tuần để lặp lại lịch trình.</p>
+                  <CardTitle>Repeat Days</CardTitle>
+                  <p className="text-sm text-muted-foreground">Select the days of the week to repeat the schedule.</p>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
@@ -175,15 +176,15 @@ const AgentTaskConfig = () => {
               </Card>
             </div>
 
-            {/* Tùy chọn nâng cao */}
-            <Card className="mb-6">
+            {/* Advanced Options */}
+            <Card className="mb-6 bg-card text-card-foreground">
               <CardHeader>
-                <CardTitle>Tùy chọn nâng cao</CardTitle>
-                <p className="text-sm text-muted-foreground">Cấu hình các cài đặt nâng cao cho bộ hẹn giờ.</p>
+                <CardTitle>Advanced Options</CardTitle>
+                <p className="text-sm text-muted-foreground">Configure advanced settings for the scheduler.</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="use-timezone">Sử dụng múi giờ</Label>
+                  <Label htmlFor="use-timezone">Use Timezone</Label>
                   <Switch 
                     id="use-timezone" 
                     checked={useTimezone} 
@@ -191,135 +192,150 @@ const AgentTaskConfig = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="time-limit">Giới hạn thời lượng (phút)</Label>
+                  <Label htmlFor="time-limit">Time Limit (minutes)</Label>
                   <Input 
                     id="time-limit" 
                     type="number" 
-                    placeholder="Ví dụ: 60" 
+                    placeholder="e.g., 60" 
                     value={timeLimit} 
                     onChange={(e) => setTimeLimit(e.target.value)}
+                    className="bg-background text-foreground"
                   />
                 </div>
               </CardContent>
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4">
-              <Button variant="outline" onClick={handleCancel}>Hủy bỏ</Button>
-              <Button onClick={() => handleSave()}>Lưu cài đặt</Button>
+            <div className="flex justify-end gap-4 mt-auto">
+              <Button variant="outline" onClick={handleCancel} className="border-border text-foreground hover:bg-muted">
+                Cancel
+              </Button>
+              <Button onClick={() => handleSave()} className="teampal-button">
+                Save Settings
+              </Button>
             </div>
           </>
         )}
 
         {currentStep === 1 && (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">1. Connect Data Source</h1>
+          <div className="space-y-6 flex flex-col h-full">
+            <div className="flex-shrink-0">
+              <h1 className="text-2xl font-bold mb-2 text-foreground">Select Input Data</h1>
               <p className="text-muted-foreground">Select where your content data comes from.</p>
 
               <div className="mt-4 flex space-x-2">
                 <Button 
                   variant={selectedDataSource === 'csv' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('csv')}
+                  className={selectedDataSource === 'csv' ? '' : 'border-border text-foreground hover:bg-muted'}
                 >
                   Upload CSV
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'excel' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('excel')}
+                  className={selectedDataSource === 'excel' ? '' : 'border-border text-foreground hover:bg-muted'}
                 >
                   Upload Excel
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'google-sheets' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('google-sheets')}
+                  className={selectedDataSource === 'google-sheets' ? '' : 'border-border text-foreground hover:bg-muted'}
                 >
                   Google Sheets
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'api' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('api')}
+                  className={selectedDataSource === 'api' ? '' : 'border-border text-foreground hover:bg-muted'}
                 >
                   API
                 </Button>
               </div>
 
               {selectedDataSource === 'csv' && (
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <Label htmlFor="csv-file">Upload your CSV file</Label>
-                    <Input id="csv-file" type="file" accept=".csv" />
-                  </div>
-                  <Button>Upload File</Button>
-                  {/* Assuming a success message display logic here */}
-                  <p className="text-green-600 flex items-center">
-                    <CheckCircle className="h-5 w-5 mr-2" /> Source connected successfully!
-                  </p>
+                <div className="mt-4 p-4 border border-border rounded-lg bg-card text-card-foreground">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Upload CSV File</h3>
+                  <input 
+                    type="file" 
+                    accept=".csv"
+                    onChange={handleExcelFileChange} // Reusing handler for now, assuming it can handle CSV structure
+                    className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">Please ensure your CSV file is comma-separated.</p>
                 </div>
               )}
 
               {selectedDataSource === 'excel' && (
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <Label htmlFor="excel-file">Upload your Excel file</Label>
-                    <Input id="excel-file" type="file" accept=".xls,.xlsx" onChange={handleExcelFileChange} />
+                <div className="mt-4 p-4 border border-border rounded-lg bg-card text-card-foreground">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Upload Excel File</h3>
+                  <input 
+                    type="file" 
+                    accept=".xlsx, .xls"
+                    onChange={handleExcelFileChange}
+                    className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">Accepted formats: .xlsx, .xls</p>
                   </div>
-                  {/* TODO: Add button to trigger Excel file processing if needed, or process on file change */}
-                  {/* Assuming a success message display logic here */}
-                  {excelData.length > 0 && (
-                     <p className="text-green-600 flex items-center">
-                      <CheckCircle className="h-5 w-5 mr-2" /> File loaded and parsed successfully!
-                     </p>
-                  )}
+              )}
+
+              {selectedDataSource === 'google-sheets' && (
+                <div className="mt-4 p-4 border border-border rounded-lg bg-card text-card-foreground">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Connect Google Sheet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Enter the shareable link to your Google Sheet.</p>
+                  <Input placeholder="Google Sheet Link" className="bg-background text-foreground" />
+                  <Button className="teampal-button mt-2">Connect</Button>
                 </div>
               )}
 
-              {/* Add UI for Google Sheets and API if needed */}
-
+              {selectedDataSource === 'api' && (
+                <div className="mt-4 p-4 border border-border rounded-lg bg-card text-card-foreground">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Connect API</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Enter the API endpoint to fetch data.</p>
+                  <Input placeholder="API Endpoint" className="bg-background text-foreground" />
+                  <Button className="teampal-button mt-2">Connect</Button>
+                </div>
+              )}
             </div>
 
-            <div>
-              <h1 className="text-2xl font-bold mb-2">2. Preview & Select Data</h1>
-              <p className="text-muted-foreground">Preview the first few rows of your connected data.</p>
-              
-              {/* Data Preview Table */}
-              <div className="mt-4 border rounded-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
+            {/* Data Preview Section (Conditional) */}
+            {dataToPreview.length > 0 && (
+              <div className="mt-6 space-y-4 flex-1 flex flex-col flex-shrink-0">
+                 <h2 className="text-xl font-semibold text-foreground">Data Preview</h2>
+                 <div className="overflow-auto flex-shrink-0 max-h-[200px]">
+                   <table className="w-full table-auto border-collapse border border-border">
+                      <thead>
+                         <tr className="bg-muted text-muted-foreground">
                       {dataColumns.map(col => (
-                        <th key={col} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {col}
-                        </th>
+                               <th key={col} className="px-4 py-2 text-left text-sm font-medium border border-border">{col}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {dataToPreview.map((row, rowIndex) => (
-                      <tr key={rowIndex}>
+                      <tbody>
+                         {dataToPreview.slice(0, 5).map((row, rowIndex) => (
+                            <tr key={rowIndex} className="even:bg-background odd:bg-card text-card-foreground">
                         {dataColumns.map(col => (
-                          <td key={col} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {row[col] as React.ReactNode}
-                          </td>
+                                  <td key={`${rowIndex}-${col}`} className="px-4 py-2 text-sm border border-border overflow-hidden text-ellipsis whitespace-nowrap">{String(row[col])}</td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
 
-            <div>
-              <h1 className="text-2xl font-bold mb-2">3. Map Columns</h1>
-              <p className="text-muted-foreground">Match your data columns to the required content fields.</p>
-              
-              {/* Column Mapping */}
-              <div className="mt-4 space-y-4">
+                 {/* Column Mapping Section */}
+                 <div className="space-y-4 flex-shrink-0">
+                    <h2 className="text-xl font-semibold text-foreground">Column Mapping</h2>
+                    <p className="text-sm text-muted-foreground">Map your data columns to the agent's required fields.</p>
+                    {/* Placeholder for mapping inputs */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {/* Example mapping input */}
                 <div>
-                  <Label htmlFor="content-title-map">Content Title</Label>
+                          <Label htmlFor="product-name-mapping">Product Name</Label>
                   <Select>
-                    <SelectTrigger id="content-title-map">
-                      <SelectValue placeholder="Select a column..." />
+                             <SelectTrigger id="product-name-mapping" className="bg-background text-foreground border-border">
+                                <SelectValue placeholder="Select column" />
                     </SelectTrigger>
                     <SelectContent>
                        {dataColumns.map(col => (
@@ -328,128 +344,50 @@ const AgentTaskConfig = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div>
-                  <Label htmlFor="content-body-map">Content Body</Label>
-                  <Select>
-                    <SelectTrigger id="content-body-map">
-                      <SelectValue placeholder="Select a column..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                       {/* Add more mapping inputs as needed based on agent requirements */}
                 </div>
-                <div>
-                  <Label htmlFor="image-url-map">Image URL</Label>
-                  <Select>
-                    <SelectTrigger id="image-url-map">
-                      <SelectValue placeholder="Select a column..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div>
-                  <Label htmlFor="tags-keywords-map">Tags/Keywords</Label>
-                  <Select>
-                    <SelectTrigger id="tags-keywords-map">
-                      <SelectValue placeholder="Select a column..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div>
-                  <Label htmlFor="author-name-map">Author Name</Label>
-                  <Select>
-                    <SelectTrigger id="author-name-map">
-                      <SelectValue placeholder="Select a column..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div>
-                  <Label htmlFor="category-map">Category</Label>
-                  <Select>
-                    <SelectTrigger id="category-map">
-                      <SelectValue placeholder="Select a column..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
-            </div>
+            )}
 
              {/* Navigation Buttons */}
-             <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setCurrentStep(0)}>Previous</Button>
-              <Button onClick={() => setCurrentStep(2)}>Next: Content Setup</Button>
+            <div className="flex justify-between gap-4 mt-auto flex-shrink-0">
+              <Button variant="outline" onClick={() => setCurrentStep(0)} className="border-border text-foreground hover:bg-muted">
+                Previous
+              </Button>
+              <Button onClick={() => setCurrentStep(2)} className="teampal-button">
+                Next
+              </Button>
             </div>
           </div>
         )}
 
         {currentStep === 2 && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold mb-2">Xem lại và xác nhận</h1>
-            <p className="text-muted-foreground mb-6">Xem lại các cài đặt đã cấu hình trước khi xác nhận.</p>
+          <div className="space-y-6 flex flex-col h-full">
+            <h1 className="text-2xl font-bold mb-2 text-foreground">Review and Confirm</h1>
+            <p className="text-muted-foreground mb-6">Review your task configuration before saving.</p>
             
-            {/* Review Section: Scheduler & Time */}
-            <Card>
+            {/* Summary Section */}
+            <Card className="bg-card text-card-foreground flex-shrink-0">
               <CardHeader>
-                <CardTitle>Lịch trình & Thời gian</CardTitle>
+                <CardTitle>Configuration Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <p><strong>Tần suất:</strong> {frequency || 'Chưa chọn'}</p>
-                <p><strong>Thời gian:</strong> {time || 'Chưa chọn'}</p>
-                <p><strong>Ngày lặp lại:</strong> {selectedDays.length > 0 ? selectedDays.join(', ') : 'Chưa chọn'}</p>
-                <p><strong>Sử dụng múi giờ:</strong> {useTimezone ? 'Có' : 'Không'}</p>
-                <p><strong>Giới hạn thời lượng (phút):</strong> {timeLimit || 'Chưa đặt'}</p>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                <p><strong>Scheduler:</strong> {frequency} at {time} (Days: {selectedDays.join(', ')})</p>
+                <p><strong>Data Source:</strong> {selectedDataSource === 'csv' ? 'CSV Upload' : selectedDataSource === 'excel' ? 'Excel Upload' : selectedDataSource === 'google-sheets' ? 'Google Sheets' : 'API'}</p>
+                {/* Add more summary details based on selected data source and mapping */}
+                <p><em>(More details will be shown here based on your selections)</em></p>
               </CardContent>
             </Card>
 
-            {/* Review Section: Data Source */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Dữ liệu đầu vào</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p><strong>Nguồn dữ liệu:</strong> {selectedDataSource === 'csv' ? 'Upload CSV' : selectedDataSource === 'google-sheets' ? 'Google Sheets' : selectedDataSource === 'api' ? 'API' : 'Chưa chọn'}</p>
-                 {/* You might want to add more details here based on the selected data source */}
-              </CardContent>
-            </Card>
-
-            {/* Review Section: Column Mapping - You might display a summary of mapped columns here */}
-             <Card>
-              <CardHeader>
-                <CardTitle>Ánh xạ cột</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Tóm tắt ánh xạ cột sẽ hiển thị ở đây.</p>
-                 {/* Implement logic to display mapped columns */}
-              </CardContent>
-            </Card>
-
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setCurrentStep(1)}>Previous</Button>
-              <Button onClick={() => handleSave()}>Confirm and Save</Button>
+            {/* Action Buttons */}
+            <div className="flex justify-between gap-4 mt-auto flex-shrink-0">
+              <Button variant="outline" onClick={() => setCurrentStep(1)} className="border-border text-foreground hover:bg-muted">
+                Previous
+              </Button>
+              <Button onClick={() => handleSave()} className="teampal-button">
+                Save Task
+              </Button>
             </div>
           </div>
         )}
