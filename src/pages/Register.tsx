@@ -55,13 +55,13 @@ const Register = () => {
     setSuccess("");
     try {
       await registerWithEmail({ email, password, name });
-      setSuccess("Đăng ký thành công!");
+      setSuccess("Register successfully");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       if (isApiError(err)) {
         setError(err.message);
       } else {
-        setError("Đăng ký thất bại. Vui lòng thử lại sau.");
+        setError("Register failed. Please try again later.");
       }
     } finally {
       setLoading(false);
@@ -158,7 +158,7 @@ const Register = () => {
                 size="lg"
                 disabled={loading || googleLoading}
               >
-                {loading ? "Đang đăng ký..." : "Create Account"}
+                {loading ? "Registering..." : "Register"}
               </Button>
               <div className="relative pt-2 pb-1">
                 <div className="absolute inset-0 flex items-center">
