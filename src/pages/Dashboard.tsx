@@ -246,6 +246,8 @@ const Dashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
                   </CardContent>
                 </Card>
+                {/* Render AgentsForFolder component for this folder */}
+                <AgentsForFolder folderId={folder.id} navigate={navigate} />
               </div>
             </div>
           ))
@@ -284,6 +286,7 @@ const Dashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
 
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
@@ -302,7 +305,6 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
     </div>
   );
 };

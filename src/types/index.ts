@@ -18,15 +18,17 @@ export interface ModelConfig {
 }
 
 export interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  avatar?: string;
-  category?: string;
-  role_description?: string;
-  instructions?: string;
-  status?: string;
-  model_config?: ModelConfig;
+  agent: {
+    id: string;
+    name: string;
+    type: string;
+    avatar?: string;
+    category?: string;
+    role_description?: string;
+    instructions?: string;
+    status?: string;
+    model_config?: ModelConfig;
+  };
 }
 
 export interface Task {
@@ -42,6 +44,26 @@ export interface Task {
   status?: "todo" | "in-progress" | "completed";
   created_at?: string;
   updated_at?: string;
+}
+
+export interface Thread {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// New interface for message data from API
+export interface ApiMessage {
+  id: string;
+  thread_id: string;
+  sender_user_id?: string; // Optional for agent messages
+  sender_agent_id?: string; // Optional for user messages
+  sender_type: "user" | "agent";
+  message_content: string;
+  created_at: string;
+  updated_at: string;
+  parent_message_id?: string; // For replies
 }
 
 export interface ChatTask {

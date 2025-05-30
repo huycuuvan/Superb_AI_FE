@@ -285,22 +285,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           {/* Thêm đường kẻ phân cách */}
           <div className="border-t border-border my-2 mx-2"></div>
 
-          {/* Render filtered menu items */}
-          {filteredMenuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center px-3 py-2 mx-2 rounded-md text-sm font-medium",
-                "transition-colors hover:bg-muted/50",
-                location.pathname === item.path ? "bg-muted" : "transparent",
-                collapsed ? "justify-center" : ""
-              )}
-            >
-              <item.icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
-              {!collapsed && item.label}
-            </Link>
-          ))}
+         
         </div>
         
         <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">

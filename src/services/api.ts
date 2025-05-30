@@ -1,5 +1,12 @@
 import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
-import { Workspace, Agent, ModelConfig } from "@/types";
+import {
+  Workspace,
+  Agent,
+  ModelConfig,
+  Thread,
+  ChatMessage,
+  ApiMessage,
+} from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
 export const registerWithEmail = async ({
@@ -25,8 +32,8 @@ export const registerWithEmail = async ({
 };
 
 export const registerWithGoogle = async () => {
-  const res = await fetch(API_ENDPOINTS.auth.google, {
-    method: "GET",
+  const res = await fetch(API_ENDPOINTS.auth.login, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
   });
 
@@ -161,7 +168,7 @@ export const getFolders = async (
 };
 
 export interface WorkspaceResponse {
-  data: Workspace | null;
+  data: Workspace[] | null;
   status: number;
 }
 
@@ -472,6 +479,110 @@ export const updateWorkspaceProfile = async (
       body: JSON.stringify(profileData),
     }
   );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const createThread = async (threadData: {
+  workspace_id: string;
+  agent_id: string;
+  title: string;
+}): Promise<{ data: Thread }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.threads.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(threadData),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const checkThreadExists = async (
+  agentId: string,
+  workspaceId: string
+): Promise<{ exists: boolean; thread_id?: string }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_ENDPOINTS.threads.check}?agent_id=${agentId}&workspace_id=${workspaceId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    // Handle non-200 responses, perhaps the API returns 404 if not found
+    if (response.status === 404) {
+      return { exists: false };
+    }
+    await handleApiError(response);
+    throw new Error("Lỗi khi kiểm tra thread tồn tại");
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+// New function to send message to thread
+export const sendMessageToThread = async (
+  threadId: string,
+  messageContent: string
+): Promise<{ data: ChatMessage }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/threads/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      thread_id: threadId,
+      message_content: messageContent,
+    }),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// New function to get messages for a thread
+export const getThreadMessages = async (
+  threadId: string
+): Promise<{ data: ApiMessage[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.threads.messages(threadId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   if (!response.ok) {
     await handleApiError(response);

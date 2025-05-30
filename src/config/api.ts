@@ -34,4 +34,11 @@ export const API_ENDPOINTS = {
     update: (id: string) => `${API_BASE_URL}/folders/${id}`,
     delete: (id: string) => `${API_BASE_URL}/folders/${id}`,
   },
+  threads: {
+    create: `${API_BASE_URL}/threads`,
+    list: `${API_BASE_URL}/threads`,
+    messages: (threadId: string) =>
+      `${API_BASE_URL}/threads/${threadId}/messages`,
+    check: `${API_BASE_URL}/threads/check`,
+  },
 };
