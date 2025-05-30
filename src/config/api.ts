@@ -41,4 +41,7 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/threads/${threadId}/messages`,
     check: `${API_BASE_URL}/threads/check`,
   },
+  messages: {
+    list: `${API_BASE_URL}/messages`,
+  },
 };
