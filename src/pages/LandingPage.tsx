@@ -42,14 +42,14 @@ const Header: React.FC = () => {
             Superb AI
           </Link>
           <nav className="hidden md:flex items-center space-x-5 lg:space-x-7">
-            <a href="#pricing" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
-            <a href="#about" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
-            <a href="#affiliates" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Affiliates</a>
-            <a href="#blog" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
+            <a href="pricing" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
+            <a href="about" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
+            <a href="docs" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Docs</a>
+            <a href="blog" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
           </nav>
           <div className="flex items-center space-x-3 sm:space-x-4">
             <Link to="/login" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
-            <Link to="/signup" className="bg-purple-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center group">
+            <Link to="/register" className="bg-purple-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center group">
               Sign up
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transform transition-transform duration-200 group-hover:translate-x-0.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -323,7 +323,6 @@ const SuperchargedAISection: React.FC = () => {
         <div className="content-card-wrapper max-w-5xl mx-auto bg-slate-50/70 backdrop-blur-sm p-6 sm:p-8 md:p-10 rounded-2xl shadow-xl border border-gray-200/60">
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="text-left">
-              <span className="text-purple-600 font-semibold text-sm mb-1 block">1.</span>
               <h3 className="text-2xl font-semibold text-gray-800 mb-3">Smarter Writing Companion</h3>
               <p className="text-gray-600 mb-6 text-sm leading-relaxed">
                 Superb AI's intelligent writing assistant helps you write, edit, and reference with ease. Save valuable time and boost your writing efficiency on your next academic project.
@@ -389,7 +388,6 @@ const WavyFeatureItem: React.FC<WavyFeatureItemProps> = ({ title, description, i
 
   const textContent = (
     <div className={`md:w-1/2 ${alignLeft ? 'text-left' : 'text-left md:text-right md:order-1'}`}>
-        <span className="text-purple-600 font-semibold text-sm mb-1 block">{itemNumber}.</span>
         <h3 className="text-2xl font-semibold text-gray-800 mb-3">{title}</h3>
         <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
         {actionText && (
