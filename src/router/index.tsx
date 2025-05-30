@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouteObject } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import LandingPage from '@/pages/LandingPage';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import Dashboard from '@/pages/Dashboard';
@@ -20,6 +21,23 @@ import Roadmap from '@/pages/Roadmap';
 import TermsOfUse from '@/pages/TermsOfUse';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Knowledge from '@/pages/Knowledge';
+import AdminLogin from "@/pages/admin/Login";
+import AdminLayout from '@/layouts/AdminLayout';
+import AdminDashboard from "@/pages/admin/Dashboard";
+import Users from "@/pages/admin/Users";
+import Messages from "@/pages/admin/Messages";
+import Documents from "@/pages/admin/Documents";
+import Analytics from "@/pages/admin/Analytics";
+import Security from "@/pages/admin/Security";
+import AdminWorkspaces from "@/pages/admin/Workspaces";
+import AdminFolders from "@/pages/admin/Folders";
+import AdminAgents from "@/pages/admin/Agents";
+import AdminAgentConfigs from "@/pages/admin/AgentConfigs";
+import AdminAgentDetail from "@/pages/admin/AgentDetail";
+import PricingPage from '@/pages/Pricing';
+import AboutPage from '@/pages/About';
+import DocsPage from '@/pages/Docs';
+import BlogPage from '@/pages/Blog';
 
 const routes: RouteObject[] = [
   {
@@ -98,7 +116,89 @@ const routes: RouteObject[] = [
   },
   {
     path: '/workspace',
-    element: <WorkspacePage />,
+    element: (
+      <ProtectedRoute>
+        <WorkspacePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/login',
+    element: <AdminLogin />,
+  },
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute>
+        <AdminLayout><Outlet /></AdminLayout>
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        path: 'dashboard',
+        element: <AdminDashboard />,
+      },
+      {
+        path: 'users',
+        element: <Users />,
+      },
+      {
+        path: 'messages',
+        element: <Messages />,
+      },
+      {
+        path: 'documents',
+        element: <Documents />,
+      },
+      {
+        path: 'analytics',
+        element: <Analytics />,
+      },
+      {
+        path: 'security',
+        element: <Security />,
+      },
+      {
+        path: 'settings',
+        element: <Settings />,
+      },
+      {
+        path: 'workspaces',
+        element: <AdminWorkspaces />,
+      },
+      {
+        path: 'folders',
+        element: <AdminFolders />,
+      },
+      {
+        path: 'agents',
+        element: <AdminAgents />,
+      },
+      {
+        path: 'agents/:agentId',
+        element: <AdminAgentDetail />,
+      },
+      {
+        path: 'agent-configs',
+        element: <AdminAgentConfigs />,
+      },
+    ],
+  },
+  {
+    path: '/pricing',
+    element: <PricingPage />,
+  },
+  {
+    path: '/about',
+    element: <AboutPage />,
+  },
+  {
+    path: '/docs/*',
+    element: <DocsPage />,
+  },
+  {
+    path: '/blog',
+    element: <BlogPage />,
   },
   {
     path: '/workspace/:workspaceId/profile',

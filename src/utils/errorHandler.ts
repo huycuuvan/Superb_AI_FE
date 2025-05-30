@@ -32,25 +32,24 @@ export const handleApiError = async (response: Response): Promise<never> => {
     };
   }
 
-  // Xử lý các mã lỗi HTTP phổ biến
   switch (response.status) {
     case 400:
-      errorData.message = errorData.message || "Yêu cầu không hợp lệ";
+      errorData.message = errorData.message || "Invalid request";
       break;
     case 401:
-      errorData.message = errorData.message || "Phiên đăng nhập hết hạn";
+      errorData.message = errorData.message || "Session expired";
       break;
     case 403:
-      errorData.message = errorData.message || "Không có quyền truy cập";
+      errorData.message = errorData.message || "You are not authorized to access this resource";
       break;
     case 404:
-      errorData.message = errorData.message || "Không tìm thấy tài nguyên";
+      errorData.message = errorData.message || "Resource not found";
       break;
     case 500:
-      errorData.message = errorData.message || "Lỗi server";
+      errorData.message = errorData.message || "Server error";
       break;
     default:
-      errorData.message = errorData.message || "Đã xảy ra lỗi";
+      errorData.message = errorData.message || "This email is already in use";
   }
 
   throw new ApiErrorException(errorData);

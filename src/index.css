@@ -47,41 +47,41 @@
   }
 
   .dark {
-    --background: 340 10% 10%;
-    --foreground: 340 10% 98%;
+    --background: 0 0% 11%; /* #1B1C1D */
+    --foreground: 0 0% 98%;
 
-    --card: 340 10% 15%;
-    --card-foreground: 340 10% 98%;
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 340 10% 15%;
-    --popover-foreground: 340 10% 98%;
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 340 100% 70%;
-    --primary-foreground: 340 10% 10%;
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 340 20% 25%;
-    --secondary-foreground: 340 10% 98%;
+    --secondary: 0 0% 25%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 340 20% 25%;
-    --muted-foreground: 340 10% 70%;
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 340 20% 25%;
-    --accent-foreground: 340 10% 98%;
+    --accent: 0 0% 25%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 340 10% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 340 20% 25%;
-    --input: 340 20% 25%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
     --ring: 340 70% 70%;
     
-    --sidebar-background: 340 10% 15%;
-    --sidebar-foreground: 340 10% 90%;
+    --sidebar-background: 0 0% 6%; /* #0F0F0F */
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 340 90% 70%;
-    --sidebar-primary-foreground: 340 10% 10%;
-    --sidebar-accent: 340 20% 25%;
-    --sidebar-accent-foreground: 340 10% 90%;
-    --sidebar-border: 340 20% 25%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 15%;
     --sidebar-ring: 340 90% 70%;
   }
 }
@@ -139,4 +139,145 @@
 
 .border-teampal-500 {
   border-color: var(--main-color) !important;
+}
+
+/* Custom sidebar styles */
+.dark .sidebar {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .sidebar-header {
+  @apply border-[#0F0F0F];
+}
+
+.dark .sidebar-search {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .sidebar-search input {
+  @apply bg-[#0F0F0F] border-[#0F0F0F] text-white placeholder-gray-400;
+}
+
+.dark .sidebar-section {
+  @apply border-[#0F0F0F];
+}
+
+.dark .sidebar-footer {
+  @apply border-[#0F0F0F];
+}
+
+/* Override slate colors and other dark mode styles */
+.dark .dark\:border-slate-800 {
+  @apply border-[#0F0F0F];
+}
+
+.dark .dark\:bg-slate-800 {
+  @apply bg-[#0F0F0F];
+}
+
+.dark .dark\:text-slate-400 {
+  @apply text-gray-400;
+}
+
+.dark .dark\:hover\:text-slate-200 {
+  @apply hover:text-gray-200;
+}
+
+/* Additional dark mode overrides */
+.dark .dark\:bg-muted\/50 {
+  @apply bg-[#0F0F0F];
+}
+
+.dark .dark\:border-border {
+  @apply border-[#0F0F0F];
+}
+
+.dark .dark\:bg-background {
+  @apply bg-[#0F0F0F];
+}
+
+.dark .dark\:hover\:bg-accent\/50 {
+  @apply hover:bg-[#1B1C1D];
+}
+
+.dark .dark\:bg-accent {
+  @apply bg-[#1B1C1D];
+}
+
+.dark .dark\:text-accent-foreground {
+  @apply text-white;
+}
+
+/* Override input styles in dark mode */
+.dark input[type="search"] {
+  @apply bg-[#0F0F0F] border-[#0F0F0F] text-white placeholder-gray-400;
+}
+
+/* Override button styles in dark mode */
+.dark button {
+  @apply text-gray-400 hover:text-gray-200;
+}
+
+/* Override specific elements */
+.dark .flex.items-center.p-\[14px\] {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .p-3 {
+  @apply bg-[#0F0F0F];
+}
+
+.dark .flex.items-center.justify-between.px-3.py-2 {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .absolute.bottom-0.left-0.w-full {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .border-b.border-border.p-2 {
+  @apply bg-[#0F0F0F] border-[#0F0F0F];
+}
+
+.dark .p-3.flex.items-center.justify-between {
+  @apply bg-[#0F0F0F];
+}
+
+/* Folder list styles */
+.dark .flex-1.min-h-0.overflow-y-auto {
+  @apply bg-[#0F0F0F];
+}
+
+.dark .flex.items-center.px-3.py-2.mx-2.rounded-md {
+  @apply bg-[#0F0F0F] hover:bg-[#1B1C1D];
+}
+
+.dark .dark\:bg-accent\/50 {
+  @apply bg-[#1B1C1D];
+}
+
+.dark .dark\:hover\:bg-slate-800 {
+  @apply hover:bg-[#1B1C1D];
+}
+
+.dark .dark\:hover\:bg-slate-700 {
+  @apply hover:bg-[#1B1C1D];
+}
+
+/* Dropdown menu styles */
+.dark .dark\:bg-slate-800.dark\:border-slate-700 {
+  @apply bg-[#0F0F0F] border-[#1B1C1D];
+}
+
+.dark .dark\:hover\:bg-slate-700 {
+  @apply hover:bg-[#1B1C1D];
+}
+
+.dark .dark\:focus\:bg-slate-700 {
+  @apply focus:bg-[#1B1C1D];
+}
+
+/* Ensure sidebar background is consistently the dark theme color */
+.dark aside.relative.flex-col.h-full {
+  @apply bg-[#0F0F0F];
 }

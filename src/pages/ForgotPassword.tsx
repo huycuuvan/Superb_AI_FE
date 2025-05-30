@@ -76,7 +76,7 @@ const ForgotPassword = () => {
       </div>
 
       <div ref={forgotPasswordCardRef} className="w-full max-w-md relative z-10">
-        
+         
         
         <Card className={`shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20`}>
           <CardHeader className={`space-y-1.5 p-6 sm:p-8 border-b border-white/20`}>

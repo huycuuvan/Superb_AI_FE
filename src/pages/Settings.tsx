@@ -7,19 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { workspaces } from "@/services/mockData";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme, Theme } from "@/hooks/useTheme";
 import toast, { Toaster } from "react-hot-toast";
 
 const Settings = () => {
   const workspace = workspaces[0];
   const [workspaceName, setWorkspaceName] = useState(workspace.name);
   const { theme, setTheme } = useTheme();
-  const [selectedTheme, setSelectedTheme] = useState(theme);
+  const [selectedTheme, setSelectedTheme] = useState<Theme>(theme || 'light');
 
   const handleSaveAppearance = () => {
     setTheme(selectedTheme);
     localStorage.setItem("theme", selectedTheme);
-    toast.success("Đã lưu giao diện thành công!");
+    toast.success("Saved successfully!");
   };
   
   return (
@@ -96,31 +96,21 @@ const Settings = () => {
                 
                 <div className="space-y-2">
                   <Label>Theme</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant="outline"
-                      className={"justify-start border-2 " + (selectedTheme === 'teampal-pink' ? 'border-teampal-500' : 'border-transparent')}
-                      onClick={() => setSelectedTheme('teampal-pink')}
+                  <div className="flex items-center space-x-4">
+                    <div
+                      className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'light' ? 'border-primary' : 'border-transparent'}`}
+                      onClick={() => setSelectedTheme('light')}
                     >
-                      <span className="mr-2 h-4 w-4 rounded-full bg-teampal-500" />
-                      <span>Teampal Pink</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className={"justify-start border-2 " + (selectedTheme === 'blue' ? 'border-blue-500' : 'border-transparent')}
-                      onClick={() => setSelectedTheme('blue')}
+                      <div className="w-16 h-16 rounded-md border shadow-md bg-background"></div>
+                      <span className="text-sm text-muted-foreground mt-1">Light Theme</span>
+                    </div>
+                    <div
+                      className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'dark' ? 'border-primary' : 'border-transparent'}`}
+                      onClick={() => setSelectedTheme('dark')}
                     >
-                      <span className="mr-2 h-4 w-4 rounded-full bg-blue-500" />
-                      <span>Blue</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className={"justify-start border-2 " + (selectedTheme === 'purple' ? 'border-purple-500' : 'border-transparent')}
-                      onClick={() => setSelectedTheme('purple')}
-                    >
-                      <span className="mr-2 h-4 w-4 rounded-full bg-purple-500" />
-                      <span>Purple</span>
-                    </Button>
+                      <div className="w-16 h-16 rounded-md border shadow-md bg-foreground border-border"></div>
+                      <span className="text-sm text-muted-foreground mt-1">Dark Theme</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
