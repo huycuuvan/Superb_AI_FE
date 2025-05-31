@@ -96,7 +96,9 @@ export const createAgent = async (agentData: {
   workspace_id: string;
   folder_id: string;
   role_description: string;
-  instructions: string;
+  job_brief: string;
+  language: string;
+  position: string;
   status: string;
   model_config?: ModelConfig;
 }) => {

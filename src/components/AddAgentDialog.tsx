@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,21 +22,27 @@ import {
 } from '@/components/ui/select';
 import { createAgent, getFolders } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { Folder } from '@/types';
+import { Folder, ModelConfig } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+
+type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
 export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFolderId, onSuccess }: { open?: boolean, onOpenChange?: (open: boolean) => void, folderId?: string, onSuccess?: () => void }) => {
   const { t } = useLanguage();
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
+  const { user } = useAuth();
   const [agentName, setAgentName] = useState('');
-  const [agentType, setAgentType] = useState('');
-  const [agentDescription, setAgentDescription] = useState('');
-  const [agentTasks, setAgentTasks] = useState('');
-  const [agentKnowledge, setAgentKnowledge] = useState('');
-  const [agentTarget, setAgentTarget] = useState('');
-  const [agentChannel, setAgentChannel] = useState('');
-  const [agentLocalization, setAgentLocalization] = useState('');
+  const [roleDescription, setRoleDescription] = useState('');
+  const [jobBrief, setJobBrief] = useState('');
+  const [language, setLanguage] = useState('Tiếng Việt');
+  const [position, setPosition] = useState('');
+  const [model, setModel] = useState('gpt-4');
+  const [temperature, setTemperature] = useState('0.8');
+  const [webhookUrl, setWebhookUrl] = useState('https://mvp2.xcel.bot/webhook/12122');
+  const [buildPromptWebhookUrl, setBuildPromptWebhookUrl] = useState('https://mvp2.xcel.bot/webhook/build-prompt');
+  const [status, setStatus] = useState<AgentStatus>('private');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +56,17 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Xác định trạng thái mặc định dựa trên role của user
+  useEffect(() => {
+    if (user?.role === 'super_admin') {
+      setStatus('system_public');
+    } else if (user?.role === 'admin') {
+      setStatus('private');
+    } else {
+      setStatus('workspace_shared');
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     setSelectedFolderId(propFolderId);
@@ -76,8 +92,8 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
   const handleCreateAgent = async () => {
     const targetFolderId = propFolderId || selectedFolderId;
 
-    if (!agentName.trim() || !agentType || !targetFolderId || !workspace?.id) {
-      setError('Please fill in all required fields and ensure workspace/folder are selected.');
+    if (!agentName.trim() || !roleDescription || !targetFolderId || !workspace?.id) {
+      setError('Vui lòng điền đầy đủ các trường bắt buộc và đảm bảo đã chọn workspace/folder.');
       return;
     }
 
@@ -85,25 +101,23 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
     setError(null);
 
     try {
-      // Hàm tiện ích để tách chuỗi thành mảng, loại bỏ khoảng trắng thừa
-      const toArray = (str: string) => str.split(',').map(s => s.trim()).filter(Boolean);
-      const instructionsJson = {
-        ObjectivesAndPurpose: toArray(agentDescription),
-        DutiesAndResponsibilities: toArray(agentTasks),
-        Expertise: toArray(agentKnowledge),
-        TargetAudience: toArray(agentTarget),
-        CommunicationChannels: toArray(agentChannel),
-        LocalizationAndCulturalConsiderations: toArray(agentLocalization)
+      const modelConfig: ModelConfig = {
+        model: model,
+        temperature: parseFloat(temperature),
+        webhook_url: webhookUrl,
+        build_prompt_webhook_url: buildPromptWebhookUrl
       };
 
       const newAgentData = {
         name: agentName.trim(),
-        workspace_id: workspace.id,
+        role_description: roleDescription,
+        job_brief: jobBrief,
+        language: language,
+        position: position,
+        model_config: modelConfig,
+        status: status,
         folder_id: targetFolderId,
-        role_description: agentType,
-        instructions: JSON.stringify(instructionsJson),
-        status: 'private',
-        model_config: {},
+        workspace_id: workspace.id
       };
 
       console.log('Attempting to create agent with data:', newAgentData);
@@ -116,41 +130,60 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
         variant: "default",
       });
 
-      // Refetch các query cache liên quan đến agents trong folder cụ thể
       await queryClient.refetchQueries({
         queryKey: ['agentsByFolder', targetFolderId],
         exact: true,
       });
 
-      // Refetch query chung cho danh sách agents để cập nhật trang Agents
       await queryClient.refetchQueries({
         queryKey: ['agents', workspace.id],
         exact: true,
       });
 
-      // Có thể vẫn cần invalidate các query chung khác nếu cần
       queryClient.invalidateQueries({ queryKey: ['agentsByWorkspace', workspace.id] });
 
       onSuccess?.();
 
+      // Reset form
       setAgentName('');
-      setAgentType('');
-      setAgentDescription('');
-      setAgentTasks('');
-      setAgentKnowledge('');
-      setAgentTarget('');
-      setAgentChannel('');
-      setAgentLocalization('');
+      setRoleDescription('');
+      setJobBrief('');
+      setPosition('');
+      setModel('gpt-4');
+      setTemperature('0.8');
+      setWebhookUrl('https://mvp2.xcel.bot/webhook/12122');
+      setBuildPromptWebhookUrl('https://mvp2.xcel.bot/webhook/build-prompt');
+      setStatus(user?.role === 'super_admin' ? 'system_public' : user?.role === 'admin' ? 'private' : 'workspace_shared');
       setOpen(false);
     } catch (error) {
       console.error('Error creating agent:', error);
-      setError('Failed to create agent. Please try again.');
+      setError('Không thể tạo agent. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
   const isFolderSelectionNeeded = propFolderId === undefined;
+
+  // Xác định các trạng thái có sẵn dựa trên role của user
+  const availableStatuses = (() => {
+    if (user?.role === 'super_admin') {
+      return [
+        { value: 'system_public', label: 'Công khai hệ thống' },
+        { value: 'workspace_shared', label: 'Chia sẻ workspace' },
+        { value: 'private', label: 'Riêng tư' }
+      ];
+    } else if (user?.role === 'admin') {
+      return [
+        { value: 'private', label: 'Riêng tư' },
+        { value: 'workspace_shared', label: 'Chia sẻ workspace' }
+      ];
+    } else {
+      return [
+        { value: 'workspace_shared', label: 'Chia sẻ workspace' }
+      ];
+    }
+  })();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -164,134 +197,178 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="grid gap-4 py-4">
             {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-name" className="text-right">
-                {t('name')}
-              </Label>
-              <Input
-                id="agent-name"
-                className="col-span-3"
-                value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
-                placeholder={t('enter_agent_name')}
-              />
+            
+            {/* Thông tin cơ bản */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Thông tin cơ bản</h3>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="agent-name" className="text-right">
+                  {t('name')}
+                </Label>
+                <Input
+                  id="agent-name"
+                  className="col-span-3"
+                  value={agentName}
+                  onChange={(e) => setAgentName(e.target.value)}
+                  placeholder={t('enter_agent_name')}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role-description" className="text-right">
+                  Mô tả vai trò
+                </Label>
+                <Input
+                  id="role-description"
+                  className="col-span-3"
+                  value={roleDescription}
+                  onChange={(e) => setRoleDescription(e.target.value)}
+                  placeholder="Nhập mô tả vai trò của agent"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="job-brief" className="text-right">
+                  Mô tả công việc
+                </Label>
+                <Textarea
+                  id="job-brief"
+                  className="col-span-3"
+                  value={jobBrief}
+                  onChange={(e) => setJobBrief(e.target.value)}
+                  rows={3}
+                  placeholder="Nhập mô tả công việc của agent"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="language" className="text-right">
+                  Ngôn ngữ
+                </Label>
+                <Input
+                  id="language"
+                  className="col-span-3"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  placeholder="Nhập ngôn ngữ"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="position" className="text-right">
+                  Vị trí phòng ban
+                </Label>
+                <Input
+                  id="position"
+                  className="col-span-3"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                  placeholder="Ví dụ: Phòng Kinh doanh, Phòng Kỹ thuật, Phòng Marketing..."
+                />
+              </div>
             </div>
 
-            {isFolderSelectionNeeded && (
+            {/* Cấu hình Model */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Cấu hình Model</h3>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="folder-select" className="text-right">
-                  Folder
+                <Label htmlFor="model" className="text-right">
+                  Model
                 </Label>
-                <Select onValueChange={setSelectedFolderId} value={selectedFolderId}>
-                  <SelectTrigger className="col-span-3" id="folder-select" disabled={loadingFolders || !folders.length}>
-                    <SelectValue placeholder={loadingFolders ? 'Loading folders...' : folders.length > 0 ? 'Select a folder' : 'No folders available'} />
+                <Select value={model} onValueChange={setModel}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Chọn model" />
                   </SelectTrigger>
                   <SelectContent>
-                    {folders.map((folder) => (
-                      <SelectItem key={folder.id} value={folder.id}>
-                        {folder.name}
+                    <SelectItem value="gpt-4">GPT-4</SelectItem>
+                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="temperature" className="text-right">
+                  Temperature
+                </Label>
+                <Input
+                  id="temperature"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  className="col-span-3"
+                  value={temperature}
+                  onChange={(e) => setTemperature(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="webhook-url" className="text-right">
+                  Webhook URL
+                </Label>
+                <Input
+                  id="webhook-url"
+                  className="col-span-3"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder="Nhập webhook URL"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="build-prompt-webhook" className="text-right">
+                  Build Prompt Webhook
+                </Label>
+                <Input
+                  id="build-prompt-webhook"
+                  className="col-span-3"
+                  value={buildPromptWebhookUrl}
+                  onChange={(e) => setBuildPromptWebhookUrl(e.target.value)}
+                  placeholder="Nhập build prompt webhook URL"
+                />
+              </div>
+            </div>
+
+            {/* Cấu hình khác */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Cấu hình khác</h3>
+              {isFolderSelectionNeeded && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="folder-select" className="text-right">
+                    Folder
+                  </Label>
+                  <Select onValueChange={setSelectedFolderId} value={selectedFolderId}>
+                    <SelectTrigger className="col-span-3" id="folder-select" disabled={loadingFolders || !folders.length}>
+                      <SelectValue placeholder={loadingFolders ? 'Loading folders...' : folders.length > 0 ? 'Select a folder' : 'No folders available'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Trạng thái
+                </Label>
+                <Select value={status} onValueChange={(value: AgentStatus) => setStatus(value)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStatuses.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-type" className="text-right">
-                Role Description
-              </Label>
-              <Input
-                id="agent-type"
-                className="col-span-3"
-                value={agentType}
-                onChange={(e) => setAgentType(e.target.value)}
-                placeholder="e.g., Customer Service Agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-description" className="text-right">
-                Mục tiêu và Mục đích
-              </Label>
-              <Textarea
-                id="agent-description"
-                className="col-span-3"
-                value={agentDescription}
-                onChange={(e) => setAgentDescription(e.target.value)}
-                rows={3}
-                placeholder="Nhập mục tiêu và mục đích của agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-tasks" className="text-right">
-                Nhiệm vụ và Trách nhiệm
-              </Label>
-              <Textarea
-                id="agent-tasks"
-                className="col-span-3"
-                value={agentTasks}
-                onChange={(e) => setAgentTasks(e.target.value)}
-                rows={3}
-                placeholder="Nhập nhiệm vụ và trách nhiệm của agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-knowledge" className="text-right">
-                Kiến thức Chuyên môn
-              </Label>
-              <Textarea
-                id="agent-knowledge"
-                className="col-span-3"
-                value={agentKnowledge}
-                onChange={(e) => setAgentKnowledge(e.target.value)}
-                rows={3}
-                placeholder="Nhập kiến thức chuyên môn của agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-target" className="text-right">
-                Đối tượng Mục tiêu
-              </Label>
-              <Textarea
-                id="agent-target"
-                className="col-span-3"
-                value={agentTarget}
-                onChange={(e) => setAgentTarget(e.target.value)}
-                rows={3}
-                placeholder="Nhập đối tượng mục tiêu của agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-channel" className="text-right">
-                Kênh Giao tiếp
-              </Label>
-              <Textarea
-                id="agent-channel"
-                className="col-span-3"
-                value={agentChannel}
-                onChange={(e) => setAgentChannel(e.target.value)}
-                rows={3}
-                placeholder="Nhập kênh giao tiếp của agent"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="agent-localization" className="text-right">
-                Địa phương hóa và Cân nhắc Văn hóa
-              </Label>
-              <Textarea
-                id="agent-localization"
-                className="col-span-3"
-                value={agentLocalization}
-                onChange={(e) => setAgentLocalization(e.target.value)}
-                rows={3}
-                placeholder="Nhập thông tin về địa phương hóa và cân nhắc văn hóa"
-              />
             </div>
           </div>
         </div>
@@ -299,8 +376,8 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             {t('cancel')}
           </Button>
-          <Button onClick={handleCreateAgent} disabled={loading || !agentName.trim() || !agentType || (isFolderSelectionNeeded && !selectedFolderId) || !workspace?.id}>
-            {loading ? 'Creating...' : t('create')}
+          <Button onClick={handleCreateAgent} disabled={loading || !agentName.trim() || !roleDescription || (isFolderSelectionNeeded && !selectedFolderId) || !workspace?.id}>
+            {loading ? 'Đang tạo...' : t('create')}
           </Button>
         </DialogFooter>
       </DialogContent>

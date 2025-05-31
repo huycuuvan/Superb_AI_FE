@@ -13,8 +13,10 @@ export interface Workspace {
 }
 
 export interface ModelConfig {
-  webhooks?: string;
-  // Add other model config properties here if needed
+  model: string;
+  temperature: number;
+  webhook_url: string;
+  build_prompt_webhook_url: string;
 }
 
 export interface Agent {
@@ -25,7 +27,6 @@ export interface Agent {
     avatar?: string;
     category?: string;
     role_description?: string;
-    instructions?: string;
     status?: string;
     model_config?: ModelConfig;
   };
