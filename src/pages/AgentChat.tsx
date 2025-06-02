@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Agent, ChatTask, ChatMessage, Task as ApiTaskType, Workspace } from '@/types';
+import { Agent, ChatTask, ChatMessage, Task as ApiTaskType, Workspace, ApiMessage } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -158,7 +158,7 @@ const AgentChat = () => {
   ]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const pollingIntervalRef = useRef<number | null>(null); // Ref to store interval ID
+  const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
   const [inputAreaMode, setInputAreaMode] = useState<'chat' | 'promptList'>('chat');
@@ -166,65 +166,81 @@ const AgentChat = () => {
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
 
-  const startPollingForMessages = () => {
-    // Clear any existing interval
-    if (pollingIntervalRef.current !== null) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    pollingIntervalRef.current = window.setInterval(async () => {
-      if (!currentThread) {
-        console.warn('Polling called without currentThread.');
-        stopPolling();
+  // Clean up interval on component unmount (now handled by WS cleanup)
+  useEffect(() => {
+    // This useEffect will now be for WebSocket connection
+    if (currentThread) {
+      const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
+      if (!token) {
+        console.error("Authentication token not found.");
         return;
       }
-      try {
-        console.log('Polling for messages...');
-        const messagesResponse = await getThreadMessages(currentThread);
-        const newMessages = messagesResponse.data.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-        // Check if there are new messages, specifically from the agent
-        const lastAgentMessage = newMessages.filter(msg => msg.sender_type === 'agent').pop();
-        const currentLastAgentMessage = messages.filter(msg => msg.sender === 'agent').pop();
+      const wsUrl = `ws://localhost:3000/ws?token=${token}&thread_id=${currentThread}`;
+      ws.current = new WebSocket(wsUrl);
 
-        if (lastAgentMessage && (!currentLastAgentMessage || new Date(lastAgentMessage.created_at).getTime() > new Date(currentLastAgentMessage.timestamp).getTime())) {
-          console.log('New agent message received.', lastAgentMessage);
-          // Update messages state with all new messages (including previous ones)
-          setMessages(newMessages.map(msg => ({
-               id: msg.id,
-               content: msg.message_content,
-               sender: msg.sender_type,
-               timestamp: msg.created_at,
-               agentId: msg.sender_agent_id
-           })));
+      ws.current.onopen = () => {
+        console.log("WebSocket Connected");
+      };
+
+      ws.current.onmessage = (event) => {
+        console.log("RAW WebSocket Data Received:", event.data); // Log raw data
+        try {
+          const receivedData = JSON.parse(event.data);
+          console.log("Parsed WebSocket Data:", receivedData);
+  
+          // Check for message content
+          if (!receivedData.message_content && !receivedData.content) {
+            console.warn("WebSocket message received without content:", receivedData);
+            return; 
+          }
+          // Check for sender
+          if (!receivedData.sender_type && !receivedData.sender) {
+              console.warn("WebSocket message received without sender:", receivedData);
+              return; // Skip if no sender
+          }
+  
+          const newChatMessage: ChatMessage = {
+            // Generate a more unique ID if server doesn't send one or sends an unreliable one
+            id: receivedData.id || `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            content: receivedData.message_content || receivedData.content,
+            sender: receivedData.sender_type || receivedData.sender,
+            timestamp: receivedData.created_at || receivedData.timestamp || new Date().toISOString(),
+            agentId: receivedData.sender_agent_id || receivedData.agentId,
+          };
+  
+          console.log("New ChatMessage object from WebSocket:", newChatMessage);
+  
+          setMessages(prevMessages => {
+            // Check if a message with this ID already exists (to avoid duplicates if ID from server is reliable)
+            if (newChatMessage.id && prevMessages.some(msg => msg.id === newChatMessage.id)) {
+                console.log("Message with this ID already exists, not adding:", newChatMessage.id);
+                return prevMessages;
+            }
+            console.log("Adding new message from WebSocket to state.");
+            return [...prevMessages, newChatMessage];
+          });
           setIsAgentThinking(false); // Stop thinking indicator
-          stopPolling(); // Stop polling
-        } else {
-           console.log('No new agent messages.');
-           // Optionally, add a timeout to stop polling after a certain period if no response
+        } catch (error) {
+          console.error("Error parsing WebSocket message or updating state:", error);
+          console.error("Offending raw WebSocket data:", event.data); // Log offending data
         }
-
-      } catch (error) {
-        console.error('Lỗi khi polling tin nhắn:', error);
-        stopPolling(); // Stop polling on error
-      }
-    }, 3000); // Poll every 3 seconds (adjust as needed)
-  };
-
-  const stopPolling = () => {
-    if (pollingIntervalRef.current !== null) {
-      window.clearInterval(pollingIntervalRef.current as number); // Explicitly cast to number
-      pollingIntervalRef.current = null;
-      console.log('Polling stopped.');
+      };
+  
+      ws.current.onclose = (event) => {
+        console.log("WebSocket Disconnected. Code:", event.code, "Reason:", event.reason, "Was Clean:", event.wasClean);
+      };
+  
+      ws.current.onerror = (error) => {
+        console.error("WebSocket Error:", error);
+        // console.error("WebSocket Error Event:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      };
+  
+      return () => {
+        ws.current?.close();
+      };
     }
-  };
-
-  // Clean up interval on component unmount
-  useEffect(() => {
-    return () => {
-      stopPolling();
-    };
-  }, []);
+  }, [currentThread]); // Reconnect when currentThread changes
 
   useEffect(() => {
     if (agentId) {
@@ -235,7 +251,7 @@ const AgentChat = () => {
           // Add a delay before fetching data and creating thread
           await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
 
-          // Lấy thông tin workspace
+          // Get workspace information
           const workspaceResponse = await getWorkspace();
           let currentWorkspaceId: string | null = null;
           if (workspaceResponse.data && workspaceResponse.data.length > 0) {
@@ -243,11 +259,10 @@ const AgentChat = () => {
             currentWorkspaceId = workspaceResponse.data[0].id;
           }
 
-          // Lấy thông tin agent
+          // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
 
-          // Kiểm tra thread tồn tại và tạo mới nếu chưa có
           let threadId: string | null = null;
           let threadCheck: { exists: boolean, thread_id?: string } | null = null;
           
@@ -262,20 +277,20 @@ const AgentChat = () => {
                 // Map API response (ApiMessage[]) to ChatMessage type and sort
                 const formattedMessages: ChatMessage[] = messagesResponse.data.map(msg => ({
                     id: msg.id,
-                    content: msg.message_content, // Map message_content to content
-                    sender: msg.sender_type, // sender_type directly maps to sender
-                    timestamp: msg.created_at, // Map created_at to timestamp
-                    agentId: msg.sender_agent_id // Map sender_agent_id to agentId for agent messages
+                    content: msg.message_content,
+                    sender: msg.sender_type,
+                    timestamp: msg.created_at,
+                    agentId: msg.sender_agent_id
                 })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
                 setMessages(formattedMessages);
 
               } catch (fetchError) {
-                console.error('Lỗi khi lấy lịch sử tin nhắn:', fetchError);
+                console.error('Error fetching initial messages:', fetchError);
                 // Decide how to handle fetch error - maybe proceed without history or show error message
               }
             } else {
-              // Tạo thread mới (chỉ khi check trả về exists: false hoặc thiếu thread_id)
+              // Create new thread (only if check returns exists: false or thread_id is missing)
               const threadData = {
                 agent_id: agentId,
                 workspace_id: currentWorkspaceId,
@@ -288,7 +303,7 @@ const AgentChat = () => {
               // This message is created on the frontend, so timestamp format should be fine
               const welcomeMessage: ChatMessage = {
                 id: Date.now().toString(),
-                content: 'Xin chào! Tôi có thể giúp gì cho bạn?',
+                content: 'Hello! How can I help you?',
                 sender: 'agent',
                 timestamp: new Date().toISOString(), // Use ISO string for frontend message
                 agentId: agentData.data.agent.id
@@ -301,7 +316,7 @@ const AgentChat = () => {
 
           setCurrentThread(threadId);
 
-          // Sau khi threadId được thiết lập (cũ hoặc mới), tải lịch sử tin nhắn
+          // After threadId is set (old or new), load message history
           if (threadId) {
              try {
                const messagesResponse = await getThreadMessages(threadId);
@@ -317,13 +332,13 @@ const AgentChat = () => {
                setMessages(formattedMessages);
 
              } catch (fetchError) {
-               console.error('Lỗi khi lấy lịch sử tin nhắn ban đầu:', fetchError); // Updated error message
+               console.error('Error fetching initial messages:', fetchError); // Updated error message
                // Decide how to handle fetch error - maybe proceed without history or show error message
              }
           }
 
         } catch (error) {
-          console.error('Lỗi khi khởi tạo chat:', error);
+          console.error('Error initializing chat:', error);
         } finally {
           setIsLoading(false);
         }
@@ -350,30 +365,23 @@ const AgentChat = () => {
         timestamp: new Date().toISOString()
       };
       
-      // Add user message to state immediately for better UX
       setMessages(prev => [...prev, userMessage]);
       setMessage('');
-
+      
       try {
-        // Call API to send message
-        await sendMessageToThread(currentThread, userMessage.content);
-        setIsSending(false); // End sending loading
-        setIsAgentThinking(true); // Start agent thinking indicator
-        startPollingForMessages(); // Start polling for agent response
+        await sendMessageToThread(currentThread, userMessage.content); // Use API call
+        setIsSending(false); 
+        setIsAgentThinking(true); // Agent starts thinking after message is sent
 
       } catch (error) {
-        console.error('Lỗi khi gửi tin nhắn:', error);
-        setIsSending(false); // End loading in case of error
-        // Optionally, show an error message to the user
+        console.error('Error sending message:', error);
+        setIsSending(false); 
       }
 
     } else if (aboveInputContent === 'knowledge') {
-       // Handle sending message with knowledge files if implemented
        console.log("Sending message with knowledge context:", selectedTaskInputs);
-       // Clear message and knowledge selection after sending
        setMessage('');
-       setAboveInputContent('none'); // Hide knowledge selection
-       // Add logic to actually send message with selected files
+       setAboveInputContent('none'); 
     }
   };
   
@@ -388,8 +396,6 @@ const AgentChat = () => {
     setSelectedTaskId(task.id);
     setAboveInputContent('taskInputs');
     setSelectedTaskInputs({});
-    // TODO: Cần cập nhật logic này để xử lý FormFields từ API (task.execution_config?.form_fields)
-    // Khởi tạo selectedTaskInputs dựa trên task.execution_config?.form_fields nếu có
   };
 
   const handleInputChange = (inputId: string, value: string) => {
@@ -402,8 +408,6 @@ const AgentChat = () => {
   const handleSubmitTaskInputs = () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
     if (selectedTask) {
-      // TODO: Gửi thông tin task và input lên API thay vì chỉ hiển thị trong chat
-      // Tạo payload dựa trên selectedTask.task_type, selectedTask.id và selectedTaskInputs
       const inputValues = Object.entries(selectedTaskInputs)
         .map(([key, value]) => `${key}: ${value}`)
         .join('\n');
@@ -413,10 +417,8 @@ const AgentChat = () => {
   };
 
   const handleActionClick = (action: 'screenshot' | 'text' | 'modify' | 'diagram' | 'prototype') => {
-    // This function is no longer used in this layout
   };
 
-  // Get appropriate colors based on theme
   const getMessageStyle = (sender: string) => {
     if (sender === 'user') {
       return 'bg-primary color-black';
@@ -584,16 +586,34 @@ const AgentChat = () => {
                 </div>
               ))}
 
+              {/* Agent Thinking Indicator */}
+              {isAgentThinking && (
+                <div className="flex items-start justify-start">
+                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
+                           <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                             {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                     </AvatarFallback>
+                  </Avatar>
+                  <div className={cn(
+                          "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
+                          getMessageStyle('agent')
+                  )}>
+                    <p>Agent is typing...</p>
+                  </div>
+                </div>
+              )}
+
               {/* Daily Timer Button (Keep this within the main chat area) */}
               {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
                 <div className="flex justify-start mt-2">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     className="flex items-center gap-2 text-sm"
                     onClick={handleDailyTaskClick}
                   >
                     <ListPlus className="h-4 w-4" />
-                    Hẹn giờ hằng ngày
+                    Schedule Daily Task
                   </Button>
                 </div>
               )}
@@ -633,7 +653,7 @@ const AgentChat = () => {
                            onValueChange={(value) => handleInputChange(input.id, value)}
                          >
                            <SelectTrigger className="bg-background text-card-foreground border-border">
-                             <SelectValue placeholder={`Chọn ${input.label.toLowerCase()}`} />
+                             <SelectValue placeholder={`Select ${input.label.toLowerCase()}`} />
                            </SelectTrigger>
                            <SelectContent>
                              {input.options?.map((option) => (
@@ -649,7 +669,7 @@ const AgentChat = () => {
                            type={input.type}
                            value={selectedTaskInputs[input.id] || ''}
                            onChange={(e) => handleInputChange(input.id, e.target.value)}
-                           placeholder={`Nhập ${input.label.toLowerCase()}`}
+                           placeholder={`Enter ${input.label.toLowerCase()}`}
                            className="bg-background text-card-foreground border-border"
                          />
                        )}

@@ -233,7 +233,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         
         <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {loadingFolders ? (
-            <div className="px-3 py-2 text-muted-foreground text-sm">Đang tải thư mục...</div>
+            <div className="px-3 py-2 text-muted-foreground text-sm">Loading...</div>
           ) : (
             folders?.map((folder) => (
               <div

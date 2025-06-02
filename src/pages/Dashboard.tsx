@@ -197,7 +197,7 @@ const Dashboard = () => {
 
       <div className="grid gap-4">
         {loadingFolders ? (
-          <div className="text-sm text-muted-foreground">Đang tải thư mục...</div>
+          <div className="text-sm text-muted-foreground">Loading...</div>
         ) : folders.length > 0 ? (
           folders.map((folder) => (
             <div key={folder.id} className="mb-8 md:mb-10">
