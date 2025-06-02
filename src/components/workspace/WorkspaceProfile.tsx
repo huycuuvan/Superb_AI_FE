@@ -55,17 +55,17 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
 
       if (onSubmit) {
         await onSubmit(fullData as WorkspaceProfile);
-        toast.success("Cập nhật thông tin workspace thành công!");
+        toast.success("Workspace information updated successfully!");
       } else {
         await createWorkspaceProfile(fullData as WorkspaceProfile);
-        toast.success("Tạo thông tin workspace thành công!");
+        toast.success("Workspace information created successfully!");
         navigate("/workspace");
       }
 
       onSuccess?.();
 
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi lưu thông tin workspace");
+      toast.error("Error saving workspace information");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -79,39 +79,40 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const formTitle = initialData ? "Chỉnh sửa thông tin Workspace" : "Thông tin Workspace";
+  const formTitle = initialData ? "Edit Workspace Information" : "Workspace Information";
 
   return (
-    <div className={initialData ? "" : "max-w-2xl mx-auto p-6"}>
-      <h1 className="text-2xl font-bold mb-6 text-primary">{formTitle}</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className={initialData ? "" : ""}>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="brand_name">Tên thương hiệu</Label>
+          <Label htmlFor="brand_name" className="font-medium text-sm text-slate-700">Brand Name</Label>
           <Input
             id="brand_name"
             name="brand_name"
             value={formData.brand_name}
             onChange={handleChange}
             required
-            placeholder="Nhập tên thương hiệu"
+            placeholder="Enter brand name"
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="business_type">Loại hình kinh doanh</Label>
+          <Label htmlFor="business_type" className="font-medium text-sm text-slate-700">Business Type</Label>
           <Input
             id="business_type"
             name="business_type"
             value={formData.business_type}
             onChange={handleChange}
             required
-            placeholder="Nhập loại hình kinh doanh"
+            placeholder="Enter business type"
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="default_language_code">Mã ngôn ngữ</Label>
+            <Label htmlFor="default_language_code" className="font-medium text-sm text-slate-700">Language Code</Label>
             <Input
               id="default_language_code"
               name="default_language_code"
@@ -119,11 +120,12 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
               onChange={handleChange}
               required
               placeholder="en"
+              className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="default_location_code">Mã quốc gia</Label>
+            <Label htmlFor="default_location_code" className="font-medium text-sm text-slate-700">Country Code</Label>
             <Input
               id="default_location_code"
               name="default_location_code"
@@ -131,60 +133,65 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
               onChange={handleChange}
               required
               placeholder="VN"
+              className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="brand_description">Mô tả thương hiệu</Label>
+          <Label htmlFor="brand_description" className="font-medium text-sm text-slate-700">Brand Description</Label>
           <Textarea
             id="brand_description"
             name="brand_description"
             value={formData.brand_description}
             onChange={handleChange}
             required
-            placeholder="Nhập mô tả thương hiệu"
+            placeholder="Enter brand description"
             rows={4}
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="brand_products_services">Sản phẩm/Dịch vụ</Label>
+          <Label htmlFor="brand_products_services" className="font-medium text-sm text-slate-700">Products/Services</Label>
           <Textarea
             id="brand_products_services"
             name="brand_products_services"
             value={formData.brand_products_services}
             onChange={handleChange}
             required
-            placeholder="Nhập sản phẩm và dịch vụ"
+            placeholder="Enter products and services"
             rows={4}
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="website_url">Website URL (không bắt buộc)</Label>
+          <Label htmlFor="website_url" className="font-medium text-sm text-slate-700">Website URL (Optional)</Label>
           <Input
             id="website_url"
             name="website_url"
             value={formData.website_url}
             onChange={handleChange}
             placeholder="https://example.com"
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="brand_logo_url">Logo URL (không bắt buộc)</Label>
+          <Label htmlFor="brand_logo_url" className="font-medium text-sm text-slate-700">Logo URL (Optional)</Label>
           <Input
             id="brand_logo_url"
             name="brand_logo_url"
             value={formData.brand_logo_url}
             onChange={handleChange}
             placeholder="https://example.com/logo.png"
+            className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
           />
         </div>
 
-        <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
-          {isLoading ? "Đang xử lý..." : initialData ? "Cập nhật thông tin" : "Lưu thông tin"}
+        <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40" disabled={isLoading}>
+          {isLoading ? "Processing..." : initialData ? "Update Information" : "Save Information"}
         </Button>
       </form>
     </div>

@@ -210,7 +210,7 @@ const WorkspacePage = () => {
         }}
       >
         <LogOut className="w-4 h-4" />
-        Đăng xuất
+        Logout
       </Button>
       <div ref={cardRef} className="w-full max-w-md relative z-10">
         <Card className={`shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20`}>
