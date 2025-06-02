@@ -43,9 +43,11 @@ import { getFolders, updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
+import React from 'react';
 
-interface SidebarProps {
-  className?: string;
+
+  interface SidebarProps {
+    className?: string;
 }
 
 interface FolderType {
@@ -54,7 +56,7 @@ interface FolderType {
   workspace_id: string;
 }
 
-const Sidebar = ({ className }: SidebarProps) => {
+const Sidebar = React.memo(({ className }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -79,7 +81,7 @@ const Sidebar = ({ className }: SidebarProps) => {
 
   useEffect(() => {
     if (workspace?.id) {
-      fetchFolders(workspace.id);
+      // fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id, fetchFolders]);
 
@@ -148,7 +150,6 @@ const Sidebar = ({ className }: SidebarProps) => {
     }
   };
 
-  console.log(user);
   const menuItems = [
     { icon: Home, label: t('home'), path: '/dashboard' },
     { icon: Users, label: t('agents'), path: '/dashboard/agents' },
@@ -156,6 +157,19 @@ const Sidebar = ({ className }: SidebarProps) => {
     { icon: Book, label: 'Knowledge', path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
   ];
+
+  // Lọc menuItems dựa trên quyền hạn
+  const filteredMenuItems = menuItems.filter(item => {
+    // Ẩn mục Agent nếu user có role là 'user'
+    if (item.label === t('agents') && user?.role === 'user') {
+      return false; 
+    }
+    // Ẩn mục Tasks nếu user có role là 'user'
+    if (item.label === t('tasks') && user?.role === 'user') {
+      return false;
+    }
+    return true; // Hiển thị các mục khác hoặc user không có role là 'user'
+  });
 
   return (
     <>
@@ -168,9 +182,7 @@ const Sidebar = ({ className }: SidebarProps) => {
       >
         <div className="flex items-center p-[14px] border-b border-border dark:border-slate-800">
           <div className="flex items-center space-x-2">
-            <div className="bg-teampal-500 text-white p-1.5 rounded">
-              <span className="font-bold text-sm">TP</span>
-            </div>
+            
             {!collapsed && (
               <span className="font-bold text-lg text-foreground dark:text-white">Superb AI</span>
             )}
@@ -221,7 +233,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         
         <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {loadingFolders ? (
-            <div className="px-3 py-2 text-muted-foreground text-sm">Đang tải thư mục...</div>
+            <div className="px-3 py-2 text-muted-foreground text-sm">Loading...</div>
           ) : (
             folders?.map((folder) => (
               <div
@@ -269,6 +281,11 @@ const Sidebar = ({ className }: SidebarProps) => {
               </div>
             ))
           )}
+
+          {/* Thêm đường kẻ phân cách */}
+          <div className="border-t border-border my-2 mx-2"></div>
+
+         
         </div>
         
         <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">
@@ -367,7 +384,7 @@ const Sidebar = ({ className }: SidebarProps) => {
       )}
     </>
   );
-};
+});
 
 export default Sidebar;
 

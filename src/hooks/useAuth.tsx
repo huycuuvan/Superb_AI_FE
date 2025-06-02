@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_ENDPOINTS } from '@/config/api';
+import { jwtDecode } from 'jwt-decode';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface User {
   id: string;
@@ -10,6 +12,14 @@ interface User {
     id: string;
     name: string;
   };
+  role?: string;
+}
+
+interface DecodedToken {
+  exp: number;
+  iat: number;
+  sub: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +30,10 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (user: User) => void;
   hasWorkspace: boolean;
+  isTokenExpired: boolean;
+  refreshToken: () => Promise<boolean>;
+  role?: string | null;
+  canCreateAgent: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,13 +42,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
+  const queryClient = useQueryClient();
+
+  const checkTokenExpiration = (token: string) => {
+    try {
+      const decoded = jwtDecode<DecodedToken>(token);
+      const currentTime = Date.now() / 1000;
+      return decoded.exp < currentTime;
+    } catch {
+      return true;
+    }
+  };
+
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return false;
+
+      const res = await fetch(API_ENDPOINTS.auth.refresh, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Không thể refresh token');
+      }
+
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        setIsTokenExpired(false);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Lỗi khi refresh token:', err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
+    
     if (token && userStr) {
-      const userData = JSON.parse(userStr);
-      setUser(userData);
+      const isExpired = checkTokenExpiration(token);
+      setIsTokenExpired(isExpired);
+      
+      if (isExpired) {
+        // Thử refresh token trước khi logout
+        refreshToken().then(success => {
+          if (!success) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+          }
+        });
+      } else {
+        const userData = JSON.parse(userStr);
+        try {
+          const decodedToken = jwtDecode<DecodedToken>(token);
+          userData.role = decodedToken.role;
+        } catch (e) {
+          console.error("Failed to decode token for role:", e);
+          userData.role = null;
+        }
+        setUser(userData);
+      }
     }
     setLoading(false);
   }, []);
@@ -53,8 +131,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (data.token && data.user) {
         localStorage.setItem('token', data.token);
+        
+        try {
+          const decodedToken = jwtDecode<DecodedToken>(data.token);
+          data.user.role = decodedToken.role;
+        } catch (e) {
+          console.error("Failed to decode token for role:", e);
+          data.user.role = null;
+        }
+
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
+        setIsTokenExpired(false);
+        
+        // Invalidate all queries after successful login
+        queryClient.invalidateQueries();
       } else {
         throw new Error('Không nhận được token hoặc user từ server');
       }
@@ -68,20 +159,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    // Xóa tất cả cache của React Query
+    queryClient.clear();
+    
+    // Xóa dữ liệu local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('selectedWorkspace');
+    
+    // Reset state
     setUser(null);
+    setIsTokenExpired(false);
   };
 
   const updateUser = (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    const updatedUser = { ...JSON.parse(localStorage.getItem('user') || '{}'), ...newUser };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const hasWorkspace = Boolean(user?.workspace?.id);
+  const canCreateAgent = user?.role !== 'user';
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, updateUser, hasWorkspace }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      error, 
+      login, 
+      logout, 
+      updateUser, 
+      hasWorkspace,
+      isTokenExpired,
+      refreshToken,
+      role: user?.role,
+      canCreateAgent,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -92,5 +205,5 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context;
+  return context as AuthContextType;
 }; 

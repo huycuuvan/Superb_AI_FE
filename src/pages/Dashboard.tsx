@@ -18,11 +18,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getFolders, updateFolder, deleteFolder } from '@/services/api';
+import { getFolders, updateFolder, deleteFolder, getAgentsByFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
 
 interface FolderType {
   id: string;
@@ -37,6 +40,7 @@ const Dashboard = () => {
   const { workspace } = useSelectedWorkspace();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canCreateAgent } = useAuth();
 
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
@@ -64,6 +68,8 @@ const Dashboard = () => {
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1200);
     return () => clearTimeout(timer);
@@ -71,7 +77,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (workspace?.id) {
-      fetchFolders(workspace.id);
+      // fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id, fetchFolders]);
 
@@ -186,9 +192,12 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Separate Search Input Component */}
+      <SearchInput onSearchChange={setSearchQuery} />
+
       <div className="grid gap-4">
         {loadingFolders ? (
-          <div className="text-sm text-muted-foreground">Đang tải thư mục...</div>
+          <div className="text-sm text-muted-foreground">Loading...</div>
         ) : folders.length > 0 ? (
           folders.map((folder) => (
             <div key={folder.id} className="mb-8 md:mb-10">
@@ -237,6 +246,8 @@ const Dashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
                   </CardContent>
                 </Card>
+                {/* Render AgentsForFolder component for this folder */}
+                <AgentsForFolder folderId={folder.id} navigate={navigate} />
               </div>
             </div>
           ))
@@ -275,6 +286,7 @@ const Dashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
 
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
@@ -293,9 +305,104 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
     </div>
   );
 };
+
+// New component for Search Input
+interface SearchInputProps {
+  onSearchChange: (query: string) => void;
+}
+
+const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) => {
+  const [query, setQuery] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    onSearchChange(newQuery);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="relative w-full md:w-96">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <Input
+          type="search"
+          placeholder="Search agents..."
+          className="pl-9"
+          value={query}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
+  );
+});
+
+// New component to fetch and display agents for a folder
+const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.memo(({ folderId, navigate }) => {
+  const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
+    queryKey: ['agentsByFolder', folderId],
+    queryFn: () => {
+      console.log('Fetching agents for folder:', folderId);
+      return getAgentsByFolder(folderId);
+    },
+    enabled: !!folderId,
+    staleTime: 300000, // Keep data fresh for 5 minutes
+  });
+
+  console.log('Rendering AgentsForFolder for folder', folderId, '; isLoading:', isLoadingAgents, '; agentsData:', agentsData); // Log on render
+
+  if (isLoadingAgents) {
+    return <Skeleton className="h-32 w-full" />;
+  }
+
+  if (agentsError) {
+    console.error('Lỗi khi tải agents cho folder', folderId, ':', agentsError);
+    return <div className="text-sm text-red-500">Lỗi tải agents.</div>;
+  }
+
+  const agents = agentsData?.data || [];
+
+  // Hiển thị thông báo nếu không có agent nào trong thư mục
+  if (agents.length === 0) {
+    return <div className="text-muted-foreground text-center w-full">Chưa có agent nào trong thư mục này.</div>;
+  }
+
+  return (
+    <>
+      {agents.map((agent: Agent) => (
+        <Card 
+          key={agent.id} 
+          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+        >
+          <Avatar className="w-12 h-12">
+             {/* Replace with actual agent avatar if available */}
+            <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-blue-800 text-lg font-medium">
+              {agent.name.charAt(0)}
+            </div>
+          </Avatar>
+          <div>
+            <CardTitle className="text-lg">{agent.name}</CardTitle>
+            <CardDescription>{agent.role_description}</CardDescription>
+          </div>
+        </Card>
+      ))}
+    </>
+  );
+});
 
 export default Dashboard;

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getFolders } from '@/services/api';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 
 interface FolderType {
   id: string;
@@ -20,6 +21,7 @@ const FolderContext = createContext<FolderContextType | undefined>(undefined);
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(true);
+  const { workspace } = useSelectedWorkspace();
 
   const fetchFolders = useCallback(async (workspaceId: string) => {
     setLoadingFolders(true);
@@ -33,6 +35,12 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setLoadingFolders(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (workspace?.id) {
+      fetchFolders(workspace.id);
+    }
+  }, [workspace?.id, fetchFolders]);
 
   return (
     <FolderContext.Provider value={{ folders, loadingFolders, fetchFolders, setFolders }}>

@@ -1,108 +1,240 @@
-import { useState } from "react";
-import { tasks, agents } from "@/services/mockData";
+import { useState } from 'react';
+import { useLanguage } from '@/hooks/useLanguage';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { AddTaskDialog } from '@/components/AddTaskDialog';
+import { EditTaskDialog } from '@/components/EditTaskDialog';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getTasks, createTask, updateTask, deleteTask, CreateTaskRequest, UpdateTaskRequest } from '@/services/taskService';
+import { Task } from '@/types';
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Task as TaskType } from "@/types";
-import { AddTaskDialog } from "@/components/AddTaskDialog";
-import { useLanguage } from "@/hooks/useLanguage";
+import { agents } from "@/services/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from '@/components/ui/dialog';
 
-const Tasks = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
+export const Tasks = () => {
   const { t } = useLanguage();
-  
-  // Filter tasks based on search query
-  const filteredTasks = tasks.filter(task => 
-    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-  
-  const getTasksByStatus = (status: TaskType['status']) => {
-    return filteredTasks.filter(task => task.status === status);
+  const { workspace } = useSelectedWorkspace();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
+  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const { data: tasksData, isLoading, refetch: fetchTasks } = useQuery({
+    queryKey: ['tasks', workspace?.id],
+    queryFn: () => getTasks(),
+    enabled: !!workspace?.id,
+  });
+
+  const tasks = tasksData?.data || [];
+
+  const handleCreateTask = async (taskData: CreateTaskRequest) => {
+    try {
+      await createTask(taskData);
+      toast.success("Tạo task thành công", {
+        description: "Task đã được tạo và sẵn sàng sử dụng"
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      fetchTasks();
+    } catch (error) {
+      console.error('Lỗi khi tạo task:', error);
+      toast.error("Lỗi khi tạo task", {
+        description: "Vui lòng kiểm tra lại thông tin và thử lại"
+      });
+    }
   };
 
-  const handleCreateTaskClick = () => {
-    setShowAddTaskDialog(true);
+  const handleUpdateTask = async (taskData: UpdateTaskRequest) => {
+    try {
+      await updateTask(taskData.id, taskData);
+      toast.success("Cập nhật task thành công", {
+        description: "Task đã được cập nhật thành công"
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      fetchTasks();
+    } catch (error) {
+      console.error('Lỗi khi cập nhật task:', error);
+      toast.error("Lỗi khi cập nhật task", {
+        description: "Vui lòng kiểm tra lại thông tin và thử lại"
+      });
+    }
   };
+
+  const confirmDeleteTask = (task: Task) => {
+    setTaskToDelete(task);
+    setShowConfirmDeleteDialog(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteTask(taskToDelete.id);
+      toast.success("Xóa task thành công", {
+        description: "Task đã được xóa khỏi hệ thống"
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      fetchTasks();
+      setShowConfirmDeleteDialog(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Lỗi khi xóa task:', error);
+      toast.error("Lỗi khi xóa task", {
+        description: "Vui lòng thử lại sau"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const filteredTasks = tasks.filter(task => 
+    task.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('tasks')}</h1>
-          <p className="text-muted-foreground">{t('taskManagement')}</p>
-        </div>
-        <Button className="teampal-button" onClick={handleCreateTaskClick}>
-          {t('createTask')}
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{t('tasks')}</h1>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t('addTask')}
         </Button>
       </div>
-      
-      <div className="flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-96">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-          >
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
+
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            type="search"
-            placeholder={t('search')}
-            className="pl-9"
+            type="text"
+            placeholder={t('searchTasks')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
           />
         </div>
       </div>
-      
-      <Tabs defaultValue="todo" className="w-full">
-        <TabsList className="mb-4 w-full md:w-auto">
-          <TabsTrigger value="todo" className="flex-1 md:flex-none">
-            {t('toDo')} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{getTasksByStatus('todo').length}</span>
-          </TabsTrigger>
-          <TabsTrigger value="in-progress" className="flex-1 md:flex-none">
-            {t('inProgress')} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{getTasksByStatus('in-progress').length}</span>
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="flex-1 md:flex-none">
-            {t('completed')} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{getTasksByStatus('completed').length}</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="todo" className="mt-0">
-          <TaskList tasks={getTasksByStatus('todo')} />
-        </TabsContent>
-        
-        <TabsContent value="in-progress" className="mt-0">
-          <TaskList tasks={getTasksByStatus('in-progress')} />
-        </TabsContent>
-        
-        <TabsContent value="completed" className="mt-0">
-          <TaskList tasks={getTasksByStatus('completed')} />
-        </TabsContent>
-      </Tabs>
 
-      {showAddTaskDialog && (
-        <AddTaskDialog />
+      {isLoading ? (
+        <div className="text-center py-8">Đang tải...</div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          {searchQuery ? 'Không tìm thấy task nào' : 'Chưa có task nào'}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredTasks.map((task) => (
+            <div
+              key={task.id}
+              className="bg-card rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-semibold">{task.name}</h3>
+                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                      {task.category}
+                    </span>
+                    <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded">
+                      {task.credit_cost} credits
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => confirmDeleteTask(task)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
+
+      {isAddDialogOpen && (
+        <AddTaskDialog
+          onClose={() => setIsAddDialogOpen(false)}
+          onSubmit={handleCreateTask}
+        />
+      )}
+
+      {isEditDialogOpen && selectedTask && (
+        <EditTaskDialog
+          task={selectedTask}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setSelectedTask(null);
+          }}
+          onSubmit={handleUpdateTask}
+        />
+      )}
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa Task</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa task "{taskToDelete?.name}" không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDeleteTask} disabled={isDeleting}>
+              {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
 
-const TaskList = ({ tasks }: { tasks: TaskType[] }) => {
+const TaskList = ({ tasks, isLoading }: { tasks: Task[], isLoading: boolean }) => {
+  if (isLoading) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">Đang tải...</p>
+      </div>
+    );
+  }
+
   if (tasks.length === 0) {
     return (
       <div className="text-center py-10">
-        <p className="text-muted-foreground">No tasks found</p>
+        <p className="text-muted-foreground">Không tìm thấy công việc nào</p>
       </div>
     );
   }
@@ -110,25 +242,35 @@ const TaskList = ({ tasks }: { tasks: TaskType[] }) => {
   return (
     <div className="space-y-4">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} />
+        task ? <TaskCard key={task.id} task={task} /> : null
       ))}
     </div>
   );
 };
 
-const TaskCard = ({ task }: { task: TaskType }) => {
-  // Find the assigned agent if any
+const TaskCard = ({ task }: { task: Task }) => {
   const assignedAgent = task.assignedAgentId 
     ? agents.find(agent => agent.id === task.assignedAgentId) 
     : undefined;
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) {
+      return 'N/A'; // Or return '' or any other placeholder
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date'; // Handle cases where dateString is present but invalid
+      }
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(date);
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return 'Error'; // Handle any other potential errors during formatting
+    }
   };
   
   let statusColor = '';
@@ -157,7 +299,7 @@ const TaskCard = ({ task }: { task: TaskType }) => {
             </span>
           </div>
           
-          <h3 className="font-medium">{task.title}</h3>
+          <h3 className="font-medium">{task.title || task.name}</h3>
           
           {task.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">
@@ -212,5 +354,3 @@ const TaskCard = ({ task }: { task: TaskType }) => {
     </Card>
   );
 };
-
-export default Tasks;

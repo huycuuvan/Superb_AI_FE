@@ -7,6 +7,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 3001,
+    proxy: {
+      "/api": {
+        target: "https://aiemployee.site/api",
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [react() /*, mode === "development" && componentTagger()*/].filter(
     Boolean

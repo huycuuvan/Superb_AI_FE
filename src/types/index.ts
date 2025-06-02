@@ -12,23 +12,59 @@ export interface Workspace {
   description?: string;
 }
 
+export interface ModelConfig {
+  model: string;
+  temperature: number;
+  webhook_url: string;
+  build_prompt_webhook_url: string;
+}
+
 export interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  avatar?: string;
-  description?: string;
-  category?: string;
+  agent: {
+    id: string;
+    name: string;
+    type: string;
+    avatar?: string;
+    category?: string;
+    role_description?: string;
+    status?: string;
+    model_config?: ModelConfig;
+  };
 }
 
 export interface Task {
   id: string;
-  title: string;
-  description?: string;
+  name: string;
+  description: string;
+  task_type: string;
+  execution_config: Record<string, unknown>;
+  credit_cost: number;
+  category: string;
+  is_system_task: boolean;
   assignedAgentId?: string;
-  status: "todo" | "in-progress" | "completed";
-  createdAt: string;
-  dueDate?: string;
+  status?: "todo" | "in-progress" | "completed";
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Thread {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// New interface for message data from API
+export interface ApiMessage {
+  id: string;
+  thread_id: string;
+  sender_user_id?: string; // Optional for agent messages
+  sender_agent_id?: string; // Optional for user messages
+  sender_type: "user" | "agent";
+  message_content: string;
+  created_at: string;
+  updated_at: string;
+  parent_message_id?: string; // For replies
 }
 
 export interface ChatTask {
@@ -57,5 +93,5 @@ export interface SidebarItem {
 export interface Folder {
   id: string;
   name: string;
-  path: string;
+  path?: string;
 }

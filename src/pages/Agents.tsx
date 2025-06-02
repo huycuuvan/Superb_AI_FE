@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { agents } from "@/services/mockData";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,41 +8,165 @@ import { Agent } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/useTheme';
+import { getAgents } from '@/services/api';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { AddAgentDialog } from '@/components/AddAgentDialog';
+import { MoreVertical, Edit, Trash } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { updateAgent, deleteAgent } from '@/services/api';
+import { useToast } from '@/components/ui/use-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 
-const Agents = () => {
+export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { theme } = useTheme();
-  const [loading, setLoading] = useState(true);
-  
+  const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
+  const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
+  const [showEditAgentDialog, setShowEditAgentDialog] = useState(false);
+  const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
+  const [editedAgentData, setEditedAgentData] = useState<Partial<Agent>>({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
+  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+  const { canCreateAgent } = useAuth();
+
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['agents', workspace?.id],
+    queryFn: () => getAgents(workspace?.id || ''),
+    enabled: !!workspace?.id, // Only fetch if workspaceId is available
+  });
+
+  // Ensure data.data is an array before processing
+  const agentsData: Agent[] = Array.isArray(data?.data) ? data?.data : [];
+
   // Group agents by category
-  const categories = Array.from(new Set(agents.map(agent => agent.category || 'Other')));
+  const categories = Array.from(new Set(agentsData.map(agent => agent.category || 'Other')));
   
   // Filter agents based on search query
-  const filteredAgents = agents.filter(agent => 
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (agent.description && agent.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredAgents = agentsData.filter(agent => 
+    agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
+    agent.type?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
+    (agent.role_description && agent.role_description.toLowerCase().includes(searchQuery.toLowerCase()))
+  ) || [];
   
   const getAgentsByCategory = (category: string) => {
     return filteredAgents.filter(agent => (agent.category || 'Other') === category);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+  // Function to handle dialog close and potentially refresh agents
+  const handleAddAgentDialogClose = (shouldRefresh?: boolean) => {
+    setShowAddAgentDialog(false);
+    // useQuery will automatically refetch if the cache is invalidated, so no explicit fetchAgents call needed here
+  };
+
+  const handleEditClick = (agent: Agent) => {
+    setAgentToEdit(agent);
+    setEditedAgentData({ name: agent.name, role_description: agent.role_description, instructions: agent.instructions, status: agent.status });
+    setShowEditAgentDialog(true);
+  };
+
+  const handleSaveAgentEdit = async () => {
+    if (!agentToEdit || Object.keys(editedAgentData).length === 0) return;
+
+    setIsSavingEdit(true);
+    try {
+      await updateAgent(agentToEdit.id, editedAgentData);
+      toast({
+        title: "Thành công!",
+        description: `Đã cập nhật agent "${agentToEdit.name}".`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] }); // Invalidate cache to trigger refetch
+      setShowEditAgentDialog(false);
+      setAgentToEdit(null);
+      setEditedAgentData({});
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật agent:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể cập nhật agent: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleDeleteClick = (agent: Agent) => {
+    setAgentToDelete(agent);
+    setShowConfirmDeleteDialog(true);
+  };
+
+  const handleDeleteAgent = async () => {
+    if (!agentToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteAgent(agentToDelete.id);
+      toast({
+        title: "Thành công!",
+        description: `Đã xóa agent "${agentToDelete.name}".`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] }); // Invalidate cache to trigger refetch
+      setShowConfirmDeleteDialog(false);
+      setAgentToDelete(null);
+    } catch (error: any) {
+      console.error('Lỗi khi xóa agent:', error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể xóa agent: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading || isLoadingWorkspace) {
+     return (
+       <div className="flex flex-col space-y-4 p-6">
+         <Skeleton className="h-8 w-1/4" />
+         <Skeleton className="h-6 w-1/3" />
+         <Skeleton className="h-4 w-1/2" />
+         <Skeleton className="h-10 w-full mt-4" />
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <Skeleton key={idx} className={`h-40 rounded-xl ${theme === 'teampal-pink' ? 'bg-teampal-100' : theme === 'blue' ? 'bg-blue-100' : theme === 'purple' ? 'bg-purple-100' : 'bg-muted'}`}
+            />
+          ))}
+         </div>
+       </div>
+     );
+   }
+
+   if (error) {
+     return <div className="text-red-500 p-6">Error: {(error as Error).message}</div>;
+   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Agents</h1>
           <p className="text-muted-foreground">Manage and interact with your AI agents</p>
         </div>
-        <Button className="teampal-button">
-          Create agent
-        </Button>
+        {canCreateAgent && (
+          <Button className="teampal-button" onClick={() => setShowAddAgentDialog(true)}>
+            Create agent
+          </Button>
+        )}
       </div>
       
       <div className="flex flex-col md:flex-row items-center gap-4">
@@ -70,83 +194,149 @@ const Agents = () => {
         </div>
       </div>
       
-      <Tabs defaultValue={categories[0]} className="w-full">
-        <TabsList className="mb-4 w-full md:w-auto">
+      {/* Only render tabs if there are agents */}
+      {categories.length > 0 ? (
+        <Tabs defaultValue={categories[0]} className="w-full">
+          <TabsList className="mb-4 w-full md:w-auto">
+            {categories.map(category => (
+              <TabsTrigger key={category} value={category} className="flex-1 md:flex-none">
+                {category} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{getAgentsByCategory(category).length}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
           {categories.map(category => (
-            <TabsTrigger key={category} value={category} className="flex-1 md:flex-none">
-              {category} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{getAgentsByCategory(category).length}</span>
-            </TabsTrigger>
+            <TabsContent key={category} value={category} className="mt-0">
+              <AgentGrid agents={getAgentsByCategory(category)} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+            </TabsContent>
           ))}
-        </TabsList>
-        
-        {categories.map(category => (
-          <TabsContent key={category} value={category} className="mt-0">
-            {getAgentsByCategory(category).length === 0 && !loading ? (
-              <div className="text-center py-10">
-                <p className="text-muted-foreground">No agents found in this category</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading
-                  ? Array.from({ length: 3 }).map((_, idx) => (
-                      <Skeleton
-                        key={idx}
-                        className={`h-40 rounded-xl ${theme === 'teampal-pink' ? 'bg-teampal-100' : theme === 'blue' ? 'bg-blue-100' : theme === 'purple' ? 'bg-purple-100' : 'bg-muted'}`}
-                      />
-                    ))
-                  : getAgentsByCategory(category).map((agent) => (
-                      <AgentCard key={agent.id} agent={agent} />
-                    ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+        </Tabs>
+      ) : (
+        <div className="text-center py-10 text-muted-foreground">
+          {searchQuery ? 'Không tìm thấy agent nào' : 'Chưa có agent nào trong workspace này'}
+        </div>
+      )}
+
+      {/* Add Agent Dialog */}
+      <AddAgentDialog 
+        open={showAddAgentDialog} 
+        onOpenChange={setShowAddAgentDialog}
+        // No need for onSuccess here, useQuery handles refetch
+      />
+
+      {/* Edit Agent Dialog */}
+      <Dialog open={showEditAgentDialog} onOpenChange={setShowEditAgentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa Agent</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cho agent "{agentToEdit?.name}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-agent-name" className="text-right">Tên</Label>
+              <Input 
+                id="edit-agent-name"
+                className="col-span-3"
+                value={editedAgentData.name || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-agent-role" className="text-right">Role Description</Label>
+              <Input 
+                id="edit-agent-role"
+                className="col-span-3"
+                value={editedAgentData.role_description || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, role_description: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-agent-instructions" className="text-right">Instructions</Label>
+              <Textarea 
+                id="edit-agent-instructions"
+                className="col-span-3"
+                value={editedAgentData.instructions || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, instructions: e.target.value })}
+                rows={4}
+              />
+            </div>
+             {/* Add other fields for editing if needed */}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditAgentDialog(false)} disabled={isSavingEdit}>Hủy</Button>
+            <Button onClick={handleSaveAgentEdit} disabled={isSavingEdit || !editedAgentData.name}>
+              {isSavingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa Agent</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa agent "{agentToDelete?.name}" không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDeleteAgent} disabled={isDeleting}>
+              {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
 
-const AgentCard = ({ agent }: { agent: Agent }) => {
+// Separate component for displaying the agent grid
+const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (agent: Agent) => void, onDelete: (agent: Agent) => void }) => {
   const navigate = useNavigate();
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full overflow-hidden border">
-              {agent.avatar ? (
-                <img src={agent.avatar} alt={agent.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full bg-teampal-100 flex items-center justify-center">
-                  <span className="text-teampal-500 font-medium">
-                    {agent.name.charAt(0)}
-                  </span>
-                </div>
-              )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {agents.map((agent: Agent) => (
+        <Card key={agent.id} className="relative">
+          <CardHeader>
+            <CardTitle>{agent.name}</CardTitle>
+            <CardDescription>{agent.type}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{agent.role_description}</p>
+            <div className="flex justify-between items-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+              >
+                Chat
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/agent/${agent.id}/profile`)}>View Profile</Button>
             </div>
-            <div>
-              <CardTitle className="text-lg">{agent.name}</CardTitle>
-              <p className="text-sm text-muted-foreground">{agent.type}</p>
-            </div>
-          </div>
-          <button className="text-muted-foreground hover:text-foreground">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
-              <path d="M3.625 7.5C3.625 8.12132 3.12132 8.625 2.5 8.625C1.87868 8.625 1.375 8.12132 1.375 7.5C1.375 6.87868 1.87868 6.375 2.5 6.375C3.12132 6.375 3.625 6.87868 3.625 7.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM13.625 7.5C13.625 8.12132 13.1213 8.625 12.5 8.625C11.8787 8.625 11.375 8.12132 11.375 7.5C11.375 6.87868 11.8787 6.375 12.5 6.375C13.1213 6.375 13.625 6.87868 13.625 7.5Z" fill="currentColor"></path>
-            </svg>
-          </button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <CardDescription className="line-clamp-3">
-          {agent.description || "No description provided for this agent."}
-        </CardDescription>
-        <div className="mt-4 flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}`)}>Chat</Button>
-          <Button size="sm" className="teampal-button">View Profile</Button>
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(agent)}>
+                <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(agent)}>
+                <Trash className="mr-2 h-4 w-4 text-destructive" /> Xóa
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Card>
+      ))}
+    </div>
   );
 };
-
-export default Agents;

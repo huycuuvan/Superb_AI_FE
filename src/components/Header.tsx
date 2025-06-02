@@ -15,14 +15,20 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
+import { useQuery } from "@tanstack/react-query";
+import { getWorkspaceProfile, updateWorkspaceProfile, WorkspaceProfile } from "@/services/api";
 
 import { LanguageToggle } from "./LanguageToggle";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
 
 // Import icons for plugins, share, and delete
-import { Puzzle, Share2, Trash2 } from 'lucide-react';
+import { Puzzle, Share2, Trash2, Edit } from 'lucide-react';
 import { agents } from '@/services/mockData'; // Assuming agents data is available
 
-const Header = () => {
+import React from "react";
+
+const Header = React.memo(() => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
@@ -34,9 +40,22 @@ const Header = () => {
   const { agentId } = useParams<{ agentId: string }>(); // Get agentId from params
   const currentAgent = agents.find(agent => agent.id === agentId); // Find current agent
 
-  console.log("Header: useQuery data:", workspace);
-  console.log("Header: useQuery isLoading:", isWorkspaceLoading);
-  console.log("Header: useQuery error:", workspaceError);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const { data: profileData, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery<{
+    data: WorkspaceProfile | null
+  } | null>({
+    queryKey: ['headerWorkspaceProfile', workspace?.id],
+    queryFn: () => workspace?.id ? getWorkspaceProfile(workspace.id) : Promise.resolve(null),
+    enabled: isEditDialogOpen && !!workspace?.id,
+  });
+
+  const handleEditProfileSubmit = async (data: WorkspaceProfile) => {
+    if (!workspace?.id) return;
+    await updateWorkspaceProfile(workspace.id, data);
+    setIsEditDialogOpen(false);
+    refetchProfile();
+  };
 
   // Generate breadcrumb segments
   const breadcrumbs = pathSegments.map((segment, index) => {
@@ -220,6 +239,6 @@ const Header = () => {
      
     </header>
   );
-};
+});
 
 export default Header;

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse } from "@/services/api";
+import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse, getWorkspaceProfile, WorkspaceProfile } from "@/services/api";
 import { Plus, LogOut, Folder } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,7 +43,24 @@ const WorkspacePage = () => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
+    retry: 3,
   });
+
+  // Fetch workspace profile for selected workspace
+  const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useQuery<{
+    data: WorkspaceProfile | null
+  } | null>({
+    queryKey: ['workspaceProfile', selectedWorkspaceId],
+    queryFn: () => selectedWorkspaceId ? getWorkspaceProfile(selectedWorkspaceId) : Promise.resolve(null),
+    enabled: !!selectedWorkspaceId,
+  });
+
+  // Redirect if profile doesn't exist for selected workspace
+  useEffect(() => {
+    if (!isLoadingProfile && !profileError && selectedWorkspaceId && profileData && profileData.data === null) {
+      navigate(`/workspace/${selectedWorkspaceId}/profile`);
+    }
+  }, [isLoadingProfile, profileError, selectedWorkspaceId, profileData, navigate]);
 
   // Fetch folders when workspace is selected
   const { data: foldersData, isLoading: isLoadingFolders } = useQuery<FolderResponse | null>({
@@ -78,16 +95,32 @@ const WorkspacePage = () => {
     setSelectedWorkspaceId(workspaceId);
   };
 
-  const handleGoToDashboard = (workspaceId: string) => {
+  const handleGoToDashboard = async (workspaceId: string) => {
     if (workspaceId) {
-      localStorage.setItem('selectedWorkspace', workspaceId);
-      if (user && data && data.data) {
-        const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
-        if (selectedWorkspace) {
-          updateUser({ ...user, workspace: selectedWorkspace });
+      // Kiểm tra profile trước khi vào dashboard
+      try {
+        const profileResponse = await getWorkspaceProfile(workspaceId);
+        if (profileResponse && profileResponse.data !== null) {
+          // Profile tồn tại, lưu workspace đã chọn và vào dashboard
+          localStorage.setItem('selectedWorkspace', workspaceId);
+          if (user && data && data.data) {
+            const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
+            if (selectedWorkspace) {
+              updateUser({ ...user, workspace: selectedWorkspace });
+            }
+          }
+          navigate('/dashboard');
+        } else {
+          // Profile không tồn tại, điều hướng đến trang tạo profile
+          navigate(`/workspace/${workspaceId}/profile`);
         }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra profile:', error);
+        // Xử lý lỗi hoặc thông báo cho người dùng nếu cần
+        // Có thể vẫn cho vào dashboard hoặc ở lại trang workspace tùy luồng mong muốn
+        // Hiện tại, tôi sẽ điều hướng về trang profile nếu có lỗi khi kiểm tra.
+         navigate(`/workspace/${workspaceId}/profile`);
       }
-      navigate('/dashboard');
     }
   };
 
@@ -101,7 +134,7 @@ const WorkspacePage = () => {
         localStorage.setItem('selectedWorkspace', ws.data.id);
         await refetch();
         setShowCreate(false);
-        navigate('/dashboard');
+        navigate(`/workspace/${ws.data.id}/profile`);
       } else {
         setError('Tạo workspace thành công nhưng không nhận được ID.');
       }
@@ -130,17 +163,26 @@ const WorkspacePage = () => {
   }
 
   if (fetchError) {
-    const errorMessage = isApiError(fetchError) 
-      ? fetchError.message 
-      : 'Lỗi khi tải workspace. Vui lòng thử lại sau.';
+    let errorMessage = 'Lỗi khi tải workspace. Vui lòng thử lại sau.';
+
+    if (isApiError(fetchError)) {
+      if (fetchError.status === 502) {
+        errorMessage = 'Không thể kết nối đến máy chủ (Bad Gateway). Vui lòng thử lại sau.';
+      } else {
+        errorMessage = fetchError.message;
+      }
+    } else if (fetchError instanceof Error) {
+      errorMessage = fetchError.message;
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
         <div className="w-full max-w-md">
           <Alert variant="destructive">
             {errorMessage}
           </Alert>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full mt-4"
             onClick={() => refetch()}
           >
@@ -168,7 +210,7 @@ const WorkspacePage = () => {
         }}
       >
         <LogOut className="w-4 h-4" />
-        Đăng xuất
+        Logout
       </Button>
       <div ref={cardRef} className="w-full max-w-md relative z-10">
         <Card className={`shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20`}>
