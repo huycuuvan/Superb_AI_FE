@@ -41,6 +41,15 @@ interface TaskWithInputs extends ApiTaskType {
   is_system_task: boolean;
 }
 
+interface Message {
+  type: string;
+  thread_id: string;
+  content: string;
+  timestamp: string;
+  sender_type: "user" | "agent";
+  sender_user_id: string;
+}
+
 const AgentChat = () => {
   const { theme } = useTheme();
   const { agentId } = useParams<{ agentId: string }>();
@@ -180,50 +189,67 @@ const AgentChat = () => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log("WebSocket Connected");
+        console.log("WebSocket Connected", { threadId: currentThread });
       };
 
       ws.current.onmessage = (event) => {
-        console.log("RAW WebSocket Data Received:", event.data); // Log raw data
+        console.warn("Received WebSocket data (WARN).");
+        console.log("RAW WebSocket Data Received:", event.data);
         try {
-          const receivedData = JSON.parse(event.data);
+          const receivedData: Message = JSON.parse(event.data);
           console.log("Parsed WebSocket Data:", receivedData);
-  
-          // Check for message content
-          if (!receivedData.message_content && !receivedData.content) {
-            console.warn("WebSocket message received without content:", receivedData);
-            return; 
+          console.log("Message Type:", receivedData.type);
+      
+          // Kiểm tra type của tin nhắn
+          if (receivedData.type === "chat") {
+            console.log("Received chat message:", receivedData);
+            const newChatMessage: ChatMessage = {
+              id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+              content: receivedData.content,
+              sender: receivedData.sender_type,
+              timestamp: receivedData.timestamp,
+              agentId: receivedData.sender_user_id
+            };
+      
+            console.log("New ChatMessage object from WebSocket:", newChatMessage);
+      
+            setMessages(prevMessages => {
+              console.log("Adding new message from WebSocket to state");
+
+              // Kiểm tra nếu tin nhắn nhận được là echo của tin nhắn user vừa gửi
+              // So sánh sender_type là user và content có vẻ khớp với tin nhắn cuối cùng của user trong state
+              // Đây là một cách kiểm tra đơn giản, có thể cần tinh chỉnh nếu có nhiều user trong thread
+              const lastUserMessage = prevMessages
+                .filter(msg => msg.sender === 'user')
+                .pop(); // Lấy tin nhắn cuối cùng từ user trong state
+
+              const isEcho = receivedData.sender_type === 'user'
+                             && lastUserMessage
+                             && receivedData.content === lastUserMessage.content;
+                             // Có thể thêm kiểm tra timestamp nếu cần độ chính xác cao hơn
+
+              if (isEcho) {
+                console.log("Received echo of user message, not adding:", receivedData);
+                return prevMessages; // Bỏ qua, không thêm vào state
+              }
+
+              return [...prevMessages, newChatMessage]; // Thêm tin nhắn (agent hoặc user không phải echo)
+            });
+      
+            setIsAgentThinking(false);
+      
+          } else if (receivedData.type === "typing") {
+             console.log("Received typing indicator:", receivedData);
+             if (receivedData.sender_type === "agent") {
+                console.log("Setting isAgentThinking to true");
+                setIsAgentThinking(true);
+             }
+          } else {
+            console.log("Received unhandled message type:", receivedData.type, receivedData);
           }
-          // Check for sender
-          if (!receivedData.sender_type && !receivedData.sender) {
-              console.warn("WebSocket message received without sender:", receivedData);
-              return; // Skip if no sender
-          }
-  
-          const newChatMessage: ChatMessage = {
-            // Generate a more unique ID if server doesn't send one or sends an unreliable one
-            id: receivedData.id || `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            content: receivedData.message_content || receivedData.content,
-            sender: receivedData.sender_type || receivedData.sender,
-            timestamp: receivedData.created_at || receivedData.timestamp || new Date().toISOString(),
-            agentId: receivedData.sender_agent_id || receivedData.agentId,
-          };
-  
-          console.log("New ChatMessage object from WebSocket:", newChatMessage);
-  
-          setMessages(prevMessages => {
-            // Check if a message with this ID already exists (to avoid duplicates if ID from server is reliable)
-            if (newChatMessage.id && prevMessages.some(msg => msg.id === newChatMessage.id)) {
-                console.log("Message with this ID already exists, not adding:", newChatMessage.id);
-                return prevMessages;
-            }
-            console.log("Adding new message from WebSocket to state.");
-            return [...prevMessages, newChatMessage];
-          });
-          setIsAgentThinking(false); // Stop thinking indicator
         } catch (error) {
-          console.error("Error parsing WebSocket message or updating state:", error);
-          console.error("Offending raw WebSocket data:", event.data); // Log offending data
+          console.error("Error processing WebSocket message:", error);
+          console.error("Raw WebSocket data that caused error:", event.data);
         }
       };
   
@@ -315,6 +341,7 @@ const AgentChat = () => {
           }
 
           setCurrentThread(threadId);
+          console.log("Thread ID set to:", threadId);
 
           // After threadId is set (old or new), load message history
           if (threadId) {
@@ -362,26 +389,43 @@ const AgentChat = () => {
         id: Date.now().toString(), // Temporary ID
         content: message,
         sender: 'user',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // agentId is not applicable for user message sent from frontend
       };
-      
+
+      // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
       setMessages(prev => [...prev, userMessage]);
       setMessage('');
-      
+
       try {
-        await sendMessageToThread(currentThread, userMessage.content); // Use API call
-        setIsSending(false); 
-        setIsAgentThinking(true); // Agent starts thinking after message is sent
+        // ** Thay thế gọi API REST bằng gửi qua WebSocket **
+        const messageToSend = {
+          type: "chat", // Loại tin nhắn
+          thread_id: currentThread, // ID của thread
+          content: userMessage.content, // Nội dung tin nhắn
+          // timestamp: userMessage.timestamp, // Có thể gửi timestamp từ frontend nếu backend cần
+          sender_type: userMessage.sender, // Loại người gửi (user)
+          // TODO: Lấy SenderUserID thực tế từ thông tin người dùng đã login
+          sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
+        };
+
+        ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
+
+        // Trạng thái sending và thinking sẽ được quản lý bởi tin nhắn WebSocket phản hồi (typing/chat)
+        setIsSending(false);
+        // setIsAgentThinking(true); // Bật trạng thái typing tạm thời hoặc chờ tín hiệu từ backend
 
       } catch (error) {
-        console.error('Error sending message:', error);
-        setIsSending(false); 
+        console.error('Error sending message via WebSocket:', error);
+        setIsSending(false);
+        // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
       }
 
     } else if (aboveInputContent === 'knowledge') {
        console.log("Sending message with knowledge context:", selectedTaskInputs);
+       // Logic xử lý knowledge context (nếu có)
        setMessage('');
-       setAboveInputContent('none'); 
+       setAboveInputContent('none');
     }
   };
   
