@@ -281,3 +281,33 @@
 .dark aside.relative.flex-col.h-full {
   @apply bg-[#0F0F0F];
 }
+
+/* Thêm đoạn này vào file CSS gốc của bạn (ví dụ: src/index.css hoặc src/globals.css) */
+/* Đảm bảo nó được xử lý bởi Tailwind hoặc hệ thống CSS của bạn */
+.chat-message {
+  overflow-x: auto; /* Cho phép cuộn ngang nếu nội dung tràn */
+  /* Các style chat-message khác nếu có */
+}
+.chat-message table {
+  border-collapse: collapse; /* Giúp các đường viền liền mạch */
+  width: 100%; /* Bảng chiếm toàn bộ chiều rộng của container tin nhắn */
+  margin-top: 1em; /* Khoảng cách trên bảng */
+  margin-bottom: 1em; /* Khoảng cách dưới bảng */
+}
+
+.chat-message th,
+.chat-message td {
+  border: 1px solid #ddd; /* Thêm đường viền mỏng màu xám nhạt */
+  padding: 8px; /* Thêm khoảng đệm bên trong ô */
+  text-align: left; /* Căn lề trái cho nội dung */
+}
+
+.chat-message th {
+  background-color: #f2f2f2; /* Màu nền cho header bảng */
+  font-weight: bold; /* In đậm chữ trong header */
+}
+
+/* Thêm style cho các hàng xen kẽ (tùy chọn) */
+.chat-message tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}

@@ -26,6 +26,8 @@ export const API_ENDPOINTS = {
   tasks: {
     list: `${API_BASE_URL}/tasks/list`,
     create: `${API_BASE_URL}/tasks/create`,
+    byAgent: (agentId: string) => `${API_BASE_URL}/tasks/agent/${agentId}`,
+    execute: `${API_BASE_URL}/tasks/execute`,
   },
   folders: {
     create: `${API_BASE_URL}/folders`,
