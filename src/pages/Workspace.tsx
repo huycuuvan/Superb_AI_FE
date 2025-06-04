@@ -190,7 +190,7 @@ const WorkspacePage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative">
+    <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f3e8ff 100%)' }} className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative text-slate-900 dark:text-white">
       {/* Subtle animated background shapes */}
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
@@ -199,7 +199,7 @@ const WorkspacePage = () => {
       </div>
       <Button 
         variant="ghost" 
-        className="absolute top-4 right-4 flex items-center gap-2 z-20"
+        className="absolute top-4 right-4 flex items-center gap-2 z-20 bg-white dark:bg-[#23232a] text-slate-700 dark:text-white border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-[#23232a]"
         onClick={() => {
           logout();
           navigate('/login');
@@ -209,14 +209,14 @@ const WorkspacePage = () => {
         Logout
       </Button>
       <div ref={cardRef} className="w-full max-w-md relative z-10">
-        <Card className="shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20">
-          <CardHeader className={`space-y-1.5 p-6 sm:p-8 border-b border-white/20`}>
-            <CardTitle className={`text-2xl sm:text-3xl font-bold text-center text-slate-800`}>Your Workspace</CardTitle>
-            <CardDescription className={`text-center text-slate-600 text-sm sm:text-base`}>
+        <Card className="shadow-2xl rounded-xl bg-white border border-gray-200 dark:bg-[#18181b] dark:border-gray-700">
+          <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800 dark:text-white">Your Workspace</CardTitle>
+            <CardDescription className="text-center text-slate-600 dark:text-slate-300 text-sm sm:text-base">
               {showCreate ? 'Enter details for your new workspace' : 'Choose a workspace to continue'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 p-6 sm:p-8">
+          <CardContent className="space-y-6 p-6 sm:p-8 bg-white dark:bg-[#18181b]">
             {showCreate ? (
               <form onSubmit={handleCreateWorkspace} className="w-full space-y-6">
                 <h2 className="text-xl font-semibold text-center text-slate-800">Create a new workspace</h2>
@@ -233,7 +233,7 @@ const WorkspacePage = () => {
                     onChange={e => setName(e.target.value)} 
                     required 
                     disabled={loading}
-                    className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                    className="border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white dark:bg-[#23232a] placeholder:text-slate-400 text-slate-800 dark:text-white rounded-md"
                   />
                 </div>
                 <div className="w-full space-y-1.5">
@@ -243,7 +243,7 @@ const WorkspacePage = () => {
                     value={description} 
                     onChange={e => setDescription(e.target.value)}
                     disabled={loading}
-                    className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                    className="border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white dark:bg-[#23232a] placeholder:text-slate-400 text-slate-800 dark:text-white rounded-md"
                   />
                 </div>
                 <Button 
@@ -265,7 +265,7 @@ const WorkspacePage = () => {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="w-full border-white/40 !text-slate-700 hover:bg-white/50 focus:ring-purple-500/30 py-2.5 bg-white/60"
+                    className="w-full border-gray-300 !text-slate-700 dark:!text-white hover:bg-gray-100 dark:hover:bg-[#23232a] focus:ring-purple-500/30 py-2.5 bg-white dark:bg-[#23232a]"
                     onClick={() => setShowCreate(false)}
                     disabled={loading}
                   >
@@ -280,21 +280,21 @@ const WorkspacePage = () => {
                     {workspaces.map((workspace) => (
                       <div key={workspace.id} className="mb-3 last:mb-0">
                         <div
-                          className="flex flex-row items-center p-3 sm:p-4 border border-white/30 rounded-2xl shadow-sm bg-white/90 hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
+                          className="flex flex-row items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
                           onClick={() => handleSelectWorkspace(workspace.id)}
                         >
-                          <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base">
-                            <span className="font-bold">{workspace.name.charAt(0).toUpperCase()}</span>
+                          <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base dark:bg-gray-700 dark:text-white">
+                            <span className="font-bold dark:text-white">{workspace.name.charAt(0).toUpperCase()}</span>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-base text-slate-800 truncate leading-tight">{workspace.name}</div>
+                            <div className="font-semibold text-base text-slate-800 dark:text-white truncate leading-tight">{workspace.name}</div>
                             {workspace.description && (
-                              <div className="text-xs text-gray-500 truncate leading-tight">{workspace.description}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight">{workspace.description}</div>
                             )}
                           </div>
                           <div className="flex-shrink-0">
                             <button
-                              className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                              className="block sm:hidden rounded-full   bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700  p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
                               onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
                               aria-label="Go to Dashboard"
                             >
@@ -303,7 +303,7 @@ const WorkspacePage = () => {
                             <Button 
                               variant="default"
                               size="sm"
-                              className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
+                              className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 dark:text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
                               onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
                             >
                               Go to Dashboard
@@ -317,7 +317,7 @@ const WorkspacePage = () => {
               </>
             )}
           </CardContent>
-          <CardFooter className="flex justify-center p-6 bg-inherit border-t border-white/20 rounded-b-xl">
+          <CardFooter className="flex justify-center p-6 bg-white dark:bg-[#18181b] border-t border-gray-200 dark:border-gray-700 rounded-b-xl">
             {!showCreate && (
               <Button 
                 onClick={() => setShowCreate(true)} 
