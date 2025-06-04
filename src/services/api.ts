@@ -7,6 +7,7 @@ import {
   Thread,
   ChatMessage,
   ApiMessage,
+  ApiTaskType,
 } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
@@ -341,7 +342,8 @@ export const getAgentById = async (
     await handleApiError(response);
   }
 
-  return response.json();
+  const responseData = await response.json();
+  return { data: responseData.data.agent };
 };
 
 export interface UpdateAgentRequest {
@@ -594,6 +596,26 @@ export const getThreadMessages = async (
   return response.json();
 };
 
+export const getTasksByAgentId = async (
+  agentId: string
+): Promise<{ data: ApiTaskType[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Authentication token not found.");
+
+  const response = await fetch(`${API_ENDPOINTS.tasks.base}/agent/${agentId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
 // New function to get tasks for a specific agent
 export const getAgentTasks = async (
   agentId: string
@@ -617,6 +639,50 @@ export const getAgentTasks = async (
   return response.json();
 };
 
+export const createTask = async (
+  taskData: Omit<ApiTaskType, 'id' | 'created_at' | 'updated_at'> & { agent_id: string }
+): Promise<{ data: ApiTaskType }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Authentication token not found.");
+
+  const response = await fetch(API_ENDPOINTS.tasks.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export interface UpdateTaskRequest {
+  name?: string;
+  description?: string;
+  task_type?: string;
+  execution_config?: Record<string, unknown>;
+  credit_cost?: number;
+  category?: string;
+  is_system_task?: boolean;
+  assignedAgentId?: string;
+  status?: "todo" | "in-progress" | "completed";
+}
+
+export const updateTask = async (
+  taskId: string,
+  taskData: UpdateTaskRequest
+): Promise<{ data: ApiTaskType }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Authentication token not found.");
+
+  const response = await fetch(API_ENDPOINTS.tasks.update(taskId), {
+    method: "PUT",
+
 // New function to execute a task
 export const executeTask = async (
   taskId: string,
@@ -628,15 +694,18 @@ export const executeTask = async (
 
   const response = await fetch(API_ENDPOINTS.tasks.execute, {
     method: "POST",
+
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+
     body: JSON.stringify({
       task_id: taskId,
       input_data: inputData,
       thread_id: threadId,
     }),
+
   });
 
   if (!response.ok) {
@@ -644,4 +713,25 @@ export const executeTask = async (
   }
 
   return response.json();
+};
+
+
+export const deleteTask = async (
+  taskId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Authentication token not found.");
+
+  const response = await fetch(API_ENDPOINTS.tasks.delete(taskId), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return { success: response.ok };
 };

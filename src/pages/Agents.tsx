@@ -317,7 +317,7 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
               >
                 Chat
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => navigate(`/agent/${agent.id}/profile`)}>View Profile</Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)}>View Profile</Button>
             </div>
           </CardContent>
           <DropdownMenu>

@@ -20,19 +20,25 @@ export interface ModelConfig {
 }
 
 export interface Agent {
-  agent: {
-    id: string;
-    name: string;
-    type: string;
-    avatar?: string;
-    category?: string;
-    role_description?: string;
-    status?: string;
-    model_config?: ModelConfig;
-  };
+  id: string;
+  name: string;
+  type: string;
+  avatar?: string;
+  category?: string;
+  role_description?: string;
+  status?: string;
+  model_config?: ModelConfig;
+  instructions?: string;
+  job_brief?: string;
+  language?: string;
+  position?: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+  folders: Folder[];
 }
 
-export interface Task {
+export interface ApiTaskType {
   id: string;
   name: string;
   description: string;
