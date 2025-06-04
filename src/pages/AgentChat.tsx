@@ -160,7 +160,7 @@ const AgentChat = () => {
                 const isEcho = prevMessages.some(msg =>
                   msg.sender === 'user' &&
                   msg.content === receivedData.content &&
-                  new Date(msg.timestamp).getTime() >= new Date(receivedData.timestamp).getTime() - 1000
+                  Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
                 );
                 if (isEcho) {
                   console.log("Skipping user message echo:", receivedData);
@@ -365,7 +365,6 @@ const AgentChat = () => {
       };
       
       // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
-      setMessages(prev => [...prev, userMessage]);
       setMessage('');
       
       try {
