@@ -14,8 +14,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TaskInput {
   id: string;
@@ -27,18 +29,32 @@ interface TaskInput {
 
 // Define a more specific type for execution_config
 interface ExecutionConfig {
-  [key: string]: any; // TODO: Specify a more specific type
+  [key: string]: string; // Cập nhật kiểu dữ liệu cho execution_config dựa trên response API
 }
 
 interface TaskWithInputs extends ApiTaskType {
-  inputs?: TaskInput[];
-  title?: string;
+  // inputs?: TaskInput[]; // Không dùng inputs theo cấu trúc mock data nữa
+  title?: string; // Giữ lại vì UI dùng title
   name: string;
   task_type: string;
-  execution_config: ExecutionConfig; // Use the new interface
+  execution_config: ExecutionConfig; // Sử dụng kiểu mới
   credit_cost: number;
   category: string;
   is_system_task: boolean;
+  // Thêm các trường khác từ API response nếu cần (creator_id, created_at, updated_at, webhook_url)
+  creator_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  webhook_url?: string;
+}
+
+interface Message {
+  type: string;
+  thread_id: string;
+  content: string;
+  timestamp: string;
+  sender_type: "user" | "agent";
+  sender_user_id: string;
 }
 
 const AgentChat = () => {
@@ -53,109 +69,19 @@ const AgentChat = () => {
   
   const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
 
-  const [tasks, setTasks] = useState<TaskWithInputs[]>([
-    { 
-      id: 'design', 
-      title: 'Tạo thiết kế từ văn bản', 
-      description: 'Nhập mô tả để tạo thiết kế giao diện.',
-      inputs: [
-        { id: 'height', label: 'Chiều cao (px)', type: 'number', required: true },
-        { id: 'width', label: 'Chiều rộng (px)', type: 'number', required: true },
-        { id: 'style', label: 'Phong cách', type: 'select', options: ['Minimal', 'Modern', 'Vintage', 'Professional'], required: true },
-        { id: 'description', label: 'Mô tả chi tiết', type: 'text', required: true }
-      ],
-      name: 'Tạo thiết kế',
-      task_type: 'design',
-      execution_config: {},
-      credit_cost: 10,
-      category: 'Design',
-      is_system_task: false,
-    },
-    { 
-      id: '1', 
-      title: 'Suggest upselling strategies', 
-      description: 'Đề xuất các chiến lược bán thêm cho khách hàng hiện tại.',
-      inputs: [
-        { id: 'customerType', label: 'Loại khách hàng', type: 'select', options: ['Cá nhân', 'Doanh nghiệp', 'Tổ chức'], required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
-        { id: 'preferences', label: 'Sở thích', type: 'text', required: true }
-      ],
-      name: 'Suggest upselling strategies',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '2', 
-      title: 'Generate ideas for sales promotions and discounts', 
-      description: 'Tạo ý tưởng cho các chương trình khuyến mãi và giảm giá.',
-      inputs: [
-        { id: 'promotionType', label: 'Loại khuyến mãi', type: 'select', options: ['Giảm giá', 'Tặng quà', 'Mua 1 tặng 1', 'Khác'], required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
-        { id: 'targetAudience', label: 'Đối tượng mục tiêu', type: 'text', required: true }
-      ],
-      name: 'Generate ideas for sales promotions and discounts',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '3', 
-      title: 'Generate ideas for sales contests and incentives', 
-      description: 'Tạo ý tưởng cho các cuộc thi và ưu đãi bán hàng.',
-      inputs: [
-        { id: 'contestType', label: 'Loại cuộc thi', type: 'select', options: ['Cá nhân', 'Nhóm', 'Phòng ban'], required: true },
-        { id: 'duration', label: 'Thời gian (ngày)', type: 'number', required: true },
-        { id: 'prize', label: 'Giải thưởng', type: 'text', required: true }
-      ],
-      name: 'Generate ideas for sales contests and incentives',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '4', 
-      title: 'Suggest cross-selling opportunities', 
-      description: 'Đề xuất cơ hội bán chéo dựa trên lịch sử mua hàng.',
-      inputs: [
-        { id: 'productType', label: 'Loại sản phẩm', type: 'select', options: ['Điện tử', 'Thời trang', 'Nhà cửa', 'Khác'], required: true },
-        { id: 'customerSegment', label: 'Phân khúc khách hàng', type: 'text', required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true }
-      ],
-      name: 'Suggest cross-selling opportunities',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '5', 
-      title: 'Suggest strategies for handling difficult customers', 
-      description: 'Đề xuất chiến lược xử lý khách hàng khó tính.',
-      inputs: [
-        { id: 'issueType', label: 'Loại vấn đề', type: 'select', options: ['Khiếu nại', 'Yêu cầu hoàn tiền', 'Chất lượng dịch vụ', 'Khác'], required: true },
-        { id: 'customerHistory', label: 'Lịch sử khách hàng', type: 'text', required: true },
-        { id: 'priority', label: 'Mức độ ưu tiên', type: 'select', options: ['Cao', 'Trung bình', 'Thấp'], required: true }
-      ],
-      name: 'Suggest strategies for handling difficult customers',
-      task_type: 'customer_service',
-      execution_config: {},
-      credit_cost: 3,
-      category: 'Customer Service',
-      is_system_task: false,
-    }
-  ]);
+  // State mới để lưu tasks được fetch từ API
+  const [tasks, setTasks] = useState<TaskWithInputs[]>([]); // Khởi tạo rỗng, sẽ fetch data
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     // Initial message, will be added after agent data is fetched
   ]);
+
+  // State mới để lưu trữ các log trạng thái từ WebSocket
+  const [taskLogs, setTaskLogs] = useState<string[]>([]);
+  // State để đóng/mở vùng log
+  const [showTaskLogs, setShowTaskLogs] = useState(true);
+  // State để xác định đã submit task thành công gần nhất chưa
+  const [taskJustSubmitted, setTaskJustSubmitted] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
@@ -165,6 +91,15 @@ const AgentChat = () => {
   const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
+
+  // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
+  const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+
+  // Ref để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
+  const taskExecutionStatusRef = useRef<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+
+  // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
+  const lastAgentMessageIdRef = useRef<string | null>(null);
 
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
@@ -180,49 +115,96 @@ const AgentChat = () => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log("WebSocket Connected");
+        console.log("WebSocket Connected", { threadId: currentThread });
       };
 
       ws.current.onmessage = (event) => {
-        console.log("RAW WebSocket Data Received:", event.data); // Log raw data
+        console.warn("Received WebSocket data (WARN).");
+        console.log("RAW WebSocket Data Received:", event.data);
         try {
-          const receivedData = JSON.parse(event.data);
+          const receivedData: Message = JSON.parse(event.data);
           console.log("Parsed WebSocket Data:", receivedData);
-  
-          if (!receivedData.message_content && !receivedData.content) {
-            console.warn("WebSocket message received without content:", receivedData);
-            return; 
-          }
-          // Check for sender
-          if (!receivedData.sender_type && !receivedData.sender) {
-              console.warn("WebSocket message received without sender:", receivedData);
-              return; // Skip if no sender
-          }
-  
-          const newChatMessage: ChatMessage = {
-            // Generate a more unique ID if server doesn't send one or sends an unreliable one
-            id: receivedData.id || `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            content: receivedData.message_content || receivedData.content,
-            sender: receivedData.sender_type || receivedData.sender,
-            timestamp: receivedData.created_at || receivedData.timestamp || new Date().toISOString(),
-            agentId: receivedData.sender_agent_id || receivedData.agentId,
-          };
-  
-          console.log("New ChatMessage object from WebSocket:", newChatMessage);
-  
-          setMessages(prevMessages => {
-            // Check if a message with this ID already exists (to avoid duplicates if ID from server is reliable)
-            if (newChatMessage.id && prevMessages.some(msg => msg.id === newChatMessage.id)) {
-                console.log("Message with this ID already exists, not adding:", newChatMessage.id);
-                return prevMessages;
+          console.log("Message Type:", receivedData.type);
+      
+          // Kiểm tra type của tin nhắn
+          if (receivedData.type === "chat") {
+            console.log("Received chat message:", receivedData);
+
+            // Xử lý tin nhắn từ Agent (dạng chunk)
+            if (receivedData.sender_type === "agent") {
+              setMessages(prevMessages => {
+                // Nếu message cuối cùng là agent, append chunk
+                if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
+                  const updatedMessages = [...prevMessages];
+                  updatedMessages[updatedMessages.length - 1].content += receivedData.content;
+                  updatedMessages[updatedMessages.length - 1].timestamp = receivedData.timestamp;
+                  return updatedMessages;
+                } else {
+                  // Nếu không, push message agent mới
+                  const newChatMessage: ChatMessage = {
+                    id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                    content: receivedData.content,
+                    sender: receivedData.sender_type,
+                    timestamp: receivedData.timestamp,
+                    agentId: receivedData.sender_user_id,
+                  };
+                  return [...prevMessages, newChatMessage];
+                }
+              });
             }
-            console.log("Adding new message from WebSocket to state.");
-            return [...prevMessages, newChatMessage];
-          });
-          setIsAgentThinking(false); // Stop thinking indicator
+            // Xử lý tin nhắn từ User (đã được thêm vào state ngay khi gửi)
+            // Nếu backend echo lại tin nhắn user, chúng ta bỏ qua vì đã thêm vào UI ngay khi gửi
+            // Có thể thêm logic kiểm tra ID hoặc content để chắc chắn là echo và không phải tin nhắn từ user khác (nếu hỗ trợ multi-user)
+            else if (receivedData.sender_type === "user") {
+              setMessages(prevMessages => {
+                const isEcho = prevMessages.some(msg =>
+                  msg.sender === 'user' &&
+                  msg.content === receivedData.content &&
+                  Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
+                );
+                if (isEcho) {
+                  console.log("Skipping user message echo:", receivedData);
+                  return prevMessages;
+                } else {
+                  // Đây có thể là tin nhắn từ user khác trong multi-user chat
+                  const newChatMessage: ChatMessage = {
+                    id: receivedData.thread_id + ":" + receivedData.timestamp + ":" + receivedData.sender_user_id + ":" + Math.random(),
+                    content: receivedData.content,
+                    sender: receivedData.sender_type,
+                    timestamp: receivedData.timestamp,
+                    agentId: receivedData.sender_user_id,
+                  };
+                  return [...prevMessages, newChatMessage];
+                }
+              });
+            }
+
+          } else if (receivedData.type === "typing") {
+             console.log("Received typing indicator:", receivedData);
+             if (receivedData.sender_type === "agent") {
+                console.log("Setting isAgentThinking to true");
+                setIsAgentThinking(true);
+             } else {
+               // TODO: Handle user typing indicator if needed and backend sends user ID
+             }
+
+          } else if (receivedData.type === "done") {
+             console.log("Received done indicator for agent message.", receivedData);
+             lastAgentMessageIdRef.current = null; // Kết thúc chuỗi chunking
+             setIsAgentThinking(false); // Tắt trạng thái typing khi nhận done (nếu backend gửi sau typing)
+
+          // Xử lý tin nhắn type "status"
+          } else if (receivedData.type === "status") {
+             console.log("Received status message:", receivedData); // Log khi nhận được tin nhắn status
+             console.log("Appending status log to UI:", receivedData.content); // Log xác nhận thêm vào state
+             setTaskLogs(logs => [...logs, receivedData.content]); // Thêm nội dung vào state taskLogs
+
+          } else {
+            console.log("Received unhandled message type:", receivedData.type, receivedData);
+          }
         } catch (error) {
-          console.error("Error parsing WebSocket message or updating state:", error);
-          console.error("Offending raw WebSocket data:", event.data); // Log offending data
+          console.error("Error processing WebSocket message:", error);
+          console.error("Raw WebSocket data that caused error:", event.data);
         }
       };
   
@@ -261,6 +243,22 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
+
+          // TODO: Fetch tasks for the agent
+          if (agentId) {
+            try {
+              const agentTasksResponse = await getAgentTasks(agentId); // Gọi API mới
+              if (agentTasksResponse.data) {
+                // Mapping dữ liệu từ API nếu cần, đảm bảo khớp với TaskWithInputs[]
+                // Hiện tại giả định cấu trúc trả về từ API khớp
+                setTasks(agentTasksResponse.data);
+                console.log("Fetched tasks:", agentTasksResponse.data);
+              }
+            } catch (taskError) {
+              console.error('Error fetching agent tasks:', taskError);
+              // Xử lý lỗi fetch tasks
+            }
+          }
 
           let threadId: string | null = null;
           let threadCheck: { exists: boolean, thread_id?: string } | null = null;
@@ -314,6 +312,7 @@ const AgentChat = () => {
           }
 
           setCurrentThread(threadId);
+          console.log("Thread ID set to:", threadId);
 
           // After threadId is set (old or new), load message history
           if (threadId) {
@@ -361,24 +360,40 @@ const AgentChat = () => {
         id: Date.now().toString(), // Temporary ID
         content: message,
         sender: 'user',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // agentId is not applicable for user message sent from frontend
       };
       
-      setMessages(prev => [...prev, userMessage]);
+      // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
       setMessage('');
       
       try {
-        await sendMessageToThread(currentThread, userMessage.content); // Use API call
+        // ** Thay thế gọi API REST bằng gửi qua WebSocket **
+        const messageToSend = {
+          type: "chat", // Loại tin nhắn
+          thread_id: currentThread, // ID của thread
+          content: userMessage.content, // Nội dung tin nhắn
+          // timestamp: userMessage.timestamp, // Có thể gửi timestamp từ frontend nếu backend cần
+          sender_type: userMessage.sender, // Loại người gửi (user)
+          // TODO: Lấy SenderUserID thực tế từ thông tin người dùng đã login
+          sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
+        };
+
+        ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
+
+        // Trạng thái sending và thinking sẽ được quản lý bởi tin nhắn WebSocket phản hồi (typing/chat)
         setIsSending(false); 
-        setIsAgentThinking(true); // Agent starts thinking after message is sent
+        // setIsAgentThinking(true); // Bật trạng thái typing tạm thời hoặc chờ tín hiệu từ backend
 
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('Error sending message via WebSocket:', error);
         setIsSending(false); 
+        // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
       }
 
     } else if (aboveInputContent === 'knowledge') {
        console.log("Sending message with knowledge context:", selectedTaskInputs);
+       // Logic xử lý knowledge context (nếu có)
        setMessage('');
        setAboveInputContent('none'); 
     }
@@ -394,7 +409,16 @@ const AgentChat = () => {
   const handleTaskSelect = (task: TaskWithInputs) => {
     setSelectedTaskId(task.id);
     setAboveInputContent('taskInputs');
-    setSelectedTaskInputs({});
+    // Khởi tạo selectedTaskInputs với giá trị mặc định từ execution_config
+    const initialInputs: {[key: string]: string} = {};
+    if (task.execution_config) {
+      Object.keys(task.execution_config).forEach(key => {
+         initialInputs[key] = task.execution_config[key] || ''; // Dùng giá trị từ config hoặc rỗng
+      });
+    }
+    setSelectedTaskInputs(initialInputs);
+    // Reset trạng thái thực thi khi chọn task mới
+    setTaskExecutionStatus(prev => ({ ...prev, [task.id]: 'idle' }));
   };
 
   const handleInputChange = (inputId: string, value: string) => {
@@ -404,14 +428,34 @@ const AgentChat = () => {
     }));
   };
 
-  const handleSubmitTaskInputs = () => {
+  const handleSubmitTaskInputs = async () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
-    if (selectedTask) {
-      const inputValues = Object.entries(selectedTaskInputs)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n');
-      setMessage(`${selectedTask.title}\n${inputValues}`);
+    if (selectedTask && currentThread) {
+      setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'loading' }));
+      // Mở vùng log khi submit
+      setShowTaskLogs(true);
+      setTaskJustSubmitted(false);
+      try {
+        console.log('Executing task...', selectedTask.name, 'with inputs:', selectedTaskInputs, 'thread:', currentThread);
+        const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread);
+        if (response.status === 200 || response.message === 'Task execution started') {
+          console.log('Task initiated/executed successfully:', response);
+          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'success' }));
+          setTaskJustSubmitted(true); // Đánh dấu đã submit thành công
+        } else {
+          console.warn('Task execution failed:', response);
+          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
+          setTaskJustSubmitted(false);
+        }
+      } catch (error) {
+        console.error('Error executing task:', error);
+        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
+        setTaskJustSubmitted(false);
+      }
       setAboveInputContent('none');
+      setTimeout(() => {
+        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'idle' }));
+      }, 5000);
     }
   };
 
@@ -426,19 +470,6 @@ const AgentChat = () => {
     }
   };
 
-
-  const promptSuggestions = [
-    "Show me the temperature today",
-    "Why does it rain",
-    "Do you feel different because of weather",
-    "What kind of clouds are there",
-    "What is the weather forecast for the next five days in my area, including high and low temperatures"
-  ];
-
-  const handlePromptSuggestionClick = (suggestion: string) => {
-    setMessage(suggestion);
-    setInputAreaMode('chat');
-  };
 
   // Initialize useNavigate
   const navigate = useNavigate();
@@ -505,10 +536,7 @@ const AgentChat = () => {
               </div>
                {/* Add more chat items as needed */}
             </div>
-            {/* Sidebar Footer (Optional) */}
-            {/* <div className="p-4 border-t">
-              <p className="text-xs text-muted-foreground text-center">Sidebar Footer</p>
-            </div> */}
+           
           </>
         )}
       </aside>
@@ -564,7 +592,13 @@ const AgentChat = () => {
                     "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
                     getMessageStyle(msg.sender)
                   )}>
+                    {msg.sender === 'agent' ? (
+                       <div className="chat-message">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                       </div>
+                    ) : (
                     <p>{msg.content}</p>
+                    )}
                     <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
                       {/* Check if date is valid before formatting */}
                       {new Date(msg.timestamp).toString() !== 'Invalid Date'
@@ -603,9 +637,59 @@ const AgentChat = () => {
                 </div>
               )}
 
-              {/* Daily Timer Button (Keep this within the main chat area) */}
-              {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
-                <div className="flex justify-start mt-2">
+              {/* Vùng hiển thị Task Logs */}
+              <div className="mt-4">
+                <button
+                  className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border"
+                  onClick={() => setShowTaskLogs(v => !v)}
+                >
+                  {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
+                </button>
+                {showTaskLogs && taskLogs.length > 0 && (
+                  <div className="p-3 border border-border rounded-lg bg-card text-card-foreground text-sm overflow-y-auto max-h-[200px]">
+                    <h4 className="font-semibold mb-2">Task Logs:</h4>
+                    <div className="space-y-2">
+                      {taskLogs.map((log, index) => {
+                        let parsed: any = null;
+                        try {
+                          parsed = typeof log === 'string' ? JSON.parse(log) : log;
+                        } catch {
+                          parsed = null;
+                        }
+                        if (parsed && typeof parsed === 'object') {
+                          return (
+                            <div key={index} className="p-2 rounded bg-muted/50">
+                              <div className="font-medium">
+                                {parsed.message && <span>{parsed.message}</span>}
+                                {parsed.status && (
+                                  <span className={
+                                    parsed.status === 'completed' ? 'text-green-600 ml-2' :
+                                    parsed.status === 'processing' ? 'text-yellow-600 ml-2' :
+                                    parsed.status === 'error' ? 'text-red-600 ml-2' : 'ml-2'
+                                  }>
+                                    [{parsed.status}]
+                                  </span>
+                                )}
+                              </div>
+                              {parsed.response && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  <span>Response: </span>
+                                  <span>{typeof parsed.response === 'string' ? parsed.response : JSON.stringify(parsed.response)}</span>
+                                </div>
+                              )}
+                              {parsed.task_id && (
+                                <div className="text-xs text-muted-foreground">Task ID: {parsed.task_id}</div>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          return <p key={index} className="text-muted-foreground">{log}</p>;
+                        }
+                      })}
+                    </div>
+                    {/* Nút Schedule Daily Task nằm trong card log */}
+                    {taskJustSubmitted && (
+                      <div className="flex justify-start mt-4">
                   <Button 
                     variant="outline" 
                     className="flex items-center gap-2 text-sm"
@@ -616,6 +700,10 @@ const AgentChat = () => {
                   </Button>
                 </div>
               )}
+                  </div>
+                )}
+              </div>
+
             </div>
 
             {/* Area above the main input for Tasks/Knowledge */}
@@ -632,7 +720,17 @@ const AgentChat = () => {
                          className="w-full justify-start border-border"
                          onClick={() => handleTaskSelect(task)}
                        >
-                         {task.title}
+                         {/* Chỉ báo trạng thái thực thi task */}
+                         {taskExecutionStatus[task.id] === 'loading' && (
+                            <span className="loading-spinner mr-2 w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin"></span>
+                         )}
+                         {taskExecutionStatus[task.id] === 'success' && (
+                            <span className="text-green-500 mr-2">✓</span> // Icon thành công
+                         )}
+                         {taskExecutionStatus[task.id] === 'error' && (
+                            <span className="text-red-500 mr-2">✗</span> // Icon thất bại
+                         )}
+                         {task.name}
                        </Button>
                      ))}
                    </div>
@@ -642,36 +740,21 @@ const AgentChat = () => {
 
                {aboveInputContent === 'taskInputs' && selectedTask && (
                  <div className="mb-3 space-y-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
-                   <h3 className="text-lg font-semibold text-foreground">{selectedTask.title} Inputs</h3>
-                   {selectedTask.inputs.map((input) => (
-                     <div key={input.id} className="space-y-1">
-                       <label htmlFor={input.id} className="text-sm font-medium text-foreground">{input.label}</label>
-                       {input.type === 'select' ? (
-                         <Select
-                           value={selectedTaskInputs[input.id] || ''}
-                           onValueChange={(value) => handleInputChange(input.id, value)}
-                         >
-                           <SelectTrigger className="bg-background text-card-foreground border-border">
-                             <SelectValue placeholder={`Select ${input.label.toLowerCase()}`} />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {input.options?.map((option) => (
-                               <SelectItem key={option} value={option}>
-                                 {option}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                       ) : (
+                   <h3 className="text-lg font-semibold text-foreground">{selectedTask.name} Inputs</h3> {/* Sử dụng task.name hoặc title */}
+                   {/* Render inputs dựa trên execution_config */}
+                   {Object.entries(selectedTask.execution_config).map(([key, defaultValue]) => (
+                     <div key={key} className="space-y-1">
+                       {/* Sử dụng key làm label và input id */}
+                       <label htmlFor={key} className="text-sm font-medium text-foreground">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label> {/* Tự động tạo label từ key */}
+                       {/* Hiện tại mặc định là text input, có thể cần logic để xác định type input (text, number, select) nếu execution_config cung cấp info này */}
                          <Input
-                           id={input.id}
-                           type={input.type}
-                           value={selectedTaskInputs[input.id] || ''}
-                           onChange={(e) => handleInputChange(input.id, e.target.value)}
-                           placeholder={`Enter ${input.label.toLowerCase()}`}
+                           id={key}
+                           type="text" // Mặc định là text, cần logic phức tạp hơn nếu có các type khác
+                           value={selectedTaskInputs[key] || ''} // Lấy giá trị từ state selectedTaskInputs
+                           onChange={(e) => handleInputChange(key, e.target.value)}
+                           placeholder={`Enter ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).toLowerCase()}`}
                            className="bg-background text-card-foreground border-border"
                          />
-                       )}
                      </div>
                    ))}
                    <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
