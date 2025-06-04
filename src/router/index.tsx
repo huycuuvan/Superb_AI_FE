@@ -38,6 +38,7 @@ import PricingPage from '@/pages/Pricing';
 import AboutPage from '@/pages/About';
 import DocsPage from '@/pages/Docs';
 import BlogPage from '@/pages/Blog';
+import AgentProfilePage from '@/pages/AgentProfilePage';
 
 const routes: RouteObject[] = [
   {
@@ -95,6 +96,10 @@ const routes: RouteObject[] = [
       {
         path: 'agents/:agentId/task/config',
         element: <AgentTaskConfig />,
+      },
+      {
+        path: 'agents/:agentId/profile',
+        element: <AgentProfilePage />,
       },
       {
         path: 'tasks',

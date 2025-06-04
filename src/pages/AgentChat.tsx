@@ -189,7 +189,6 @@ const AgentChat = () => {
           const receivedData = JSON.parse(event.data);
           console.log("Parsed WebSocket Data:", receivedData);
   
-          // Check for message content
           if (!receivedData.message_content && !receivedData.content) {
             console.warn("WebSocket message received without content:", receivedData);
             return; 

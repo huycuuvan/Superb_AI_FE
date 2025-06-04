@@ -1,0 +1,690 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getAgentById, getTasksByAgentId, updateAgent, deleteAgent, UpdateAgentRequest, createTask, updateTask, deleteTask, UpdateTaskRequest } from '@/services/api';
+import { Agent, ApiTaskType, ModelConfig } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ListPlus, Edit, Trash2, PlusCircle, X } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+
+const AgentProfilePage = () => {
+  const { agentId } = useParams<{ agentId: string }>();
+  const navigate = useNavigate();
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [tasks, setTasks] = useState<ApiTaskType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isEditAgentDialogOpen, setIsEditAgentDialogOpen] = useState(false);
+  const [editedAgentData, setEditedAgentData] = useState<Partial<Agent>>({});
+  const [isSavingAgent, setIsSavingAgent] = useState(false);
+
+  const [isDeleteAgentDialogOpen, setIsDeleteAgentDialogOpen] = useState(false);
+  const [isDeletingAgent, setIsDeletingAgent] = useState(false);
+
+  const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false);
+  const [newTaskData, setNewTaskData] = useState<Partial<ApiTaskType>>({});
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [currentTaskToEdit, setCurrentTaskToEdit] = useState<ApiTaskType | null>(null);
+  const [editedTaskData, setEditedTaskData] = useState<Partial<ApiTaskType>>({});
+  const [isSavingTask, setIsSavingTask] = useState(false);
+
+  const [isDeleteTaskDialogOpen, setIsDeleteTaskDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<ApiTaskType | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+
+  const fetchAgentData = async () => {
+    if (!agentId) {
+      setError('Agent ID is missing.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const agentResponse = await getAgentById(agentId);
+      setAgent(agentResponse.data);
+      setEditedAgentData(agentResponse.data); // Initialize edit form with current agent data
+
+      const tasksResponse = await getTasksByAgentId(agentId);
+      setTasks(tasksResponse.data);
+
+    } catch (err) {
+      console.error('Error fetching agent data:', err);
+      setError('Failed to load agent profile or tasks.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAgentData();
+  }, [agentId]);
+
+  // Agent CRUD Handlers
+  const handleEditAgentClick = () => {
+    if (agent) {
+      setEditedAgentData(agent);
+      setIsEditAgentDialogOpen(true);
+    }
+  };
+
+  const handleSaveAgent = async () => {
+    if (!agentId || !editedAgentData.name) return;
+
+    setIsSavingAgent(true);
+    try {
+      await updateAgent(agentId, editedAgentData as UpdateAgentRequest);
+      toast.success('Agent updated successfully!');
+      setIsEditAgentDialogOpen(false);
+      fetchAgentData(); // Re-fetch agent data to update UI
+    } catch (err) {
+      console.error('Error updating agent:', err);
+      toast.error('Failed to update agent.');
+    } finally {
+      setIsSavingAgent(false);
+    }
+  };
+
+  const handleDeleteAgentClick = () => {
+    setIsDeleteAgentDialogOpen(true);
+  };
+
+  const handleConfirmDeleteAgent = async () => {
+    if (!agentId) return;
+
+    setIsDeletingAgent(true);
+    try {
+      await deleteAgent(agentId);
+      toast.success('Agent deleted successfully!');
+      navigate('/dashboard/agents'); // Navigate back to agents list
+    } catch (err) {
+      console.error('Error deleting agent:', err);
+      toast.error('Failed to delete agent.');
+    } finally {
+      setIsDeletingAgent(false);
+    }
+  };
+
+  // Task CRUD Handlers
+  const handleCreateTaskClick = () => {
+    setNewTaskData({}); // Clear previous data
+    setIsCreateTaskDialogOpen(true);
+  };
+
+  const handleSaveNewTask = async () => {
+    if (!agentId || !newTaskData.name || !newTaskData.description || !newTaskData.task_type || !newTaskData.category) {
+      toast.error('Please fill all required task fields.');
+      return;
+    }
+
+    setIsCreatingTask(true);
+    try {
+      await createTask({
+        ...newTaskData as ApiTaskType,
+        agent_id: agentId, // Assign task to current agent
+        execution_config: newTaskData.execution_config || {}, // Ensure execution_config is an object
+        credit_cost: newTaskData.credit_cost || 0,
+        is_system_task: newTaskData.is_system_task || false, // Default to false if not provided
+      });
+      toast.success('Task created successfully!');
+      setIsCreateTaskDialogOpen(false);
+      fetchAgentData(); // Re-fetch tasks to update UI
+    } catch (err) {
+      console.error('Error creating task:', err);
+      toast.error('Failed to create task.');
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
+  const handleEditTaskClick = (task: ApiTaskType) => {
+    setCurrentTaskToEdit(task);
+    setEditedTaskData(task);
+    setIsEditTaskDialogOpen(true);
+  };
+
+  const handleSaveEditedTask = async () => {
+    if (!currentTaskToEdit?.id || !editedTaskData.name) return;
+
+    setIsSavingTask(true);
+    try {
+      await updateTask(currentTaskToEdit.id, editedTaskData as UpdateTaskRequest);
+      toast.success('Task updated successfully!');
+      setIsEditTaskDialogOpen(false);
+      fetchAgentData(); // Re-fetch tasks to update UI
+    } catch (err) {
+      console.error('Error updating task:', err);
+      toast.error('Failed to update task.');
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
+
+  const handleDeleteTaskClick = (task: ApiTaskType) => {
+    setTaskToDelete(task);
+    setIsDeleteTaskDialogOpen(true);
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    if (!taskToDelete?.id) return;
+
+    setIsDeletingTask(true);
+    try {
+      await deleteTask(taskToDelete.id);
+      toast.success('Task deleted successfully!');
+      setIsDeleteTaskDialogOpen(false);
+      fetchAgentData(); // Re-fetch tasks to update UI
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      toast.error('Failed to delete task.');
+    } finally {
+      setIsDeletingTask(false);
+    }
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="flex items-center space-x-4">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Separator className="my-4" />
+            <Skeleton className="h-6 w-1/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500 mt-8">{error}</div>;
+  }
+
+  if (!agent) {
+    return <div className="text-center text-muted-foreground mt-8">Agent not found.</div>;
+  }
+
+  const agentTypeOptions = ['General', 'Sales', 'Customer Service', 'Design', 'Marketing', 'Developer', 'HR', 'Finance'];
+  const agentCategoryOptions = ['Utility', 'Creative', 'Productivity', 'Communication', 'Data Analysis', 'Automation', 'Specialized'];
+  const agentStatusOptions = ['active', 'inactive', 'system_public', 'private'];
+
+  const taskTypeOptions = ['prompt_template', 'automation_script', 'webhook_action', 'api_call'];
+  const taskCategoryOptions = ['utility', 'design', 'sales', 'customer_service', 'marketing', 'development'];
+  const taskStatusOptions = ['todo', 'in-progress', 'completed'];
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-background">
+      <Card className="w-full max-w-2xl bg-card text-card-foreground shadow-lg rounded-xl">
+        <CardHeader className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 p-6 border-b border-border">
+          <Avatar className="h-28 w-28">
+            {agent.avatar ? (
+              <AvatarImage src={agent.avatar} alt={agent.name || ''} />
+            ) : (
+              <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
+                {agent.name?.charAt(0) || 'AI'}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <div className="text-center sm:text-left flex-1">
+            <div className="flex justify-center sm:justify-start items-center space-x-2 mb-1">
+              <CardTitle className="text-4xl font-extrabold tracking-tight">
+                {agent.name}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={handleEditAgentClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
+                <Edit className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleDeleteAgentClick} className="hover:bg-destructive/10 hover:text-destructive rounded-full p-2">
+                <Trash2 className="h-5 w-5 text-destructive hover:opacity-80" />
+              </Button>
+            </div>
+            <CardDescription className="text-xl text-muted-foreground mb-2">
+              {agent.role_description || agent.type}
+            </CardDescription>
+            {agent.instructions && (
+              <p className="text-md text-muted-foreground mb-4">
+                <span className="font-semibold text-foreground">Instructions:</span> {agent.instructions}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {agent.category && (
+                <Badge variant="secondary" className="text-md px-3 py-1 rounded-full">
+                  {agent.category}
+                </Badge>
+              )}
+              {agent.status && (
+                <Badge variant="outline" className="text-md px-3 py-1 rounded-full ml-2">
+                  Status: {agent.status}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Agent Model Configuration */}
+          {agent.model_config && (
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold">Model Configuration</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <p><span className="font-semibold text-foreground">Model:</span> {agent.model_config.model}</p>
+                <p><span className="font-semibold text-foreground">Temperature:</span> {agent.model_config.temperature}</p>
+                {agent.model_config.webhook_url && (
+                  <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Webhook URL:</span> {agent.model_config.webhook_url}</p>
+                )}
+                {agent.model_config.build_prompt_webhook_url && (
+                  <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Build Prompt Webhook URL:</span> {agent.model_config.build_prompt_webhook_url}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Agent Details */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Agent Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-muted-foreground">
+              {agent.language && (
+                <p><span className="font-semibold text-foreground">Language:</span> {agent.language}</p>
+              )}
+              {agent.position && (
+                <p><span className="font-semibold text-foreground">Position:</span> {agent.position}</p>
+              )}
+              {agent.job_brief && (
+                <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Job Brief:</span> {agent.job_brief}</p>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Associated Tasks */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold flex items-center">
+                <ListPlus className="mr-2 text-primary" /> Associated Tasks ({tasks.length})
+              </h3>
+              <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className="flex items-center space-x-2">
+                <PlusCircle className="h-4 w-4" /> <span>Create New Task</span>
+              </Button>
+            </div>
+            {tasks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tasks.map((task) => (
+                  <Card key={task.id} className="p-4 bg-background border border-border rounded-lg relative transition-all hover:shadow-md hover:border-primary/50">
+                    <CardTitle className="text-lg font-bold mb-1 pr-10">{task.name}</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {task.description}
+                    </CardDescription>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-200">{task.category}</Badge>
+                      <Badge variant="outline" className="border-purple-200 text-purple-800 bg-purple-50 hover:bg-purple-100">Cost: {task.credit_cost} Credits</Badge>
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-800 hover:bg-gray-200">Type: {task.task_type}</Badge>
+                      {task.status && <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Status: {task.status}</Badge>}
+                    </div>
+                    <div className="absolute top-2 right-2 flex space-x-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-accent hover:text-accent-foreground" onClick={() => handleEditTaskClick(task)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteTaskClick(task)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No tasks associated with this agent.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Agent Dialog */}
+      <Dialog open={isEditAgentDialogOpen} onOpenChange={setIsEditAgentDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Agent</DialogTitle>
+            <DialogDescription>
+              Make changes to your agent profile here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">Name</Label>
+              <Input
+                id="name"
+                value={editedAgentData.name || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, name: e.target.value })}
+                className="col-span-3 rounded-md"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role_description" className="text-right">Role Description</Label>
+              <Textarea
+                id="role_description"
+                value={editedAgentData.role_description || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, role_description: e.target.value })}
+                className="col-span-3 rounded-md"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="instructions" className="text-right">Instructions</Label>
+              <Textarea
+                id="instructions"
+                value={editedAgentData.instructions || ''}
+                onChange={(e) => setEditedAgentData({ ...editedAgentData, instructions: e.target.value })}
+                className="col-span-3 rounded-md"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">Type</Label>
+              <Select
+                value={editedAgentData.type || ''}
+                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, type: value })}
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentTypeOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">Category</Label>
+              <Select
+                value={editedAgentData.category || ''}
+                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, category: value })}
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentCategoryOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">Status</Label>
+              <Select
+                value={editedAgentData.status || ''}
+                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, status: value })}
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select a status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentStatusOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditAgentDialogOpen(false)} disabled={isSavingAgent}>Cancel</Button>
+            <Button onClick={handleSaveAgent} disabled={isSavingAgent || !editedAgentData.name}>
+              {isSavingAgent ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Agent Confirmation Dialog */}
+      <Dialog open={isDeleteAgentDialogOpen} onOpenChange={setIsDeleteAgentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Agent</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete agent "{agent?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteAgentDialogOpen(false)} disabled={isDeletingAgent}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteAgent} disabled={isDeletingAgent}>
+              {isDeletingAgent ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create New Task Dialog */}
+      <Dialog open={isCreateTaskDialogOpen} onOpenChange={setIsCreateTaskDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+            <DialogDescription>
+              Fill in the details for the new task associated with this agent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTaskName" className="text-right">Task Name</Label>
+              <Input
+                id="newTaskName"
+                value={newTaskData.name || ''}
+                onChange={(e) => setNewTaskData({ ...newTaskData, name: e.target.value })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTaskDescription" className="text-right">Description</Label>
+              <Textarea
+                id="newTaskDescription"
+                value={newTaskData.description || ''}
+                onChange={(e) => setNewTaskData({ ...newTaskData, description: e.target.value })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTaskType" className="text-right">Task Type</Label>
+              <Select
+                value={newTaskData.task_type || ''}
+                onValueChange={(value) => setNewTaskData({ ...newTaskData, task_type: value })}
+                required
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select task type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskTypeOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTaskCategory" className="text-right">Category</Label>
+              <Select
+                value={newTaskData.category || ''}
+                onValueChange={(value) => setNewTaskData({ ...newTaskData, category: value })}
+                required
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskCategoryOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newTaskCreditCost" className="text-right">Credit Cost</Label>
+              <Input
+                id="newTaskCreditCost"
+                type="number"
+                value={newTaskData.credit_cost !== undefined ? newTaskData.credit_cost : ''}
+                onChange={(e) => setNewTaskData({ ...newTaskData, credit_cost: parseFloat(e.target.value) })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            {/* Add more fields as needed for execution_config or other properties */}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateTaskDialogOpen(false)} disabled={isCreatingTask}>Cancel</Button>
+            <Button onClick={handleSaveNewTask} disabled={isCreatingTask || !newTaskData.name || !newTaskData.description || !newTaskData.task_type || !newTaskData.category}>
+              {isCreatingTask ? 'Creating...' : 'Create Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Make changes to the task details. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskName" className="text-right">Task Name</Label>
+              <Input
+                id="editTaskName"
+                value={editedTaskData.name || ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, name: e.target.value })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskDescription" className="text-right">Description</Label>
+              <Textarea
+                id="editTaskDescription"
+                value={editedTaskData.description || ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, description: e.target.value })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskType" className="text-right">Task Type</Label>
+              <Select
+                value={editedTaskData.task_type || ''}
+                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, task_type: value })}
+                required
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select task type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskTypeOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskCategory" className="text-right">Category</Label>
+              <Select
+                value={editedTaskData.category || ''}
+                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, category: value })}
+                required
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskCategoryOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskCreditCost" className="text-right">Credit Cost</Label>
+              <Input
+                id="editTaskCreditCost"
+                type="number"
+                value={editedTaskData.credit_cost !== undefined ? editedTaskData.credit_cost : ''}
+                onChange={(e) => setEditedTaskData({ ...editedTaskData, credit_cost: parseFloat(e.target.value) })}
+                className="col-span-3 rounded-md"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editTaskStatus" className="text-right">Status</Label>
+              <Select
+                value={editedTaskData.status || ''}
+                onValueChange={(value) => setEditedTaskData({ ...editedTaskData, status: value as "todo" | "in-progress" | "completed" })}
+              >
+                <SelectTrigger className="col-span-3 rounded-md">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskStatusOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Add more fields as needed for execution_config or other properties */}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditTaskDialogOpen(false)} disabled={isSavingTask}>Cancel</Button>
+            <Button onClick={handleSaveEditedTask} disabled={isSavingTask || !editedTaskData.name || !editedTaskData.description || !editedTaskData.task_type || !editedTaskData.category}>
+              {isSavingTask ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Confirmation Dialog */}
+      <Dialog open={isDeleteTaskDialogOpen} onOpenChange={setIsDeleteTaskDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete task "{taskToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteTaskDialogOpen(false)} disabled={isDeletingTask}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteTask} disabled={isDeletingTask}>
+              {isDeletingTask ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AgentProfilePage; 
