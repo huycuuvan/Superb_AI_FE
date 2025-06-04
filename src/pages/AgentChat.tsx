@@ -176,7 +176,7 @@ const AgentChat = () => {
         return;
       }
 
-      const wsUrl = `wss://aiemployee.site/ws?token=${token}&thread_id=${currentThread}`;
+      const wsUrl = `ws://localhost:3000/ws?token=${token}&thread_id=${currentThread}`;
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
