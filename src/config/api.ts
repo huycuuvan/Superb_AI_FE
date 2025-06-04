@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
     create: `${API_BASE_URL}/tasks/create`,
     update: (id: string) => `${API_BASE_URL}/tasks/${id}`,
     delete: (id: string) => `${API_BASE_URL}/tasks/${id}`,
+
+    byAgent: (agentId: string) => `${API_BASE_URL}/tasks/agent/${agentId}`,
+    execute: `${API_BASE_URL}/tasks/execute`,
+
   },
   folders: {
     create: `${API_BASE_URL}/folders`,

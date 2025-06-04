@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
 import {
   Workspace,
@@ -615,6 +616,28 @@ export const getTasksByAgentId = async (
 
   return response.json();
 };
+// New function to get tasks for a specific agent
+export const getAgentTasks = async (
+  agentId: string
+): Promise<{ data: any[] }> => {
+  // TODO: Thay 'any[]' bằng kiểu dữ liệu chính xác cho tasks
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.tasks.byAgent(agentId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
 
 export const createTask = async (
   taskData: Omit<ApiTaskType, 'id' | 'created_at' | 'updated_at'> & { agent_id: string }
@@ -659,11 +682,30 @@ export const updateTask = async (
 
   const response = await fetch(API_ENDPOINTS.tasks.update(taskId), {
     method: "PUT",
+
+// New function to execute a task
+export const executeTask = async (
+  taskId: string,
+  inputData: { [key: string]: string },
+  threadId: string
+): Promise<{ message: string; status: number; webhook_response?: any }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.tasks.execute, {
+    method: "POST",
+
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(taskData),
+
+    body: JSON.stringify({
+      task_id: taskId,
+      input_data: inputData,
+      thread_id: threadId,
+    }),
+
   });
 
   if (!response.ok) {
@@ -672,6 +714,7 @@ export const updateTask = async (
 
   return response.json();
 };
+
 
 export const deleteTask = async (
   taskId: string

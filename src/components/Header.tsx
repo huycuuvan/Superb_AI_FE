@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -41,6 +41,7 @@ const Header = React.memo(() => {
   const currentAgent = agents.find(agent => agent.id === agentId); // Find current agent
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [showMobileHistory, setShowMobileHistory] = useState(false);
 
   const { data: profileData, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery<{
     data: WorkspaceProfile | null
@@ -103,12 +104,15 @@ const Header = React.memo(() => {
           {location.pathname.startsWith('/dashboard/agent-chat/') ? (
             // Agent Chat Header
             <div className="flex items-center space-x-3 md:space-x-4">
-              <Avatar className="h-8 w-8 md:h-9 md:w-9">
-                <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                <AvatarFallback className="bg-teampal-100 text-teampal-500 text-sm">
-                  {currentAgent?.name?.charAt(0) || 'A'}
-                </AvatarFallback>
-              </Avatar>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 md:h-9 md:w-9 bg-background hover:bg-muted hover:text-foreground"
+                aria-label="Lịch sử chat"
+                onClick={() => setShowMobileHistory(true)}
+              >
+                <Clock className="h-5 w-5" />
+              </Button>
               <div>
                 <h1 className="text-base md:text-lg font-semibold">{currentAgent?.name || 'Agent'}</h1>
                 <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
@@ -181,7 +185,7 @@ const Header = React.memo(() => {
                           {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
                         </span>
                       </Avatar>
-                      <span className="font-semibold flex items-center justify-center md:text-sm">{workspace.name}{workspace.name && "'s workspace"}</span>
+                      <span className="font-semibold hidden md:flex items-center justify-center md:text-sm">{workspace.name}{workspace.name && "'s workspace"}</span>
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -199,8 +203,8 @@ const Header = React.memo(() => {
                 </DropdownMenu>
               )}
               {/* Logout Button */}
-              <Button variant="outline" size="sm" onClick={handleLogout} className="hover:bg-muted hover:text-foreground">
-                 Logout
+              <Button variant="outline" size="icon" onClick={handleLogout} className="hover:bg-muted hover:text-foreground" aria-label="Logout">
+                <LogOut className="h-5 w-5" />
               </Button>
             </>
           )}
@@ -236,7 +240,35 @@ const Header = React.memo(() => {
         </nav>
       </div>
 
-     
+      {/* Mobile History Bottom Sheet */}
+      {showMobileHistory && (
+        <div className="fixed inset-0 z-50 flex items-end md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileHistory(false)} />
+          <div className="relative w-full h-[60%] bg-card rounded-t-2xl shadow-lg p-4 flex flex-col">
+            <button
+              className="absolute top-2 right-4 p-2 bg-gray-100 dark:bg-slate-800 rounded-full border"
+              onClick={() => setShowMobileHistory(false)}
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+            <h2 className="text-lg font-semibold mb-4 text-center">Lịch sử chat</h2>
+            {/* Nội dung lịch sử chat, có thể lấy từ sidebar hoặc props */}
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {/* Demo: */}
+              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                <p className="text-sm font-medium">Chat với {currentAgent?.name || 'Agent'}</p>
+                <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
+              </div>
+              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                <p className="text-sm font-medium">Previous Chat</p>
+                <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+              </div>
+              {/* Thêm các mục lịch sử chat thực tế ở đây */}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 });

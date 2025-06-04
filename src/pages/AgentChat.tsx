@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
-  ListPlus, Book
+  ListPlus, Book, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,8 +14,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TaskInput {
   id: string;
@@ -27,18 +29,32 @@ interface TaskInput {
 
 // Define a more specific type for execution_config
 interface ExecutionConfig {
-  [key: string]: any; // TODO: Specify a more specific type
+  [key: string]: string; // Cập nhật kiểu dữ liệu cho execution_config dựa trên response API
 }
 
 interface TaskWithInputs extends ApiTaskType {
-  inputs?: TaskInput[];
-  title?: string;
+  // inputs?: TaskInput[]; // Không dùng inputs theo cấu trúc mock data nữa
+  title?: string; // Giữ lại vì UI dùng title
   name: string;
   task_type: string;
-  execution_config: ExecutionConfig; // Use the new interface
+  execution_config: ExecutionConfig; // Sử dụng kiểu mới
   credit_cost: number;
   category: string;
   is_system_task: boolean;
+  // Thêm các trường khác từ API response nếu cần (creator_id, created_at, updated_at, webhook_url)
+  creator_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  webhook_url?: string;
+}
+
+interface Message {
+  type: string;
+  thread_id: string;
+  content: string;
+  timestamp: string;
+  sender_type: "user" | "agent";
+  sender_user_id: string;
 }
 
 const AgentChat = () => {
@@ -53,109 +69,19 @@ const AgentChat = () => {
   
   const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
 
-  const [tasks, setTasks] = useState<TaskWithInputs[]>([
-    { 
-      id: 'design', 
-      title: 'Tạo thiết kế từ văn bản', 
-      description: 'Nhập mô tả để tạo thiết kế giao diện.',
-      inputs: [
-        { id: 'height', label: 'Chiều cao (px)', type: 'number', required: true },
-        { id: 'width', label: 'Chiều rộng (px)', type: 'number', required: true },
-        { id: 'style', label: 'Phong cách', type: 'select', options: ['Minimal', 'Modern', 'Vintage', 'Professional'], required: true },
-        { id: 'description', label: 'Mô tả chi tiết', type: 'text', required: true }
-      ],
-      name: 'Tạo thiết kế',
-      task_type: 'design',
-      execution_config: {},
-      credit_cost: 10,
-      category: 'Design',
-      is_system_task: false,
-    },
-    { 
-      id: '1', 
-      title: 'Suggest upselling strategies', 
-      description: 'Đề xuất các chiến lược bán thêm cho khách hàng hiện tại.',
-      inputs: [
-        { id: 'customerType', label: 'Loại khách hàng', type: 'select', options: ['Cá nhân', 'Doanh nghiệp', 'Tổ chức'], required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
-        { id: 'preferences', label: 'Sở thích', type: 'text', required: true }
-      ],
-      name: 'Suggest upselling strategies',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '2', 
-      title: 'Generate ideas for sales promotions and discounts', 
-      description: 'Tạo ý tưởng cho các chương trình khuyến mãi và giảm giá.',
-      inputs: [
-        { id: 'promotionType', label: 'Loại khuyến mãi', type: 'select', options: ['Giảm giá', 'Tặng quà', 'Mua 1 tặng 1', 'Khác'], required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true },
-        { id: 'targetAudience', label: 'Đối tượng mục tiêu', type: 'text', required: true }
-      ],
-      name: 'Generate ideas for sales promotions and discounts',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '3', 
-      title: 'Generate ideas for sales contests and incentives', 
-      description: 'Tạo ý tưởng cho các cuộc thi và ưu đãi bán hàng.',
-      inputs: [
-        { id: 'contestType', label: 'Loại cuộc thi', type: 'select', options: ['Cá nhân', 'Nhóm', 'Phòng ban'], required: true },
-        { id: 'duration', label: 'Thời gian (ngày)', type: 'number', required: true },
-        { id: 'prize', label: 'Giải thưởng', type: 'text', required: true }
-      ],
-      name: 'Generate ideas for sales contests and incentives',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '4', 
-      title: 'Suggest cross-selling opportunities', 
-      description: 'Đề xuất cơ hội bán chéo dựa trên lịch sử mua hàng.',
-      inputs: [
-        { id: 'productType', label: 'Loại sản phẩm', type: 'select', options: ['Điện tử', 'Thời trang', 'Nhà cửa', 'Khác'], required: true },
-        { id: 'customerSegment', label: 'Phân khúc khách hàng', type: 'text', required: true },
-        { id: 'budget', label: 'Ngân sách', type: 'number', required: true }
-      ],
-      name: 'Suggest cross-selling opportunities',
-      task_type: 'sales',
-      execution_config: {},
-      credit_cost: 5,
-      category: 'Sales',
-      is_system_task: false,
-    },
-    { 
-      id: '5', 
-      title: 'Suggest strategies for handling difficult customers', 
-      description: 'Đề xuất chiến lược xử lý khách hàng khó tính.',
-      inputs: [
-        { id: 'issueType', label: 'Loại vấn đề', type: 'select', options: ['Khiếu nại', 'Yêu cầu hoàn tiền', 'Chất lượng dịch vụ', 'Khác'], required: true },
-        { id: 'customerHistory', label: 'Lịch sử khách hàng', type: 'text', required: true },
-        { id: 'priority', label: 'Mức độ ưu tiên', type: 'select', options: ['Cao', 'Trung bình', 'Thấp'], required: true }
-      ],
-      name: 'Suggest strategies for handling difficult customers',
-      task_type: 'customer_service',
-      execution_config: {},
-      credit_cost: 3,
-      category: 'Customer Service',
-      is_system_task: false,
-    }
-  ]);
+  // State mới để lưu tasks được fetch từ API
+  const [tasks, setTasks] = useState<TaskWithInputs[]>([]); // Khởi tạo rỗng, sẽ fetch data
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     // Initial message, will be added after agent data is fetched
   ]);
+
+  // State mới để lưu trữ các log trạng thái từ WebSocket
+  const [taskLogs, setTaskLogs] = useState<string[]>([]);
+  // State để đóng/mở vùng log
+  const [showTaskLogs, setShowTaskLogs] = useState(true);
+  // State để xác định đã submit task thành công gần nhất chưa
+  const [taskJustSubmitted, setTaskJustSubmitted] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
@@ -165,6 +91,17 @@ const AgentChat = () => {
   const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
+
+  // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
+  const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+
+  // Ref để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
+  const taskExecutionStatusRef = useRef<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+
+  // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
+  const lastAgentMessageIdRef = useRef<string | null>(null);
+
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
 
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
@@ -180,49 +117,82 @@ const AgentChat = () => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log("WebSocket Connected");
+        console.log("WebSocket Connected", { threadId: currentThread });
       };
 
       ws.current.onmessage = (event) => {
-        console.log("RAW WebSocket Data Received:", event.data); // Log raw data
         try {
-          const receivedData = JSON.parse(event.data);
-          console.log("Parsed WebSocket Data:", receivedData);
-  
-          if (!receivedData.message_content && !receivedData.content) {
-            console.warn("WebSocket message received without content:", receivedData);
-            return; 
-          }
-          // Check for sender
-          if (!receivedData.sender_type && !receivedData.sender) {
-              console.warn("WebSocket message received without sender:", receivedData);
-              return; // Skip if no sender
-          }
-  
-          const newChatMessage: ChatMessage = {
-            // Generate a more unique ID if server doesn't send one or sends an unreliable one
-            id: receivedData.id || `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            content: receivedData.message_content || receivedData.content,
-            sender: receivedData.sender_type || receivedData.sender,
-            timestamp: receivedData.created_at || receivedData.timestamp || new Date().toISOString(),
-            agentId: receivedData.sender_agent_id || receivedData.agentId,
-          };
-  
-          console.log("New ChatMessage object from WebSocket:", newChatMessage);
-  
-          setMessages(prevMessages => {
-            // Check if a message with this ID already exists (to avoid duplicates if ID from server is reliable)
-            if (newChatMessage.id && prevMessages.some(msg => msg.id === newChatMessage.id)) {
-                console.log("Message with this ID already exists, not adding:", newChatMessage.id);
-                return prevMessages;
+          const receivedData: Message = JSON.parse(event.data);
+          // console.log("Parsed WebSocket Data:", receivedData);
+          // console.log("Message Type:", receivedData.type);
+      
+          // Kiểm tra type của tin nhắn
+          if (receivedData.type === "chat") {
+            // console.log("Received chat message:", receivedData);
+
+            // Xử lý tin nhắn từ Agent (dạng chunk)
+            if (receivedData.sender_type === "agent") {
+              setIsAgentThinking(false); // Agent đã trả lời, mở lại input
+              setMessages(prevMessages => {
+                // Nếu message cuối cùng là agent, append chunk
+                if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
+                  const updatedMessages = [...prevMessages];
+                  updatedMessages[updatedMessages.length - 1].content += receivedData.content;
+                  updatedMessages[updatedMessages.length - 1].timestamp = receivedData.timestamp;
+                  return updatedMessages;
+                } else {
+                  // Nếu không, push message agent mới
+                  const newChatMessage: ChatMessage = {
+                    id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                    content: receivedData.content,
+                    sender: receivedData.sender_type,
+                    timestamp: receivedData.timestamp,
+                    agentId: receivedData.sender_user_id,
+                  };
+                  return [...prevMessages, newChatMessage];
+                }
+              });
             }
-            console.log("Adding new message from WebSocket to state.");
-            return [...prevMessages, newChatMessage];
-          });
-          setIsAgentThinking(false); // Stop thinking indicator
+            // Xử lý tin nhắn từ User (đã được thêm vào state ngay khi gửi)
+            // Nếu backend echo lại tin nhắn user, chúng ta bỏ qua vì đã thêm vào UI ngay khi gửi
+            // Có thể thêm logic kiểm tra ID hoặc content để chắc chắn là echo và không phải tin nhắn từ user khác (nếu hỗ trợ multi-user)
+            else if (receivedData.sender_type === "user") {
+              setMessages(prevMessages => {
+                const isEcho = prevMessages.some(msg =>
+                  msg.sender === 'user' &&
+                  msg.content === receivedData.content &&
+                  Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
+                );
+                if (isEcho) {
+                  // console.log("Skipping user message echo:", receivedData);
+                  return prevMessages;
+                } else {
+                  // Đây có thể là tin nhắn từ user khác trong multi-user chat
+                  const newChatMessage: ChatMessage = {
+                    id: receivedData.thread_id + ":" + receivedData.timestamp + ":" + receivedData.sender_user_id + ":" + Math.random(),
+                    content: receivedData.content,
+                    sender: receivedData.sender_type,
+                    timestamp: receivedData.timestamp,
+                    agentId: receivedData.sender_user_id,
+                  };
+                  return [...prevMessages, newChatMessage];
+                }
+              });
+            }
+
+          } else if (receivedData.type === "typing") {
+             if (receivedData.sender_type === "agent") {
+                setIsAgentThinking(true);
+             }
+          } else if (receivedData.type === "done") {
+             lastAgentMessageIdRef.current = null; // Kết thúc chuỗi chunking
+             setIsAgentThinking(false); // Tắt trạng thái typing khi nhận done (nếu backend gửi sau typing)
+          } else if (receivedData.type === "status") {
+             setTaskLogs(logs => [...logs, receivedData.content]); // Thêm nội dung vào state taskLogs
+          }
         } catch (error) {
-          console.error("Error parsing WebSocket message or updating state:", error);
-          console.error("Offending raw WebSocket data:", event.data); // Log offending data
+          // console.error("Error processing WebSocket message:", error);
+          // console.error("Raw WebSocket data that caused error:", event.data);
         }
       };
   
@@ -261,6 +231,22 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
+
+          // TODO: Fetch tasks for the agent
+          if (agentId) {
+            try {
+              const agentTasksResponse = await getAgentTasks(agentId); // Gọi API mới
+              if (agentTasksResponse.data) {
+                // Mapping dữ liệu từ API nếu cần, đảm bảo khớp với TaskWithInputs[]
+                // Hiện tại giả định cấu trúc trả về từ API khớp
+                setTasks(agentTasksResponse.data);
+                console.log("Fetched tasks:", agentTasksResponse.data);
+              }
+            } catch (taskError) {
+              console.error('Error fetching agent tasks:', taskError);
+              // Xử lý lỗi fetch tasks
+            }
+          }
 
           let threadId: string | null = null;
           let threadCheck: { exists: boolean, thread_id?: string } | null = null;
@@ -314,6 +300,7 @@ const AgentChat = () => {
           }
 
           setCurrentThread(threadId);
+          console.log("Thread ID set to:", threadId);
 
           // After threadId is set (old or new), load message history
           if (threadId) {
@@ -356,29 +343,40 @@ const AgentChat = () => {
   const handleSendMessage = async () => { // Made async
     if (message.trim() && currentThread) { // Check if threadId exists
       setIsSending(true); // Start loading
+      setIsAgentThinking(true); // Khóa input, chờ agent trả lời
 
       const userMessage: ChatMessage = {
         id: Date.now().toString(), // Temporary ID
         content: message,
         sender: 'user',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // agentId is not applicable for user message sent from frontend
       };
       
-      setMessages(prev => [...prev, userMessage]);
+      // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
       setMessage('');
       
       try {
-        await sendMessageToThread(currentThread, userMessage.content); // Use API call
-        setIsSending(false); 
-        setIsAgentThinking(true); // Agent starts thinking after message is sent
+        // ** Thay thế gọi API REST bằng gửi qua WebSocket **
+        const messageToSend = {
+          type: "chat", // Loại tin nhắn
+          thread_id: currentThread, // ID của thread
+          content: userMessage.content, // Nội dung tin nhắn
+          sender_type: userMessage.sender, // Loại người gửi (user)
+          sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
+        };
 
-      } catch (error) {
-        console.error('Error sending message:', error);
+        ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
         setIsSending(false); 
+      } catch (error) {
+        console.error('Error sending message via WebSocket:', error);
+        setIsSending(false); 
+        // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
       }
 
     } else if (aboveInputContent === 'knowledge') {
        console.log("Sending message with knowledge context:", selectedTaskInputs);
+       // Logic xử lý knowledge context (nếu có)
        setMessage('');
        setAboveInputContent('none'); 
     }
@@ -394,7 +392,16 @@ const AgentChat = () => {
   const handleTaskSelect = (task: TaskWithInputs) => {
     setSelectedTaskId(task.id);
     setAboveInputContent('taskInputs');
-    setSelectedTaskInputs({});
+    // Khởi tạo selectedTaskInputs với giá trị mặc định từ execution_config
+    const initialInputs: {[key: string]: string} = {};
+    if (task.execution_config) {
+      Object.keys(task.execution_config).forEach(key => {
+         initialInputs[key] = task.execution_config[key] || ''; // Dùng giá trị từ config hoặc rỗng
+      });
+    }
+    setSelectedTaskInputs(initialInputs);
+    // Reset trạng thái thực thi khi chọn task mới
+    setTaskExecutionStatus(prev => ({ ...prev, [task.id]: 'idle' }));
   };
 
   const handleInputChange = (inputId: string, value: string) => {
@@ -404,14 +411,34 @@ const AgentChat = () => {
     }));
   };
 
-  const handleSubmitTaskInputs = () => {
+  const handleSubmitTaskInputs = async () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
-    if (selectedTask) {
-      const inputValues = Object.entries(selectedTaskInputs)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n');
-      setMessage(`${selectedTask.title}\n${inputValues}`);
+    if (selectedTask && currentThread) {
+      setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'loading' }));
+      // Mở vùng log khi submit
+      setShowTaskLogs(true);
+      setTaskJustSubmitted(false);
+      try {
+        console.log('Executing task...', selectedTask.name, 'with inputs:', selectedTaskInputs, 'thread:', currentThread);
+        const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread);
+        if (response.status === 200 || response.message === 'Task execution started') {
+          console.log('Task initiated/executed successfully:', response);
+          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'success' }));
+          setTaskJustSubmitted(true); // Đánh dấu đã submit thành công
+        } else {
+          console.warn('Task execution failed:', response);
+          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
+          setTaskJustSubmitted(false);
+        }
+      } catch (error) {
+        console.error('Error executing task:', error);
+        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
+        setTaskJustSubmitted(false);
+      }
       setAboveInputContent('none');
+      setTimeout(() => {
+        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'idle' }));
+      }, 5000);
     }
   };
 
@@ -427,19 +454,6 @@ const AgentChat = () => {
   };
 
 
-  const promptSuggestions = [
-    "Show me the temperature today",
-    "Why does it rain",
-    "Do you feel different because of weather",
-    "What kind of clouds are there",
-    "What is the weather forecast for the next five days in my area, including high and low temperatures"
-  ];
-
-  const handlePromptSuggestionClick = (suggestion: string) => {
-    setMessage(suggestion);
-    setInputAreaMode('chat');
-  };
-
   // Initialize useNavigate
   const navigate = useNavigate();
 
@@ -452,8 +466,77 @@ const AgentChat = () => {
 
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col">
+      
+
+      {/* Sidebar overlay cho mobile */}
+      {showMobileSidebar && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          <aside className="fixed top-0 left-0 h-full w-64 z-50 bg-card border-r flex flex-col md:hidden">
+            <button
+              className="absolute top-4 right-4 z-50 p-2 bg-gray-100 dark:bg-slate-800 rounded-full border"
+              onClick={() => setShowMobileSidebar(false)}
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+            {/* Nội dung sidebar cũ */}
+            {isLoading ? (
+              <div className="p-4 space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[120px]" />
+                    <Skeleton className="h-3 w-[80px]" />
+                  </div>
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                      {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">{currentAgent?.agent?.name || 'Agent'}</h2>
+                    <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
+                  </div>
+                </div>
+                <div className="p-4 border-b">
+                  <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+                    <Plus className="h-4 w-4" />
+                    <span>New chat</span>
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                    <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
+                  </div>
+                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                    <p className="text-sm font-medium">Previous Chat</p>
+                    <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </aside>
+        </>
+      )}
+
+      {/* Sidebar luôn hiện ở PC */}
+      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col hidden md:flex">
         {isLoading ? (
           <div className="p-4 space-y-4">
             <div className="flex items-center space-x-3">
@@ -471,7 +554,6 @@ const AgentChat = () => {
           </div>
         ) : (
           <>
-            {/* Agent Selection / Header in Sidebar */}
             <div className="p-4 border-b flex items-center space-x-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
@@ -484,31 +566,22 @@ const AgentChat = () => {
                 <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
               </div>
             </div>
-            {/* New Chat Button */}
             <div className="p-4 border-b">
               <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
                 <Plus className="h-4 w-4" />
                 <span>New chat</span>
               </Button>
             </div>
-            {/* Chat History List (Placeholder) */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {/* Map through chat history here */}
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                 <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
-                 <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
+                <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
               </div>
-               {/* Example of another chat item */}
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                  <p className="text-sm font-medium">Previous Chat</p>
-                 <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+                <p className="text-sm font-medium">Previous Chat</p>
+                <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
               </div>
-               {/* Add more chat items as needed */}
             </div>
-            {/* Sidebar Footer (Optional) */}
-            {/* <div className="p-4 border-t">
-              <p className="text-xs text-muted-foreground text-center">Sidebar Footer</p>
-            </div> */}
           </>
         )}
       </aside>
@@ -542,7 +615,7 @@ const AgentChat = () => {
                 aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
               )}
             >
-              {messages.map((msg) => (
+              {messages.slice(-50).map((msg) => (
                 <div
                   key={msg.id}
                   className={
@@ -564,7 +637,13 @@ const AgentChat = () => {
                     "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
                     getMessageStyle(msg.sender)
                   )}>
+                    {msg.sender === 'agent' ? (
+                       <div className="chat-message">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                       </div>
+                    ) : (
                     <p>{msg.content}</p>
+                    )}
                     <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
                       {/* Check if date is valid before formatting */}
                       {new Date(msg.timestamp).toString() !== 'Invalid Date'
@@ -587,25 +666,65 @@ const AgentChat = () => {
 
               {/* Agent Thinking Indicator */}
               {isAgentThinking && (
-                <div className="flex items-start justify-start">
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
-                           <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                             {currentAgent?.agent?.name?.charAt(0) || 'A'}
-                     </AvatarFallback>
-                  </Avatar>
-                  <div className={cn(
-                          "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
-                          getMessageStyle('agent')
-                  )}>
-                    <p>Agent is typing...</p>
-                  </div>
+                <div className="flex items-center justify-center my-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></span>
+                  <span className="text-primary font-semibold">Agent đang phản hồi...</span>
                 </div>
               )}
 
-              {/* Daily Timer Button (Keep this within the main chat area) */}
-              {messages.length > 0 && messages[messages.length - 1].sender === 'agent' && ( // Only show if the last message is from the agent
-                <div className="flex justify-start mt-2">
+              {/* Vùng hiển thị Task Logs */}
+              <div className="mt-4">
+                <button
+                  className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border"
+                  onClick={() => setShowTaskLogs(v => !v)}
+                >
+                  {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
+                </button>
+                {showTaskLogs && taskLogs.length > 0 && (
+                  <div className="p-3 border border-border rounded-lg bg-card text-card-foreground text-sm overflow-y-auto max-h-[200px]">
+                    <h4 className="font-semibold mb-2">Task Logs:</h4>
+                    <div className="space-y-2">
+                      {taskLogs.map((log, index) => {
+                        let parsed: any = null;
+                        try {
+                          parsed = typeof log === 'string' ? JSON.parse(log) : log;
+                        } catch {
+                          parsed = null;
+                        }
+                        if (parsed && typeof parsed === 'object') {
+                          return (
+                            <div key={index} className="p-2 rounded bg-muted/50">
+                              <div className="font-medium">
+                                {parsed.message && <span>{parsed.message}</span>}
+                                {parsed.status && (
+                                  <span className={
+                                    parsed.status === 'completed' ? 'text-green-600 ml-2' :
+                                    parsed.status === 'processing' ? 'text-yellow-600 ml-2' :
+                                    parsed.status === 'error' ? 'text-red-600 ml-2' : 'ml-2'
+                                  }>
+                                    [{parsed.status}]
+                                  </span>
+                                )}
+                              </div>
+                              {parsed.response && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  <span>Response: </span>
+                                  <span>{typeof parsed.response === 'string' ? parsed.response : JSON.stringify(parsed.response)}</span>
+                                </div>
+                              )}
+                              {parsed.task_id && (
+                                <div className="text-xs text-muted-foreground">Task ID: {parsed.task_id}</div>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          return <p key={index} className="text-muted-foreground">{log}</p>;
+                        }
+                      })}
+                    </div>
+                    {/* Nút Schedule Daily Task nằm trong card log */}
+                    {taskJustSubmitted && (
+                      <div className="flex justify-start mt-4">
                   <Button 
                     variant="outline" 
                     className="flex items-center gap-2 text-sm"
@@ -616,6 +735,10 @@ const AgentChat = () => {
                   </Button>
                 </div>
               )}
+                  </div>
+                )}
+              </div>
+
             </div>
 
             {/* Area above the main input for Tasks/Knowledge */}
@@ -632,7 +755,17 @@ const AgentChat = () => {
                          className="w-full justify-start border-border"
                          onClick={() => handleTaskSelect(task)}
                        >
-                         {task.title}
+                         {/* Chỉ báo trạng thái thực thi task */}
+                         {taskExecutionStatus[task.id] === 'loading' && (
+                            <span className="loading-spinner mr-2 w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin"></span>
+                         )}
+                         {taskExecutionStatus[task.id] === 'success' && (
+                            <span className="text-green-500 mr-2">✓</span> // Icon thành công
+                         )}
+                         {taskExecutionStatus[task.id] === 'error' && (
+                            <span className="text-red-500 mr-2">✗</span> // Icon thất bại
+                         )}
+                         {task.name}
                        </Button>
                      ))}
                    </div>
@@ -642,36 +775,21 @@ const AgentChat = () => {
 
                {aboveInputContent === 'taskInputs' && selectedTask && (
                  <div className="mb-3 space-y-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
-                   <h3 className="text-lg font-semibold text-foreground">{selectedTask.title} Inputs</h3>
-                   {selectedTask.inputs.map((input) => (
-                     <div key={input.id} className="space-y-1">
-                       <label htmlFor={input.id} className="text-sm font-medium text-foreground">{input.label}</label>
-                       {input.type === 'select' ? (
-                         <Select
-                           value={selectedTaskInputs[input.id] || ''}
-                           onValueChange={(value) => handleInputChange(input.id, value)}
-                         >
-                           <SelectTrigger className="bg-background text-card-foreground border-border">
-                             <SelectValue placeholder={`Select ${input.label.toLowerCase()}`} />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {input.options?.map((option) => (
-                               <SelectItem key={option} value={option}>
-                                 {option}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                       ) : (
+                   <h3 className="text-lg font-semibold text-foreground">{selectedTask.name} Inputs</h3> {/* Sử dụng task.name hoặc title */}
+                   {/* Render inputs dựa trên execution_config */}
+                   {Object.entries(selectedTask.execution_config).map(([key, defaultValue]) => (
+                     <div key={key} className="space-y-1">
+                       {/* Sử dụng key làm label và input id */}
+                       <label htmlFor={key} className="text-sm font-medium text-foreground">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label> {/* Tự động tạo label từ key */}
+                       {/* Hiện tại mặc định là text input, có thể cần logic để xác định type input (text, number, select) nếu execution_config cung cấp info này */}
                          <Input
-                           id={input.id}
-                           type={input.type}
-                           value={selectedTaskInputs[input.id] || ''}
-                           onChange={(e) => handleInputChange(input.id, e.target.value)}
-                           placeholder={`Enter ${input.label.toLowerCase()}`}
+                           id={key}
+                           type="text" // Mặc định là text, cần logic phức tạp hơn nếu có các type khác
+                           value={selectedTaskInputs[key] || ''} // Lấy giá trị từ state selectedTaskInputs
+                           onChange={(e) => handleInputChange(key, e.target.value)}
+                           placeholder={`Enter ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).toLowerCase()}`}
                            className="bg-background text-card-foreground border-border"
                          />
-                       )}
                      </div>
                    ))}
                    <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
@@ -702,59 +820,80 @@ const AgentChat = () => {
 
                {/* Main Input Area Structure */}
                <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
+                 {/* Nếu agent đang phản hồi, hiển thị overlay mờ và disable input */}
+                 {isAgentThinking && (
+                   <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-lg">
+                     <div className="flex items-center gap-2">
+                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
+                       <span className="text-primary font-semibold">Đang chờ agent trả lời...</span>
+                     </div>
+                   </div>
+                 )}
                  {/* Textarea Row */}
                  <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
                     <Textarea
                       placeholder={t('askAI')}
-                      className="flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
                       rows={1}
                       style={{ overflowY: 'hidden', height: 'auto' }}
+                      disabled={isAgentThinking}
                     />
-
                  </div>
 
                  {/* Tool Buttons and Send Button Row with Descriptions */}
-                 <div className="flex items-center space-x-2 pt-2 justify-between">
-                    <div className="flex items-center space-x-4">
+                 <div className="flex items-center space-x-4 pt-2 justify-between">
+                    <div className="flex items-center space-x-2">
                        {/* Knowledge Button with Description */}
                        <Button
                           variant="outline"
-                          size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                          size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
+                          disabled={isAgentThinking}
                        >
-                          <Book className="h-4 w-4" />
-                          <span className="text-sm">Knowledge</span>
+                          <Book className="h-5 w-5" />
                        </Button>
 
                        {/* Task Button with Description */}
                        <Button
                           variant="outline"
-                           size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                           size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
+                          disabled={isAgentThinking}
                        >
-                          <ListPlus className="h-4 w-4" />
-                          <span className="text-sm">Task</span>
+                          <ListPlus className="h-5 w-5" />
+                       </Button>
+
+                       {/* Nút clock lịch sử, chỉ hiện ở mobile */}
+                       <Button
+                          variant="outline"
+                           size="icon"
+                          className="rounded-full border border-border h-10 w-10 bg-background hover:bg-muted text-primary md:hidden"
+                          onClick={() => setShowMobileSidebar(true)}
+                          aria-label="Lịch sử chat"
+                          type="button"
+                       >
+                          <Clock className="h-5 w-5" />
                        </Button>
 
                        {/* Attach File Button with Description */}
                        <Button
                           variant="outline"
-                           size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                           size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
+                          disabled={isAgentThinking}
                        >
-                          <Paperclip className="h-4 w-4" />
-                          <span className="text-sm">Attach file</span>
+                          <Paperclip className="h-5 w-5" />
                        </Button>
                     </div>
 
                     {/* Send Button (Moved to the second row) */}
-                    <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage} disabled={!message.trim() || isSending || !currentThread}> {/* Disable if message is empty or sending or no thread */}
-                      {isSending ? <span className="loading-spinner"></span> : <Send className="h-4 w-4" />} {/* Show spinner when sending */}
+                    <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage} disabled={!message.trim() || isSending || !currentThread || isAgentThinking}> {/* Disable if message is empty or sending or no thread or agent is thinking */}
+                      {(isSending || isAgentThinking) ? <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span> : <Send className="h-4 w-4" />} {/* Show spinner when sending or agent is thinking */}
                     </Button>
                  </div>
                </div>
