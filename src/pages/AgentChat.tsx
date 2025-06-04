@@ -119,19 +119,18 @@ const AgentChat = () => {
       };
 
       ws.current.onmessage = (event) => {
-        console.warn("Received WebSocket data (WARN).");
-        console.log("RAW WebSocket Data Received:", event.data);
         try {
           const receivedData: Message = JSON.parse(event.data);
-          console.log("Parsed WebSocket Data:", receivedData);
-          console.log("Message Type:", receivedData.type);
+          // console.log("Parsed WebSocket Data:", receivedData);
+          // console.log("Message Type:", receivedData.type);
       
           // Kiểm tra type của tin nhắn
           if (receivedData.type === "chat") {
-            console.log("Received chat message:", receivedData);
+            // console.log("Received chat message:", receivedData);
 
             // Xử lý tin nhắn từ Agent (dạng chunk)
             if (receivedData.sender_type === "agent") {
+              setIsAgentThinking(false); // Agent đã trả lời, mở lại input
               setMessages(prevMessages => {
                 // Nếu message cuối cùng là agent, append chunk
                 if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
@@ -163,7 +162,7 @@ const AgentChat = () => {
                   Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
                 );
                 if (isEcho) {
-                  console.log("Skipping user message echo:", receivedData);
+                  // console.log("Skipping user message echo:", receivedData);
                   return prevMessages;
                 } else {
                   // Đây có thể là tin nhắn từ user khác trong multi-user chat
@@ -180,31 +179,18 @@ const AgentChat = () => {
             }
 
           } else if (receivedData.type === "typing") {
-             console.log("Received typing indicator:", receivedData);
              if (receivedData.sender_type === "agent") {
-                console.log("Setting isAgentThinking to true");
                 setIsAgentThinking(true);
-             } else {
-               // TODO: Handle user typing indicator if needed and backend sends user ID
              }
-
           } else if (receivedData.type === "done") {
-             console.log("Received done indicator for agent message.", receivedData);
              lastAgentMessageIdRef.current = null; // Kết thúc chuỗi chunking
              setIsAgentThinking(false); // Tắt trạng thái typing khi nhận done (nếu backend gửi sau typing)
-
-          // Xử lý tin nhắn type "status"
           } else if (receivedData.type === "status") {
-             console.log("Received status message:", receivedData); // Log khi nhận được tin nhắn status
-             console.log("Appending status log to UI:", receivedData.content); // Log xác nhận thêm vào state
              setTaskLogs(logs => [...logs, receivedData.content]); // Thêm nội dung vào state taskLogs
-
-          } else {
-            console.log("Received unhandled message type:", receivedData.type, receivedData);
           }
         } catch (error) {
-          console.error("Error processing WebSocket message:", error);
-          console.error("Raw WebSocket data that caused error:", event.data);
+          // console.error("Error processing WebSocket message:", error);
+          // console.error("Raw WebSocket data that caused error:", event.data);
         }
       };
   
@@ -355,6 +341,7 @@ const AgentChat = () => {
   const handleSendMessage = async () => { // Made async
     if (message.trim() && currentThread) { // Check if threadId exists
       setIsSending(true); // Start loading
+      setIsAgentThinking(true); // Khóa input, chờ agent trả lời
 
       const userMessage: ChatMessage = {
         id: Date.now().toString(), // Temporary ID
@@ -373,18 +360,12 @@ const AgentChat = () => {
           type: "chat", // Loại tin nhắn
           thread_id: currentThread, // ID của thread
           content: userMessage.content, // Nội dung tin nhắn
-          // timestamp: userMessage.timestamp, // Có thể gửi timestamp từ frontend nếu backend cần
           sender_type: userMessage.sender, // Loại người gửi (user)
-          // TODO: Lấy SenderUserID thực tế từ thông tin người dùng đã login
           sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
         };
 
         ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
-
-        // Trạng thái sending và thinking sẽ được quản lý bởi tin nhắn WebSocket phản hồi (typing/chat)
         setIsSending(false); 
-        // setIsAgentThinking(true); // Bật trạng thái typing tạm thời hoặc chờ tín hiệu từ backend
-
       } catch (error) {
         console.error('Error sending message via WebSocket:', error);
         setIsSending(false); 
@@ -570,7 +551,7 @@ const AgentChat = () => {
                 aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
               )}
             >
-              {messages.map((msg) => (
+              {messages.slice(-50).map((msg) => (
                 <div
                   key={msg.id}
                   className={
@@ -621,19 +602,9 @@ const AgentChat = () => {
 
               {/* Agent Thinking Indicator */}
               {isAgentThinking && (
-                <div className="flex items-start justify-start">
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
-                           <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                             {currentAgent?.agent?.name?.charAt(0) || 'A'}
-                     </AvatarFallback>
-                  </Avatar>
-                  <div className={cn(
-                          "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
-                          getMessageStyle('agent')
-                  )}>
-                    <p>Agent is typing...</p>
-                  </div>
+                <div className="flex items-center justify-center my-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></span>
+                  <span className="text-primary font-semibold">Agent đang phản hồi...</span>
                 </div>
               )}
 
@@ -785,6 +756,15 @@ const AgentChat = () => {
 
                {/* Main Input Area Structure */}
                <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
+                 {/* Nếu agent đang phản hồi, hiển thị overlay mờ và disable input */}
+                 {isAgentThinking && (
+                   <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-lg">
+                     <div className="flex items-center gap-2">
+                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
+                       <span className="text-primary font-semibold">Đang chờ agent trả lời...</span>
+                     </div>
+                   </div>
+                 )}
                  {/* Textarea Row */}
                  <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
                     <Textarea
@@ -795,6 +775,7 @@ const AgentChat = () => {
                       onKeyDown={handleKeyDown}
                       rows={1}
                       style={{ overflowY: 'hidden', height: 'auto' }}
+                      disabled={isAgentThinking}
                     />
 
                  </div>
@@ -808,6 +789,7 @@ const AgentChat = () => {
                           size="sm"
                           className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
+                          disabled={isAgentThinking}
                        >
                           <Book className="h-4 w-4" />
                           <span className="text-sm">Knowledge</span>
@@ -819,6 +801,7 @@ const AgentChat = () => {
                            size="sm"
                           className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
                           onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
+                          disabled={isAgentThinking}
                        >
                           <ListPlus className="h-4 w-4" />
                           <span className="text-sm">Task</span>
@@ -829,6 +812,7 @@ const AgentChat = () => {
                           variant="outline"
                            size="sm"
                           className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                          disabled={isAgentThinking}
                        >
                           <Paperclip className="h-4 w-4" />
                           <span className="text-sm">Attach file</span>
@@ -836,8 +820,8 @@ const AgentChat = () => {
                     </div>
 
                     {/* Send Button (Moved to the second row) */}
-                    <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage} disabled={!message.trim() || isSending || !currentThread}> {/* Disable if message is empty or sending or no thread */}
-                      {isSending ? <span className="loading-spinner"></span> : <Send className="h-4 w-4" />} {/* Show spinner when sending */}
+                    <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage} disabled={!message.trim() || isSending || !currentThread || isAgentThinking}> {/* Disable if message is empty or sending or no thread or agent is thinking */}
+                      {(isSending || isAgentThinking) ? <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span> : <Send className="h-4 w-4" />} {/* Show spinner when sending or agent is thinking */}
                     </Button>
                  </div>
                </div>
