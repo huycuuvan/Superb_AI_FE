@@ -652,9 +652,9 @@ const AgentChat = () => {
 
               {/* Agent Thinking Indicator */}
               {isAgentThinking && (
-                <div className="flex items-center justify-center my-2">
-                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary mr-2"></span>
-                  <span className="text-primary font-semibold">Agent đang phản hồi...</span>
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
+                  <span className="text-primary font-semibold">Đang chờ agent trả lời...</span>
                 </div>
               )}
 
@@ -804,18 +804,8 @@ const AgentChat = () => {
                   </div>
                 )}
 
-               {/* Main Input Area Structure */}
                <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
-                 {/* Nếu agent đang phản hồi, hiển thị overlay mờ và disable input */}
-                 {isAgentThinking && (
-                   <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-lg">
-                     <div className="flex items-center gap-2">
-                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
-                       <span className="text-primary font-semibold">Đang chờ agent trả lời...</span>
-                     </div>
-                   </div>
-                 )}
-                 {/* Textarea Row */}
+                 
                  <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
                     <Textarea
                       placeholder={t('askAI')}
@@ -829,7 +819,6 @@ const AgentChat = () => {
                     />
                  </div>
 
-                 {/* Tool Buttons and Send Button Row with Descriptions */}
                  <div className="flex items-center space-x-4 pt-2 justify-between">
                     <div className="flex items-center space-x-2">
                        {/* Knowledge Button with Description */}

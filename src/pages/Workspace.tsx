@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse, getWorkspaceProfile, WorkspaceProfile } from "@/services/api";
-import { Plus, LogOut, Folder } from "lucide-react";
+import { Plus, LogOut, Folder, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { isApiError } from "@/utils/errorHandler";
@@ -33,20 +33,17 @@ const WorkspacePage = () => {
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
-  // Fetch workspace using React Query
   const { data, isLoading, error: fetchError, refetch } = useQuery<WorkspaceResponse | null>({
     queryKey: ['workspaces'],
     queryFn: getWorkspace,
     enabled: !!user,
     refetchOnMount: true,
-    // options
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
     retry: 3,
   });
 
-  // Fetch workspace profile for selected workspace
   const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useQuery<{
     data: WorkspaceProfile | null
   } | null>({
@@ -55,7 +52,6 @@ const WorkspacePage = () => {
     enabled: !!selectedWorkspaceId,
   });
 
-  // Redirect if profile doesn't exist for selected workspace
   useEffect(() => {
     if (!isLoadingProfile && !profileError && selectedWorkspaceId && profileData && profileData.data === null) {
       navigate(`/workspace/${selectedWorkspaceId}/profile`);
@@ -194,7 +190,7 @@ const WorkspacePage = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative`}>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative">
       {/* Subtle animated background shapes */}
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
@@ -213,7 +209,7 @@ const WorkspacePage = () => {
         Logout
       </Button>
       <div ref={cardRef} className="w-full max-w-md relative z-10">
-        <Card className={`shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20`}>
+        <Card className="shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20">
           <CardHeader className={`space-y-1.5 p-6 sm:p-8 border-b border-white/20`}>
             <CardTitle className={`text-2xl sm:text-3xl font-bold text-center text-slate-800`}>Your Workspace</CardTitle>
             <CardDescription className={`text-center text-slate-600 text-sm sm:text-base`}>
@@ -282,54 +278,38 @@ const WorkspacePage = () => {
                 {workspaces.length > 0 && (
                   <div className="w-full space-y-4">
                     {workspaces.map((workspace) => (
-                      <div key={workspace.id}>
+                      <div key={workspace.id} className="mb-3 last:mb-0">
                         <div
-                          className="flex items-center gap-3 p-4 border border-white/30 rounded-lg cursor-pointer hover:bg-white/40 transition-colors bg-white/60"
+                          className="flex flex-row items-center p-3 sm:p-4 border border-white/30 rounded-2xl shadow-sm bg-white/90 hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
                           onClick={() => handleSelectWorkspace(workspace.id)}
                         >
-                          <Avatar className="bg-gray-200 text-foreground w-10 h-10 flex items-center justify-center">
-                            <span className="font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
+                          <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base">
+                            <span className="font-bold">{workspace.name.charAt(0).toUpperCase()}</span>
                           </Avatar>
-                          <div className="flex-1">
-                            <div className="font-medium text-base text-slate-800">{workspace.name}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-base text-slate-800 truncate leading-tight">{workspace.name}</div>
                             {workspace.description && (
-                              <div className="text-sm text-gray-500">{workspace.description}</div>
+                              <div className="text-xs text-gray-500 truncate leading-tight">{workspace.description}</div>
                             )}
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="border-white/40 !text-slate-700 hover:bg-white/50 focus:ring-purple-500/30 py-2.5 bg-white/60"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGoToDashboard(workspace.id);
-                            }}
-                          >
-                            Go to Dashboard
-                          </Button>
+                          <div className="flex-shrink-0">
+                            <button
+                              className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                              onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
+                              aria-label="Go to Dashboard"
+                            >
+                              <ArrowRight className="w-5 h-5" />
+                            </button>
+                            <Button 
+                              variant="default"
+                              size="sm"
+                              className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
+                              onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
+                            >
+                              Go to Dashboard
+                            </Button>
+                          </div>
                         </div>
-                        {selectedWorkspaceId === workspace.id && (
-                          <div className="mt-4 ml-12 space-y-2">
-                            {isLoadingFolders ? (
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Loading folders...
-                              </div>
-                            ) : folders.length > 0 ? (
-                              folders.map((folder) => (
-                                <div 
-                                  key={folder.id}
-                                  className="flex items-center gap-2 p-2 text-sm text-gray-600 hover:bg-white/40 rounded cursor-pointer transition-colors"
-                                >
-                                  <Folder className="w-4 h-4" />
-                                  {folder.name}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-sm text-gray-500">No folders yet</div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
