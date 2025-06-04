@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
-  ListPlus, Book
+  ListPlus, Book, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,6 +100,8 @@ const AgentChat = () => {
 
   // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
   const lastAgentMessageIdRef = useRef<string | null>(null);
+
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
 
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
@@ -464,8 +466,77 @@ const AgentChat = () => {
 
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col">
+      
+
+      {/* Sidebar overlay cho mobile */}
+      {showMobileSidebar && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          <aside className="fixed top-0 left-0 h-full w-64 z-50 bg-card border-r flex flex-col md:hidden">
+            <button
+              className="absolute top-4 right-4 z-50 p-2 bg-gray-100 dark:bg-slate-800 rounded-full border"
+              onClick={() => setShowMobileSidebar(false)}
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+            {/* Nội dung sidebar cũ */}
+            {isLoading ? (
+              <div className="p-4 space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[120px]" />
+                    <Skeleton className="h-3 w-[80px]" />
+                  </div>
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                      {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">{currentAgent?.agent?.name || 'Agent'}</h2>
+                    <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
+                  </div>
+                </div>
+                <div className="p-4 border-b">
+                  <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+                    <Plus className="h-4 w-4" />
+                    <span>New chat</span>
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                    <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
+                  </div>
+                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                    <p className="text-sm font-medium">Previous Chat</p>
+                    <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </aside>
+        </>
+      )}
+
+      {/* Sidebar luôn hiện ở PC */}
+      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col hidden md:flex">
         {isLoading ? (
           <div className="p-4 space-y-4">
             <div className="flex items-center space-x-3">
@@ -483,7 +554,6 @@ const AgentChat = () => {
           </div>
         ) : (
           <>
-            {/* Agent Selection / Header in Sidebar */}
             <div className="p-4 border-b flex items-center space-x-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
@@ -496,28 +566,22 @@ const AgentChat = () => {
                 <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
               </div>
             </div>
-            {/* New Chat Button */}
             <div className="p-4 border-b">
               <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
                 <Plus className="h-4 w-4" />
                 <span>New chat</span>
               </Button>
             </div>
-            {/* Chat History List (Placeholder) */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {/* Map through chat history here */}
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                 <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
-                 <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
+                <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
               </div>
-               {/* Example of another chat item */}
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                  <p className="text-sm font-medium">Previous Chat</p>
-                 <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
+                <p className="text-sm font-medium">Previous Chat</p>
+                <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
               </div>
-               {/* Add more chat items as needed */}
             </div>
-           
           </>
         )}
       </aside>
@@ -769,7 +833,7 @@ const AgentChat = () => {
                  <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
                     <Textarea
                       placeholder={t('askAI')}
-                      className="flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -777,45 +841,53 @@ const AgentChat = () => {
                       style={{ overflowY: 'hidden', height: 'auto' }}
                       disabled={isAgentThinking}
                     />
-
                  </div>
 
                  {/* Tool Buttons and Send Button Row with Descriptions */}
-                 <div className="flex items-center space-x-2 pt-2 justify-between">
-                    <div className="flex items-center space-x-4">
+                 <div className="flex items-center space-x-4 pt-2 justify-between">
+                    <div className="flex items-center space-x-2">
                        {/* Knowledge Button with Description */}
                        <Button
                           variant="outline"
-                          size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                          size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
                           disabled={isAgentThinking}
                        >
-                          <Book className="h-4 w-4" />
-                          <span className="text-sm">Knowledge</span>
+                          <Book className="h-5 w-5" />
                        </Button>
 
                        {/* Task Button with Description */}
                        <Button
                           variant="outline"
-                           size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                           size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
                           disabled={isAgentThinking}
                        >
-                          <ListPlus className="h-4 w-4" />
-                          <span className="text-sm">Task</span>
+                          <ListPlus className="h-5 w-5" />
+                       </Button>
+
+                       {/* Nút clock lịch sử, chỉ hiện ở mobile */}
+                       <Button
+                          variant="outline"
+                           size="icon"
+                          className="rounded-full border border-border h-10 w-10 bg-background hover:bg-muted text-primary md:hidden"
+                          onClick={() => setShowMobileSidebar(true)}
+                          aria-label="Lịch sử chat"
+                          type="button"
+                       >
+                          <Clock className="h-5 w-5" />
                        </Button>
 
                        {/* Attach File Button with Description */}
                        <Button
                           variant="outline"
-                           size="sm"
-                          className="flex items-center space-x-1 rounded-full border-border text-foreground hover:bg-muted"
+                           size="icon"
+                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           disabled={isAgentThinking}
                        >
-                          <Paperclip className="h-4 w-4" />
-                          <span className="text-sm">Attach file</span>
+                          <Paperclip className="h-5 w-5" />
                        </Button>
                     </div>
 
