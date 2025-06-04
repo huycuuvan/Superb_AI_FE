@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Agent, ChatTask, ChatMessage, Task as ApiTaskType, Workspace, ApiMessage } from '@/types';
+import { Agent, ChatTask, ChatMessage, ApiTaskType, Workspace, ApiMessage } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -32,21 +32,7 @@ interface ExecutionConfig {
   [key: string]: string; // Cập nhật kiểu dữ liệu cho execution_config dựa trên response API
 }
 
-interface TaskWithInputs extends ApiTaskType {
-  // inputs?: TaskInput[]; // Không dùng inputs theo cấu trúc mock data nữa
-  title?: string; // Giữ lại vì UI dùng title
-  name: string;
-  task_type: string;
-  execution_config: ExecutionConfig; // Sử dụng kiểu mới
-  credit_cost: number;
-  category: string;
-  is_system_task: boolean;
-  // Thêm các trường khác từ API response nếu cần (creator_id, created_at, updated_at, webhook_url)
-  creator_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  webhook_url?: string;
-}
+// Use ApiTaskType directly everywhere
 
 interface Message {
   type: string;
@@ -70,7 +56,7 @@ const AgentChat = () => {
   const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
 
   // State mới để lưu tasks được fetch từ API
-  const [tasks, setTasks] = useState<TaskWithInputs[]>([]); // Khởi tạo rỗng, sẽ fetch data
+  const [tasks, setTasks] = useState<ApiTaskType[]>([]); // Khởi tạo rỗng, sẽ fetch data
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     // Initial message, will be added after agent data is fetched
@@ -113,7 +99,7 @@ const AgentChat = () => {
         return;
       }
 
-      const wsUrl = `ws://localhost:3000/ws?token=${token}&thread_id=${currentThread}`;
+      const wsUrl = `wss://aiemployee.site/ws?token=${token}&thread_id=${currentThread}`;
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
@@ -291,7 +277,7 @@ const AgentChat = () => {
                 content: 'Hello! How can I help you?',
                 sender: 'agent',
                 timestamp: new Date().toISOString(), // Use ISO string for frontend message
-                agentId: agentData.data.agent.id
+                agentId: agentData.data.id
               };
               // Add welcome message after fetching history (for new thread)
               // Note: If getThreadMessages for a new thread returns an empty array, this will be the first message
@@ -389,14 +375,14 @@ const AgentChat = () => {
     }
   };
   
-  const handleTaskSelect = (task: TaskWithInputs) => {
+  const handleTaskSelect = (task: ApiTaskType) => {
     setSelectedTaskId(task.id);
     setAboveInputContent('taskInputs');
     // Khởi tạo selectedTaskInputs với giá trị mặc định từ execution_config
     const initialInputs: {[key: string]: string} = {};
     if (task.execution_config) {
       Object.keys(task.execution_config).forEach(key => {
-         initialInputs[key] = task.execution_config[key] || ''; // Dùng giá trị từ config hoặc rỗng
+         initialInputs[key] = String(task.execution_config[key] ?? '');
       });
     }
     setSelectedTaskInputs(initialInputs);
@@ -503,14 +489,14 @@ const AgentChat = () => {
               <>
                 <div className="p-4 border-b flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                    <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                      {currentAgent?.name?.charAt(0) || 'A'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground">{currentAgent?.agent?.name || 'Agent'}</h2>
-                    <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
+                    <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
+                    <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
                   </div>
                 </div>
                 <div className="p-4 border-b">
@@ -521,7 +507,7 @@ const AgentChat = () => {
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                   <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                    <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                    <p className="text-sm font-medium">Chat with {currentAgent?.name}</p>
                     <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
                   </div>
                   <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
@@ -556,14 +542,14 @@ const AgentChat = () => {
           <>
             <div className="p-4 border-b flex items-center space-x-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
                 <AvatarFallback className="bg-secondary text-secondary-foreground">
-                  {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                  {currentAgent?.name?.charAt(0) || 'A'}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h2 className="text-lg font-semibold text-foreground">{currentAgent?.agent?.name || 'Agent'}</h2>
-                <p className="text-xs text-muted-foreground">{currentAgent?.agent?.type || 'AI Assistant'}</p>
+                <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
+                <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
               </div>
             </div>
             <div className="p-4 border-b">
@@ -574,7 +560,7 @@ const AgentChat = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                <p className="text-sm font-medium">Chat with {currentAgent?.agent?.name}</p>
+                <p className="text-sm font-medium">Chat with {currentAgent?.name}</p>
                 <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
               </div>
               <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
@@ -627,9 +613,9 @@ const AgentChat = () => {
                 >
                   {msg.sender === 'agent' && (
                     <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
-                       <AvatarImage src={currentAgent?.agent?.avatar} alt={currentAgent?.agent?.name || 'Agent'} />
+                       <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
                       <AvatarFallback className="bg-secondary text-secondary-foreground">
-                         {currentAgent?.agent?.name?.charAt(0) || 'A'}
+                         {currentAgent?.name?.charAt(0) || 'A'}
                        </AvatarFallback>
                     </Avatar>
                   )}

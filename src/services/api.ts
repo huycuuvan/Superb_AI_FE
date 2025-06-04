@@ -682,6 +682,19 @@ export const updateTask = async (
 
   const response = await fetch(API_ENDPOINTS.tasks.update(taskId), {
     method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
 
 // New function to execute a task
 export const executeTask = async (
@@ -694,18 +707,15 @@ export const executeTask = async (
 
   const response = await fetch(API_ENDPOINTS.tasks.execute, {
     method: "POST",
-
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-
     body: JSON.stringify({
       task_id: taskId,
       input_data: inputData,
       thread_id: threadId,
     }),
-
   });
 
   if (!response.ok) {
@@ -714,7 +724,6 @@ export const executeTask = async (
 
   return response.json();
 };
-
 
 export const deleteTask = async (
   taskId: string
