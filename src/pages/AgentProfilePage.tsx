@@ -70,7 +70,7 @@ const AgentProfilePage = () => {
         throw new Error('Authentication token not found');
       }
 
-      const tasksResponse = await fetch(`https://aiemployee.site/api/tasks/agent/${agentId}`, {
+      const tasksResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/tasks/agent/${agentId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
