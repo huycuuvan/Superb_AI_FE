@@ -6,20 +6,23 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import { AuthProvider } from "@/hooks/useAuth";
 import { FolderProvider } from '@/contexts/FolderContext';
+import { ThemeProvider } from "@/hooks/useTheme";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <FolderProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <RouterProvider router={router} />
-        </TooltipProvider>
-      </FolderProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <FolderProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <RouterProvider router={router} />
+          </TooltipProvider>
+        </FolderProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
