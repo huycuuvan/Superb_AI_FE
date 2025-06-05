@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAgentById, getTasksByAgentId, updateAgent, deleteAgent, UpdateAgentRequest, createTask, updateTask, deleteTask, UpdateTaskRequest } from '@/services/api';
@@ -53,16 +54,43 @@ const AgentProfilePage = () => {
 
     try {
       setIsLoading(true);
-      const agentResponse = await getAgentById(agentId);
-      setAgent(agentResponse.data);
-      setEditedAgentData(agentResponse.data); // Initialize edit form with current agent data
+      setError(null);
 
-      const tasksResponse = await getTasksByAgentId(agentId);
-      setTasks(tasksResponse.data);
+      // Fetch agent data
+      const agentResponse = await getAgentById(agentId);
+      if (!agentResponse.data) {
+        throw new Error('Failed to fetch agent data');
+      }
+      setAgent(agentResponse.data);
+      setEditedAgentData(agentResponse.data);
+
+      // Fetch tasks data
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const tasksResponse = await fetch(`https://aiemployee.site/api/tasks/agent/${agentId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!tasksResponse.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+
+      const tasksData = await tasksResponse.json();
+      // Ensure tasks is always an array
+      const tasks = Array.isArray(tasksData.data) ? tasksData.data : [];
+      setTasks(tasks);
 
     } catch (err) {
-      console.error('Error fetching agent data:', err);
-      setError('Failed to load agent profile or tasks.');
+      console.error('Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load agent profile or tasks.');
+      setTasks([]); // Reset tasks to empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -327,13 +355,13 @@ const AgentProfilePage = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold flex items-center">
-                <ListPlus className="mr-2 text-primary" /> Associated Tasks ({tasks.length})
+                <ListPlus className="mr-2 text-primary" /> Associated Tasks ({tasks?.length || 0})
               </h3>
               <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className="flex items-center space-x-2">
                 <PlusCircle className="h-4 w-4" /> <span>Create New Task</span>
               </Button>
             </div>
-            {tasks.length > 0 ? (
+            {tasks && tasks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {tasks.map((task) => (
                   <Card key={task.id} className="p-4 bg-background border border-border rounded-lg relative transition-all hover:shadow-md hover:border-primary/50">
@@ -687,4 +715,46 @@ const AgentProfilePage = () => {
   );
 };
 
-export default AgentProfilePage; 
+// Add Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-4">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+          <p className="text-gray-600 mb-4">{this.state.error?.message}</p>
+          <Button onClick={() => window.location.reload()}>Try again</Button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Wrap the main component with ErrorBoundary
+const AgentProfilePageWithErrorBoundary = () => {
+  return (
+    <ErrorBoundary>
+      <AgentProfilePage />
+    </ErrorBoundary>
+  );
+};
+
+export default AgentProfilePageWithErrorBoundary; 

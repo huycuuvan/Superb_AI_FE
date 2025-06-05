@@ -77,7 +77,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (workspace?.id) {
-      // fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id, fetchFolders]);
 
