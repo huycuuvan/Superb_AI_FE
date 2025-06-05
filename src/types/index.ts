@@ -55,9 +55,13 @@ export interface ApiTaskType {
 
 export interface Thread {
   id: string;
-  title: string;
+  user_id: string;
+  agent_id: string;
+  workspace_id: string;
   created_at: string;
   updated_at: string;
+  title: string;
+  messages?: ApiMessage[];
 }
 
 // New interface for message data from API

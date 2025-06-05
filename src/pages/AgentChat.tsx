@@ -14,10 +14,12 @@ import { useTheme } from '@/hooks/useTheme';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskInput {
   id: string;
@@ -43,9 +45,16 @@ interface Message {
   sender_user_id: string;
 }
 
+// Interface cho log từ WebSocket task
+interface TaskLog {
+  message?: string;
+  status?: 'completed' | 'processing' | 'error' | string; // Có thể có các trạng thái khác
+  response?: unknown; // Sử dụng unknown thay cho any để yêu cầu kiểm tra kiểu rõ ràng
+  task_id?: string;
+}
+
 const AgentChat = () => {
-  const { theme } = useTheme();
-  const { agentId } = useParams<{ agentId: string }>();
+  const { agentId, threadId: paramThreadId } = useParams<{ agentId: string, threadId?: string }>();
   const [message, setMessage] = useState('');
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +63,7 @@ const AgentChat = () => {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   
   const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
+  const [isCreatingThread, setIsCreatingThread] = useState(false); // State for new thread creation loading
 
   // State mới để lưu tasks được fetch từ API
   const [tasks, setTasks] = useState<ApiTaskType[]>([]); // Khởi tạo rỗng, sẽ fetch data
@@ -212,11 +222,13 @@ const AgentChat = () => {
           if (workspaceResponse.data && workspaceResponse.data.length > 0) {
             setWorkspace(workspaceResponse.data[0]);
             currentWorkspaceId = workspaceResponse.data[0].id;
+            console.log('Workspace loaded:', workspaceResponse.data[0]);
           }
 
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
+          console.log('Agent loaded:', agentData.data);
 
           // TODO: Fetch tasks for the agent
           if (agentId) {
@@ -246,7 +258,7 @@ const AgentChat = () => {
               try {
                 const messagesResponse = await getThreadMessages(threadId);
                 // Map API response (ApiMessage[]) to ChatMessage type and sort
-                const formattedMessages: ChatMessage[] = messagesResponse.data.map(msg => ({
+                const formattedMessages: ChatMessage[] = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
                     id: msg.id,
                     content: msg.message_content,
                     sender: msg.sender_type,
@@ -255,6 +267,10 @@ const AgentChat = () => {
                 })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
                 setMessages(formattedMessages);
+
+                // Add console.log here to inspect fetched messages
+                console.log("Fetched messages for thread:", threadId, messagesResponse.data);
+                console.log("Formatted messages state:", formattedMessages);
 
               } catch (fetchError) {
                 console.error('Error fetching initial messages:', fetchError);
@@ -293,7 +309,7 @@ const AgentChat = () => {
              try {
                const messagesResponse = await getThreadMessages(threadId);
                // Map API response (ApiMessage[]) to ChatMessage type and sort
-               const formattedMessages: ChatMessage[] = messagesResponse.data.map(msg => ({
+               const formattedMessages: ChatMessage[] = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
                    id: msg.id,
                    content: msg.message_content,
                    sender: msg.sender_type,
@@ -396,7 +412,68 @@ const AgentChat = () => {
       [inputId]: value
     }));
   };
+ // Fetch threads for the current workspace
+ const { data: threadsData, isLoading: isLoadingThreads, error: threadsError } = useQuery({
+  queryKey: ['threads', agentId],
+  queryFn: () => getThreadByAgentId(agentId),
+  enabled: !!agentId,
+});
+ // Handle New Chat action
+ const handleNewChat = async (agentId: string | undefined) => {
+  if (!agentId) {
+    toast({
+      title: "Lỗi!",
+      description: "Không tìm thấy Agent ID.",
+      variant: "destructive",
+    });
+    return;
+  }
 
+  if (!workspace?.id) {
+    toast({
+      title: "Lỗi!",
+      description: "Không tìm thấy Workspace ID.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setIsCreatingThread(true); // Start loading
+
+  // Close mobile sidebar on thread click (already there, keep it)
+  setShowMobileSidebar(false);
+
+  try {
+    const newThread = await createThread({ agent_id: agentId, workspace_id: workspace.id, title: "" });
+    if (newThread?.data?.id) {
+      // Cập nhật state trước khi navigate
+      setCurrentThread(newThread.data.id);
+
+      // ** Lấy messages từ response backend và format lại **
+      const initialMessages: ChatMessage[] = (newThread.data.messages || []).map(msg => ({
+          id: msg.id,
+          content: msg.message_content,
+          sender: msg.sender_type,
+          timestamp: msg.created_at,
+          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+      })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      setMessages(initialMessages); // Sử dụng messages từ backend
+
+      navigateToAgentChat(agentId); // Giữ lại navigate helper
+      setIsCreatingThread(false); // End loading on success
+
+    }
+  } catch (error) {
+    console.error('Lỗi khi tạo thread mới:', error);
+    toast({
+      title: "Lỗi!",
+      description: `Không thể tạo cuộc hội thoại mới: ${error instanceof Error ? error.message : String(error)}`,
+      variant: "destructive",
+    });
+    setIsCreatingThread(false); // End loading on error
+  }
+};
   const handleSubmitTaskInputs = async () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
     if (selectedTask && currentThread) {
@@ -428,7 +505,55 @@ const AgentChat = () => {
     }
   };
 
-  const handleActionClick = (action: 'screenshot' | 'text' | 'modify' | 'diagram' | 'prototype') => {
+  const handleThreadClick = async (threadId: string) => {
+    if (!agentId) {
+      // Xử lý trường hợp agentId chưa được load hoặc không tồn tại
+      console.error("Agent ID is not available.");
+      toast({
+        title: "Lỗi!",
+        description: "Không tìm thấy Agent ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Close mobile sidebar on thread click
+    setShowMobileSidebar(false); // Thêm dòng này để đóng sidebar mobile
+
+    try {
+      // Fetch messages for the clicked thread
+      const messagesResponse = await getThreadMessages(threadId);
+      // Map API response (ApiMessage[]) to ChatMessage type and sort
+      const formattedMessages: ChatMessage[] = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+          id: msg.id,
+          content: msg.message_content,
+          sender: msg.sender_type,
+          timestamp: msg.created_at,
+          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+      })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      // Update the state with messages from the clicked thread
+      setMessages(formattedMessages);
+      // Update the currentThread state
+      setCurrentThread(threadId);
+
+      console.log('Thread clicked:', threadId, 'Messages loaded:', formattedMessages.length);
+
+      // Navigate to the thread-specific URL
+      // This will also trigger the main useEffect if the URL changes
+      // navigate(`/dashboard/agents/${agentId}/${threadId}`); // Xóa hoặc comment dòng này
+
+    } catch (error) {
+      console.error('Lỗi khi tải tin nhắn cho thread:', threadId, error);
+      toast({
+        title: "Lỗi!",
+        description: `Không thể tải cuộc hội thoại: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive",
+      });
+      // Optionally, clear messages or show an empty state if loading fails
+      setMessages([]);
+      setCurrentThread(threadId); // Set threadId anyway so WS might connect, but messages are empty
+      // navigate(`/dashboard/agents/${agentId}/${threadId}`); // Xóa hoặc comment dòng này
+    }
   };
 
   const getMessageStyle = (sender: string) => {
@@ -442,6 +567,13 @@ const AgentChat = () => {
 
   // Initialize useNavigate
   const navigate = useNavigate();
+
+  // Helper function for navigation
+  const navigateToAgentChat = (agentId: string) => {
+    if (agentId) {
+      navigate(`/dashboard/agents/${agentId}`);
+    }
+  };
 
   // Handler for daily task button click
   const handleDailyTaskClick = () => {
@@ -500,20 +632,19 @@ const AgentChat = () => {
                   </div>
                 </div>
                 <div className="p-4 border-b">
-                  <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+                  <button className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)} >
                     <Plus className="h-4 w-4" />
                     <span>New chat</span>
-                  </Button>
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                    <p className="text-sm font-medium">Chat with {currentAgent?.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
-                  </div>
-                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                    <p className="text-sm font-medium">Previous Chat</p>
-                    <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
-                  </div>
+                  {threadsData?.data?.map((thread) => (
+                    <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                      <button className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
+                        {thread.title ? thread.title : 'New chat'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -553,20 +684,25 @@ const AgentChat = () => {
               </div>
             </div>
             <div className="p-4 border-b">
-              <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
-                <Plus className="h-4 w-4" />
-                <span>New chat</span>
+              <Button variant="outline" className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)}
+                disabled={isCreatingThread || isLoading} // Disable when creating or initial loading
+              >
+                {isCreatingThread ? (
+                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span> // Spinner
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                <span>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text */}
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                <p className="text-sm font-medium">Chat with {currentAgent?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
-              </div>
-              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                <p className="text-sm font-medium">Previous Chat</p>
-                <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
-              </div>
+              {threadsData?.data?.map((thread) => (
+                <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                  <button className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
+                    {thread.title ? thread.title : 'New chat'}
+                  </button>
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -671,35 +807,40 @@ const AgentChat = () => {
                     <h4 className="font-semibold mb-2">Task Logs:</h4>
                     <div className="space-y-2">
                       {taskLogs.map((log, index) => {
-                        let parsed: any = null;
+                        let parsed: unknown = null;
                         try {
                           parsed = typeof log === 'string' ? JSON.parse(log) : log;
                         } catch {
                           parsed = null;
                         }
-                        if (parsed && typeof parsed === 'object') {
+                        if (parsed && typeof parsed === 'object' && parsed !== null) {
+                          // Explicitly cast parsed to a more specific type if possible, or handle properties carefully
+                          const taskLogData = parsed as { message?: string; status?: string; response?: unknown; task_id?: string }; // Explicitly define expected structure
+
                           return (
                             <div key={index} className="p-2 rounded bg-muted/50">
                               <div className="font-medium">
-                                {parsed.message && <span>{parsed.message}</span>}
-                                {parsed.status && (
-                                  <span className={
-                                    parsed.status === 'completed' ? 'text-green-600 ml-2' :
-                                    parsed.status === 'processing' ? 'text-yellow-600 ml-2' :
-                                    parsed.status === 'error' ? 'text-red-600 ml-2' : 'ml-2'
-                                  }>
-                                    [{parsed.status}]
+                                {taskLogData.message && <span>{taskLogData.message}</span>}
+                                {taskLogData.status && (
+                                  <span className={cn(
+                                    'ml-2',
+                                    taskLogData.status === 'completed' && 'text-green-600',
+                                    taskLogData.status === 'processing' && 'text-yellow-600',
+                                    taskLogData.status === 'error' && 'text-red-600'
+                                  )}>
+                                    [{taskLogData.status}]
                                   </span>
                                 )}
                               </div>
-                              {parsed.response && (
+                              {taskLogData.response && (
                                 <div className="text-xs text-muted-foreground mt-1">
                                   <span>Response: </span>
-                                  <span>{typeof parsed.response === 'string' ? parsed.response : JSON.stringify(parsed.response)}</span>
+                                  {/* Xử lý hiển thị response tùy theo kiểu dữ liệu */}
+                                  <span>{typeof taskLogData.response === 'string' ? taskLogData.response : JSON.stringify(taskLogData.response)}</span>
                                 </div>
                               )}
-                              {parsed.task_id && (
-                                <div className="text-xs text-muted-foreground">Task ID: {parsed.task_id}</div>
+                              {taskLogData.task_id && (
+                                <div className="text-xs text-muted-foreground">Task ID: {taskLogData.task_id}</div>
                               )}
                             </div>
                           );
@@ -815,7 +956,7 @@ const AgentChat = () => {
                       onKeyDown={handleKeyDown}
                       rows={1}
                       style={{ overflowY: 'hidden', height: 'auto' }}
-                      disabled={isAgentThinking}
+                      disabled={isAgentThinking || isCreatingThread || isLoading} // Disable when agent thinking, creating thread, or initial loading
                     />
                  </div>
 
@@ -824,10 +965,10 @@ const AgentChat = () => {
                        {/* Knowledge Button with Description */}
                        <Button
                           variant="outline"
-                          size="icon"
+                           size="icon"
                           className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
-                          disabled={isAgentThinking}
+                          disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
                           <Book className="h-5 w-5" />
                        </Button>
@@ -838,7 +979,7 @@ const AgentChat = () => {
                            size="icon"
                           className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
                           onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
-                          disabled={isAgentThinking}
+                          disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
                           <ListPlus className="h-5 w-5" />
                        </Button>
@@ -851,6 +992,7 @@ const AgentChat = () => {
                           onClick={() => setShowMobileSidebar(true)}
                           aria-label="Lịch sử chat"
                           type="button"
+                          disabled={isCreatingThread || isLoading} // Disable when creating thread or initial loading
                        >
                           <Clock className="h-5 w-5" />
                        </Button>
@@ -860,15 +1002,25 @@ const AgentChat = () => {
                           variant="outline"
                            size="icon"
                           className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
-                          disabled={isAgentThinking}
+                          disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
                           <Paperclip className="h-5 w-5" />
                        </Button>
                     </div>
 
                     {/* Send Button (Moved to the second row) */}
-                    <Button type="submit" size="icon" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSendMessage} disabled={!message.trim() || isSending || !currentThread || isAgentThinking}> {/* Disable if message is empty or sending or no thread or agent is thinking */}
-                      {(isSending || isAgentThinking) ? <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span> : <Send className="h-4 w-4" />} {/* Show spinner when sending or agent is thinking */}
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={handleSendMessage}
+                      disabled={!message.trim() || isSending || !currentThread || isAgentThinking || isCreatingThread || isLoading} // Disable if message is empty, sending, no thread, agent thinking, creating thread, or initial loading
+                    >
+                      {(isSending || isAgentThinking || isCreatingThread || isLoading) ? (
+                        <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span> // Show spinner when sending, agent thinking, creating thread, or initial loading
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                     </Button>
                  </div>
                </div>

@@ -3,64 +3,195 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X, Sparkles, LogOut, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Menu, X, Sparkles, LogOut, Clock, Bell, Users, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react"; // Removed useRef as it's not used in the provided snippet
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar"; // AvatarImage, AvatarFallback not used directly in this part of snippet
+
+// Import DropdownMenu components from your UI library (e.g., shadcn/ui)
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu"; // ENSURE THIS PATH IS CORRECT
+
+// Add Sheet imports
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from "@/components/ui/sheet";
+// import { Separator } from "@/components/ui/separator"; // Not used in the final workspace dropdown
+
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
-import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceProfile, updateWorkspaceProfile, WorkspaceProfile } from "@/services/api";
+import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
+import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember } from "@/services/api"; // Removed unused workspace profile imports for this snippet
 
 import { LanguageToggle } from "./LanguageToggle";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
+// Dialog imports not used in this specific Header logic, but kept if used elsewhere
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+// import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
 
-// Import icons for plugins, share, and delete
-import { Puzzle, Share2, Trash2, Edit } from 'lucide-react';
-import { agents } from '@/services/mockData'; // Assuming agents data is available
+import { Puzzle, Share2 } from 'lucide-react'; // Edit icon not used in this part
+import { agents } from '@/services/mockData';
 
 import React from "react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react"; // Import Loader2
+
+interface DetailedInvitation extends Invitation {
+  WorkspaceName?: string;
+  InviterEmail?: string;
+}
 
 const Header = React.memo(() => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth(); // user object should contain email
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  const { workspace, isLoading: isWorkspaceLoading, error: workspaceError } = useSelectedWorkspace();
-  const { agentId } = useParams<{ agentId: string }>(); // Get agentId from params
-  const currentAgent = agents.find(agent => agent.id === agentId); // Find current agent
+  const { workspace } = useSelectedWorkspace(); // isLoading, error not directly used in dropdown rendering logic shown
+  const { agentId } = useParams<{ agentId: string }>();
+  const currentAgent = agents.find(agent => agent.id === agentId);
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  // const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // Not used in provided snippet
   const [showMobileHistory, setShowMobileHistory] = useState(false);
 
-  const { data: profileData, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery<{
-    data: WorkspaceProfile | null
-  } | null>({
-    queryKey: ['headerWorkspaceProfile', workspace?.id],
-    queryFn: () => workspace?.id ? getWorkspaceProfile(workspace.id) : Promise.resolve(null),
-    enabled: isEditDialogOpen && !!workspace?.id,
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  // State for managing the members modal
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  // State for managing the remove member confirmation modal
+  const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
+  const [memberToRemoveId, setMemberToRemoveId] = useState<string | null>(null);
+
+  // Use the workspace ID from the selected workspace context
+  const workspaceIdForMembers = workspace?.id || null;
+
+  const notificationsQuery: UseQueryResult<{ data: Notification[] }, Error> = useQuery({
+    queryKey: ['notifications'],
+    queryFn: getNotifications,
+    enabled: isNotificationsOpen,
+    staleTime: 60 * 1000,
   });
 
-  const handleEditProfileSubmit = async (data: WorkspaceProfile) => {
-    if (!workspace?.id) return;
-    await updateWorkspaceProfile(workspace.id, data);
-    setIsEditDialogOpen(false);
-    refetchProfile();
+  const {
+    data: invitationsData,
+    isLoading: isLoadingInvitations,
+    error: errorInvitations,
+    refetch: refetchInvitations
+  } = useQuery<{ data: DetailedInvitation[] }, Error>({
+      queryKey: ['userInvitations'],
+      queryFn: getAllInvitations,
+      enabled: isNotificationsOpen,
+      staleTime: 60 * 1000,
+  });
+
+  // Fetch workspace members using React Query in Header
+  const { data: membersData, isLoading: isLoadingMembers, error: membersError } = useQuery<{
+    data: WorkspaceMember[]
+  }>({
+    queryKey: ['workspaceMembers', workspaceIdForMembers],
+    queryFn: () => getWorkspaceMembers(workspaceIdForMembers as string),
+    enabled: !!workspaceIdForMembers && isMembersModalOpen, // Only fetch when modal is open and workspaceId is set
+  });
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (notificationsQuery.error) {
+        console.error("Error fetching notifications:", notificationsQuery.error);
+    }
+    if (errorInvitations) {
+        console.error("Error fetching invitations:", errorInvitations);
+    }
+    // Added error handling for members query
+    if (membersError) {
+        console.error("Error fetching workspace members:", membersError);
+    }
+  }, [notificationsQuery.error, errorInvitations, membersError]); // Added membersError dependency
+
+
+  const handleAcceptInvitation = async (invitationId: string) => {
+    try {
+      await acceptInvitation(invitationId);
+      toast.success("Đã chấp nhận lời mời.");
+      queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Also invalidate workspace query to potentially update workspace list if user joined a new one
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    } catch (error) {
+      toast.error("Không thể chấp nhận lời mời.");
+      console.error("Error accepting invitation:", error);
+    }
   };
 
-  // Generate breadcrumb segments
+  const handleRejectInvitation = async (invitationId: string) => {
+    try {
+      await rejectInvitation(invitationId);
+      toast.success("Đã từ chối lời mời.");
+      queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch (error) {
+      toast.error("Không thể từ chối lời mời.");
+      console.error("Error rejecting invitation:", error);
+    }
+  };
+
+  const handleViewAllInvitations = () => {
+    navigate('/dashboard/invitations');
+    setIsNotificationsOpen(false);
+  };
+
+  // Function to open the members modal
+  const handleViewMembers = () => {
+    // workspaceIdForMembers is already set from useSelectedWorkspace
+    setIsMembersModalOpen(true);
+  };
+
+  // Function to initiate removing a member (show confirmation modal)
+  const confirmRemoveMember = (memberId: string) => {
+      setMemberToRemoveId(memberId);
+      setIsRemoveMemberModalOpen(true);
+  };
+
+  // Function to handle removing a member after confirmation
+  const handleRemoveMember = async () => {
+      if (!workspaceIdForMembers || !memberToRemoveId) {
+          toast.error("Không tìm thấy thông tin thành viên hoặc workspace.");
+          return;
+      }
+
+      try {
+          await removeWorkspaceMember(workspaceIdForMembers, memberToRemoveId);
+          toast.success("Đã xóa thành viên.");
+          // Invalidate members query to refresh the list
+          queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspaceIdForMembers] });
+          setIsRemoveMemberModalOpen(false); // Close confirmation modal
+          setMemberToRemoveId(null); // Clear temporary state
+      } catch (error) {
+          toast.error("Không thể xóa thành viên.");
+          console.error("Error removing member:", error);
+          setIsRemoveMemberModalOpen(false); // Close confirmation modal on error as well
+          setMemberToRemoveId(null); // Clear temporary state
+      }
+  };
+
   const breadcrumbs = pathSegments.map((segment, index) => {
-    // Capitalize first letter
     const displayName = segment.charAt(0).toUpperCase() + segment.slice(1);
     return {
       name: displayName,
@@ -68,7 +199,6 @@ const Header = React.memo(() => {
     };
   });
   
-  // Get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return t('goodMorning');
@@ -83,15 +213,24 @@ const Header = React.memo(() => {
     { icon: "⚙️", label: t('settings'), path: '/dashboard/settings' },
   ];
 
-  // Handle logout
   const handleLogout = () => {
-    logout(); // Call the logout function from useAuth
-    navigate('/login'); // Navigate to the login page after logout
+    logout();
+    navigate('/login');
   };
 
+  // Filter pending invitations directly from fetched data
+  const pendingInvitations = invitationsData?.data?.filter(inv => inv.Status === 'pending') || [];
+
+  // Determine if the current user is the owner of the selected workspace
+  const isWorkspaceOwner = user && workspace && workspace.ownerId === user.id;
+
+  // Find the member object to display info in the confirmation modal
+  const memberToConfirmRemoval = membersData?.data.find(member => member.user_id === memberToRemoveId);
+
   return (
-    <header className="bg-background border-b border-border">
+    <header className="bg-background border-b border-border relative z-10">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
+        {/* Left Section: Mobile Menu Toggle & Breadcrumbs/Agent Info */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -102,7 +241,6 @@ const Header = React.memo(() => {
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           {location.pathname.startsWith('/dashboard/agent-chat/') ? (
-            // Agent Chat Header
             <div className="flex items-center space-x-3 md:space-x-4">
               <Button
                 variant="outline"
@@ -119,7 +257,6 @@ const Header = React.memo(() => {
               </div>
             </div>
           ) : (
-            // Default Header (Breadcrumbs/Greeting)
             <div className="hidden md:flex items-center gap-2 text-muted-foreground text-sm">
               {breadcrumbs.length === 0 ? (
                 <span>{getGreeting()}, {user?.name || 'Guest'}</span>
@@ -150,9 +287,77 @@ const Header = React.memo(() => {
           )}
         </div>
         
+        {/* Right Section: Notifications, Actions, Workspace, Logout */}
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Notification Sheet (as implemented before) */}
+          <Sheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                <Bell className="h-5 w-5" />
+                {pendingInvitations.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    {pendingInvitations.length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[380px] sm:w-[450px] p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Thông báo</SheetTitle>
+              </SheetHeader>
+              <div className="flex-grow overflow-y-auto">
+                <div className="p-4">
+                  <h3 className="text-md font-semibold mb-3 text-foreground">Lời mời tham gia Workspace</h3>
+                  {isLoadingInvitations ? ( /* ... loading UI ... */ 
+                    <div className="text-center py-6 text-muted-foreground">Đang tải lời mời...</div>
+                  ) : errorInvitations ? ( /* ... error UI ... */ 
+                    <div className="text-center py-6 text-red-600 bg-red-50 p-3 rounded-md">
+                      <p>Không thể tải lời mời.</p>
+                      <p className="text-xs">Vui lòng thử lại sau.</p>
+                    </div>
+                  ) : pendingInvitations.length === 0 ? ( /* ... no invitations UI ... */ 
+                    <div className="text-sm text-muted-foreground py-6 text-center">
+                      Không có lời mời nào đang chờ xử lý.
+                    </div>
+                  ) : ( /* ... list invitations ... */ 
+                    <div className="space-y-3">
+                      {pendingInvitations.map(invitation => (
+                        <div key={invitation.ID} className="bg-card p-3 rounded-lg border shadow-sm">
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-foreground leading-relaxed">
+                              Bạn đã được mời tham gia workspace <span className="font-semibold text-primary">{invitation.WorkspaceName || invitation.WorkspaceID}</span>
+                              {invitation.InviterEmail && <span className="block text-xs text-muted-foreground">Từ: {invitation.InviterEmail}</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Với vai trò: <span className="font-medium">{invitation.Role}</span>
+                            </p>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => handleRejectInvitation(invitation.ID)} className="text-xs">
+                              Từ chối
+                            </Button>
+                            <Button variant="default" size="sm" onClick={() => handleAcceptInvitation(invitation.ID)} className="text-xs">
+                              Chấp nhận
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {(pendingInvitations.length > 0 || !isLoadingInvitations) && (
+                <SheetFooter className="p-4 mt-auto border-t">
+                  <Button variant="ghost" className="w-full justify-center" onClick={handleViewAllInvitations}>
+                    Xem tất cả lời mời
+                  </Button>
+                </SheetFooter>
+              )}
+            </SheetContent>
+          </Sheet>
+
+          {/* Conditional Rendering for Agent Chat vs Default Header Icons */}
           {location.pathname.startsWith('/dashboard/agent-chat/') ? (
-            // Agent Chat Icons
             <div className="flex items-center gap-2 md:gap-3">
               <Button variant="ghost" size="icon" aria-label="Plugins">
                 <Puzzle className="h-5 w-5" />
@@ -165,44 +370,51 @@ const Header = React.memo(() => {
               </Button>
             </div>
           ) : (
-            // Default Icons
             <>
               <LanguageToggle />
-              {/* Credit Display */}
-              <div className="flex items-center gap-1 text-foreground text-sm">
-                 <Sparkles className="h-4 w-4 text-yellow-400" /> {/* Sparkling star icon */}
-                 <span>10000 Credits</span> {/* Placeholder for credit amount */}
-              </div>
               <Button variant="outline" size="sm" className="hidden md:inline-flex hover:bg-muted hover:text-foreground">
                 {t('editBrand')}
               </Button>
+
+              {/* Workspace Selector Dropdown - CORRECTED */}
               {workspace && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-400 transition">
-                      <Avatar className="bg-teampal-200 text-foreground w-8 h-8 flex items-center justify-center">
-                        <span className="font-bold text-base flex items-center justify-center">
-                          {workspace.name ? workspace.name.charAt(0).toUpperCase() : "W"}
+                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition-colors">
+                      <Avatar className="bg-primary-foreground text-primary w-8 h-8 flex items-center justify-center border">
+                        <span className="font-bold text-sm">
+                          {/* Display first letter of workspace name, or user email, or 'W' */}
+                          {workspace.name ? workspace.name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : "W")}
                         </span>
                       </Avatar>
-                      <span className="font-semibold hidden md:flex items-center justify-center md:text-sm">{workspace.name}{workspace.name && "'s workspace"}</span>
+                      <span className="font-semibold hidden md:flex items-center justify-center md:text-sm text-foreground">
+                        {/* Display "WorkspaceName's workspace" or "UserEmail's workspace" */}
+                        {workspace.name ? `${workspace.name}'s workspace` : (user?.email ? `${user.email}'s workspace` : "My Workspace")}
+                      </span>
                     </div>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-4 py-2">
-                      <div className="font-bold">{workspace.name}</div>
-                      {workspace.description && (
-                        <div className="text-xs text-muted-foreground">{workspace.description}</div>
-                      )}
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate('/workspace')}>
+                  <DropdownMenuContent align="end" className="w-56"> {/* Standard shadcn/ui classes will apply */}
+                    {user?.email && (
+                      <>
+                        <div className="px-3 py-2">
+                          <p className="text-sm font-medium text-foreground leading-none">{user.name || "User"}</p>
+                          <p className="text-xs text-muted-foreground leading-none mt-1">{user.email}</p>
+                        </div>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {/* Added View Members DropdownMenuItem */}
+                    <DropdownMenuItem onClick={handleViewMembers} className="cursor-pointer">
+                      <Users className="mr-2 h-4 w-4" />
+                      Xem thành viên
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer">
                       Chọn workspace khác
                     </DropdownMenuItem>
+                    {/* You can add more items here, e.g., "Workspace Settings" */}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {/* Logout Button */}
               <Button variant="outline" size="icon" onClick={handleLogout} className="hover:bg-muted hover:text-foreground" aria-label="Logout">
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -211,28 +423,17 @@ const Header = React.memo(() => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      <div className={cn(
-        "md:hidden border-t border-border bg-background",
-        mobileMenuOpen ? "block" : "hidden"
-      )}>
+      {/* Mobile Menu (remains the same) */}
+      <div className={cn("md:hidden border-t border-border bg-background", mobileMenuOpen ? "block" : "hidden")}>
         <nav className="px-2 py-2 space-y-1">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm",
-                  isActive 
-                    ? "bg-accent text-accent-foreground" 
-                    : "hover:bg-accent/50 hover:text-accent-foreground",
-                  "transition-colors"
-                )}
+              <Link key={item.path} to={item.path}
+                className={cn("flex items-center px-3 py-2 rounded-md text-sm font-medium", isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/70 hover:text-accent-foreground", "transition-colors")}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="mr-2">{item.icon}</span>
+                <span className="mr-2.5">{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             );
@@ -240,35 +441,89 @@ const Header = React.memo(() => {
         </nav>
       </div>
 
-      {/* Mobile History Bottom Sheet */}
+      {/* Mobile History Bottom Sheet (remains the same) */}
       {showMobileHistory && (
         <div className="fixed inset-0 z-50 flex items-end md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileHistory(false)} />
-          <div className="relative w-full h-[60%] bg-card rounded-t-2xl shadow-lg p-4 flex flex-col">
-            <button
-              className="absolute top-2 right-4 p-2 bg-gray-100 dark:bg-slate-800 rounded-full border"
-              onClick={() => setShowMobileHistory(false)}
-              aria-label="Đóng"
-            >
-              ×
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileHistory(false)} />
+          <div className="relative w-full max-h-[70%] bg-card rounded-t-xl shadow-xl p-4 flex flex-col">
+            <button className="absolute top-3 right-3 p-1.5 bg-muted rounded-full hover:bg-muted/80" onClick={() => setShowMobileHistory(false)} aria-label="Close history">
+              <X className="h-4 w-4" />
             </button>
-            <h2 className="text-lg font-semibold mb-4 text-center">Lịch sử chat</h2>
-            {/* Nội dung lịch sử chat, có thể lấy từ sidebar hoặc props */}
-            <div className="flex-1 overflow-y-auto space-y-2">
-              {/* Demo: */}
-              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                <p className="text-sm font-medium">Chat với {currentAgent?.name || 'Agent'}</p>
-                <p className="text-xs text-muted-foreground truncate">Last message preview...</p>
-              </div>
-              <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                <p className="text-sm font-medium">Previous Chat</p>
-                <p className="text-xs text-muted-foreground truncate">Another message preview...</p>
-              </div>
-              {/* Thêm các mục lịch sử chat thực tế ở đây */}
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Lịch sử chat</h2>
+            <div className="overflow-y-auto flex-grow">
+              <p className="text-sm text-muted-foreground text-center py-5">Chưa có lịch sử chat.</p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Members Modal (Moved to Header) */}
+      <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Thành viên Workspace</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingMembers ? (
+              <div className="text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+                <p className="text-muted-foreground mt-2">Đang tải thành viên...</p>
+              </div>
+            ) : membersError ? (
+              <div className="text-center text-red-600">
+                <p>Không thể tải danh sách thành viên.</p>
+                <p className="text-xs text-muted-foreground">{membersError.message}</p>
+              </div>
+            ) : membersData?.data && membersData.data.length > 0 ? (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {membersData.data.map(member => (
+                  <div key={member.user_id} className="flex items-center gap-3 p-2 border rounded-md">
+                    <Avatar className="w-8 h-8 flex items-center justify-center border">
+                      <span className="font-bold text-sm">{member.user_name.charAt(0).toUpperCase()}</span>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-foreground">{member.user_name}</p>
+                      <p className="text-xs text-muted-foreground">{member.user_email} - <span className="font-medium">{member.role}</span></p>
+                    </div>
+                     {/* Add remove button if user is owner and not the member themselves */}
+                    {user?.id !== member.user_id && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="ml-auto text-muted-foreground hover:text-red-500"
+                            onClick={() => confirmRemoveMember(member.user_id)}
+                            aria-label="Xóa thành viên"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                Không có thành viên nào trong workspace này.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Modal */}
+      <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa thành viên</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa thành viên <span className="font-semibold">{memberToConfirmRemoval?.user_name || "này"}</span> khỏi workspace không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>Hủy</Button>
+            <Button variant="destructive" onClick={handleRemoveMember}>Xóa</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 });

@@ -8,6 +8,7 @@ import {
   ChatMessage,
   ApiMessage,
   ApiTaskType,
+  User,
 } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
@@ -640,7 +641,9 @@ export const getAgentTasks = async (
 };
 
 export const createTask = async (
-  taskData: Omit<ApiTaskType, 'id' | 'created_at' | 'updated_at'> & { agent_id: string }
+  taskData: Omit<ApiTaskType, "id" | "created_at" | "updated_at"> & {
+    agent_id: string;
+  }
 ): Promise<{ data: ApiTaskType }> => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Authentication token not found.");
@@ -743,4 +746,271 @@ export const deleteTask = async (
   }
 
   return { success: response.ok };
+};
+
+export interface Invitation {
+  ID: string;
+  WorkspaceID: string;
+  InviterID: string;
+  InviteeUserID: string | null;
+  InviteeEmail: string;
+  Role: string;
+  Status: "pending" | "accepted" | "rejected";
+  Token: string;
+  ExpiresAt: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  type: "invitation"; // Assuming only invitation type for now
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getNotifications = async (): Promise<{ data: Notification[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/workspaces/notifications`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const getAllInvitations = async (): Promise<{ data: Invitation[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/workspaces/me/invitations`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const acceptInvitation = async (
+  invitationId: string
+): Promise<{ message: string; status: number }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.workspace.acceptInvitation(invitationId)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const rejectInvitation = async (
+  invitationId: string
+): Promise<{ message: string; status: number }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.workspace.rejectInvitation(invitationId)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const inviteMember = async (
+  workspaceId: string,
+  email: string,
+  role: string,
+  message: string
+): Promise<{ message: string; status: number }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.workspace.inviteMember(workspaceId)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        invitee_email: email,
+        role: role,
+        message: message,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export interface WorkspaceMember {
+  workspace_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  user_name: string;
+  user_email: string;
+}
+
+export const getWorkspaceMembers = async (
+  workspaceId: string
+): Promise<{ data: WorkspaceMember[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_ENDPOINTS.workspace.getMembers(workspaceId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// New function to remove a workspace member
+export const removeWorkspaceMember = async (
+  workspaceId: string,
+  memberId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/workspaces/${workspaceId}/members/${memberId}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json", // Include Content-Type header
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return { success: response.ok };
+};
+
+export const getThreadByAgentId = async (
+  agentId: string
+): Promise<{ data: Thread[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.threads.getByAgentId(agentId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// New function to get threads for a workspace
+export const getThreads = async (
+  workspaceId: string
+): Promise<{ data: Thread[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/threads/list`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const getThreadById = async (
+  threadId: string
+): Promise<{ data: Thread }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.threads.getById(threadId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
 };

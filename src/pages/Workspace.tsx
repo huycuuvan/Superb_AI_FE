@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse, getWorkspaceProfile, WorkspaceProfile } from "@/services/api";
+import { getWorkspace, createWorkspace, WorkspaceResponse, getFolders, FolderResponse, getWorkspaceProfile, WorkspaceProfile, getWorkspaceMembers, WorkspaceMember } from "@/services/api";
 import { Plus, LogOut, Folder, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,11 +15,20 @@ import { Loader2 } from "lucide-react";
 import PageLoader from "@/components/PageLoader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import gsap from 'gsap';
+import { InviteMember } from "@/components/workspace/InviteMember";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Workspace {
   id: string;
   name: string;
   description?: string;
+  ownerId: string;
 }
 
 const WorkspacePage = () => {
@@ -33,6 +42,9 @@ const WorkspacePage = () => {
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [workspaceIdForMembers, setWorkspaceIdForMembers] = useState<string | null>(null);
+
   const { data, isLoading, error: fetchError, refetch } = useQuery<WorkspaceResponse | null>({
     queryKey: ['workspaces'],
     queryFn: getWorkspace,
@@ -42,6 +54,14 @@ const WorkspacePage = () => {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
     retry: 3,
+  });
+
+  const { data: membersData, isLoading: isLoadingMembers, error: membersError } = useQuery<{
+    data: WorkspaceMember[]
+  }>({
+    queryKey: ['workspaceMembers', workspaceIdForMembers],
+    queryFn: () => getWorkspaceMembers(workspaceIdForMembers as string),
+    enabled: !!workspaceIdForMembers && isMembersModalOpen,
   });
 
   const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useQuery<{
@@ -58,34 +78,29 @@ const WorkspacePage = () => {
     }
   }, [isLoadingProfile, profileError, selectedWorkspaceId, profileData, navigate]);
 
-  // Fetch folders when workspace is selected
   const { data: foldersData, isLoading: isLoadingFolders } = useQuery<FolderResponse | null>({
     queryKey: ['folders', selectedWorkspaceId],
     queryFn: () => selectedWorkspaceId ? getFolders(selectedWorkspaceId) : Promise.resolve(null),
     enabled: !!selectedWorkspaceId,
   });
 
-  // Convert fetched data to a consistent array format for rendering
   const workspaces = (data && data.data) ? (Array.isArray(data.data) ? data.data : [data.data]) : [];
   const folders = foldersData?.data || [];
 
-  // Auto show create form if no workspace exists
   useEffect(() => {
     if (workspaces.length === 0 && !showCreate && !isLoading) {
       setShowCreate(true);
     }
   }, [workspaces.length, isLoading]);
 
-  // Effect to hide loader when data is no longer loading
   useEffect(() => {
-    if (!isLoading && !isLoadingFolders) {
-      // Allow a small delay to see the animation before hiding
+    if (!isLoading && !isLoadingFolders && !isLoadingMembers) {
       const timer = setTimeout(() => {
         setShowLoader(false);
-      }, 200); // Adjust delay as needed
+      }, 200);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isLoadingFolders]);
+  }, [isLoading, isLoadingFolders, isLoadingMembers]);
 
   const handleSelectWorkspace = (workspaceId: string) => {
     setSelectedWorkspaceId(workspaceId);
@@ -93,11 +108,9 @@ const WorkspacePage = () => {
 
   const handleGoToDashboard = async (workspaceId: string) => {
     if (workspaceId) {
-      // Kiểm tra profile trước khi vào dashboard
       try {
         const profileResponse = await getWorkspaceProfile(workspaceId);
         if (profileResponse && profileResponse.data !== null) {
-          // Profile tồn tại, lưu workspace đã chọn và vào dashboard
           localStorage.setItem('selectedWorkspace', workspaceId);
           if (user && data && data.data) {
             const selectedWorkspace = (Array.isArray(data.data) ? data.data : [data.data]).find(ws => ws.id === workspaceId);
@@ -107,15 +120,11 @@ const WorkspacePage = () => {
           }
           navigate('/dashboard');
         } else {
-          // Profile không tồn tại, điều hướng đến trang tạo profile
           navigate(`/workspace/${workspaceId}/profile`);
         }
       } catch (error) {
         console.error('Lỗi khi kiểm tra profile:', error);
-        // Xử lý lỗi hoặc thông báo cho người dùng nếu cần
-        // Có thể vẫn cho vào dashboard hoặc ở lại trang workspace tùy luồng mong muốn
-        // Hiện tại, tôi sẽ điều hướng về trang profile nếu có lỗi khi kiểm tra.
-         navigate(`/workspace/${workspaceId}/profile`);
+        navigate(`/workspace/${workspaceId}/profile`);
       }
     }
   };
@@ -145,7 +154,11 @@ const WorkspacePage = () => {
     }
   };
 
-  // GSAP animation for card
+  const handleViewMembers = (workspaceId: string) => {
+    setWorkspaceIdForMembers(workspaceId);
+    setIsMembersModalOpen(true);
+  };
+
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if(cardRef.current){
@@ -153,7 +166,6 @@ const WorkspacePage = () => {
     }
   },[]);
 
-  // Render PageLoader while initial data is loading
   if (showLoader) {
     return <PageLoader onComplete={() => setShowLoader(false)} />;
   }
@@ -191,7 +203,6 @@ const WorkspacePage = () => {
 
   return (
     <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f3e8ff 100%)' }} className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative text-slate-900 dark:text-white">
-      {/* Subtle animated background shapes */}
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
         <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
@@ -280,7 +291,7 @@ const WorkspacePage = () => {
                     {workspaces.map((workspace) => (
                       <div key={workspace.id} className="mb-3 last:mb-0">
                         <div
-                          className="flex flex-row items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
+                          className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
                           onClick={() => handleSelectWorkspace(workspace.id)}
                         >
                           <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base dark:bg-gray-700 dark:text-white">
@@ -292,9 +303,10 @@ const WorkspacePage = () => {
                               <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight">{workspace.description}</div>
                             )}
                           </div>
-                          <div className="flex-shrink-0">
+                          <div className="flex items-center gap-2 ml-auto">
+                            <InviteMember workspaceId={workspace.id} iconOnly={true} />
                             <button
-                              className="block sm:hidden rounded-full   bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700  p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                              className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
                               onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
                               aria-label="Go to Dashboard"
                             >
@@ -330,6 +342,45 @@ const WorkspacePage = () => {
           </CardFooter>
         </Card>
       </div>
+
+      <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Thành viên Workspace</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingMembers ? (
+              <div className="text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+                <p className="text-muted-foreground mt-2">Đang tải thành viên...</p>
+              </div>
+            ) : membersError ? (
+              <div className="text-center text-red-600">
+                <p>Không thể tải danh sách thành viên.</p>
+                <p className="text-xs text-muted-foreground">{membersError.message}</p>
+              </div>
+            ) : membersData?.data && membersData.data.length > 0 ? (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {membersData.data.map(member => (
+                  <div key={member.user_id} className="flex items-center gap-3 p-2 border rounded-md">
+                    <Avatar className="w-8 h-8 flex items-center justify-center border">
+                      <span className="font-bold text-sm">{member.user_name.charAt(0).toUpperCase()}</span>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-foreground">{member.user_name}</p>
+                      <p className="text-xs text-muted-foreground">{member.user_email} - <span className="font-medium">{member.role}</span></p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                Không có thành viên nào trong workspace này.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

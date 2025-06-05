@@ -14,6 +14,14 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/workspaces/${workspaceId}/profile`,
     updateProfile: (workspaceId: string) =>
       `${API_BASE_URL}/workspaces/${workspaceId}/profile`,
+    inviteMember: (workspaceId: string) =>
+      `/workspaces/${workspaceId}/invitations`,
+    acceptInvitation: (invitationId: string) =>
+      `/workspaces/invitations/${invitationId}/accept`,
+    rejectInvitation: (invitationId: string) =>
+      `/workspaces/invitations/${invitationId}/decline`,
+    getMembers: (workspaceId: string) =>
+      `${API_BASE_URL}/workspaces/${workspaceId}/members`,
   },
   agents: {
     list: `${API_BASE_URL}/agents/all`,
@@ -32,7 +40,6 @@ export const API_ENDPOINTS = {
 
     byAgent: (agentId: string) => `${API_BASE_URL}/tasks/agent/${agentId}`,
     execute: `${API_BASE_URL}/tasks/execute`,
-
   },
   folders: {
     create: `${API_BASE_URL}/folders`,
@@ -47,6 +54,9 @@ export const API_ENDPOINTS = {
     messages: (threadId: string) =>
       `${API_BASE_URL}/threads/${threadId}/messages`,
     check: `${API_BASE_URL}/threads/check`,
+    getById: (id: string) => `${API_BASE_URL}/threads/${id}`,
+    getByAgentId: (agentId: string) =>
+      `${API_BASE_URL}/threads/filter?agent_id=${agentId}`,
   },
   messages: {
     list: `${API_BASE_URL}/messages`,
