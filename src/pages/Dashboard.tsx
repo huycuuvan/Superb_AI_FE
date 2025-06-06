@@ -34,9 +34,9 @@ interface FolderType {
 }
 
 const Dashboard = () => {
+  console.log('Dashboard rendered');
   const { theme } = useTheme();
-  const [loading, setLoading] = useState(true);
-  const { folders, loadingFolders, fetchFolders, setFolders } = useFolders();
+  const { folders, loadingFolders, errorFolders, fetchFolders, setFolders } = useFolders();
   const { workspace } = useSelectedWorkspace();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -71,12 +71,11 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     if (workspace?.id) {
+      console.log('useEffect fetchFolders running for workspace ID:', workspace.id);
+      fetchFolders(workspace.id);
+    } else {
+      console.log('useEffect fetchFolders: workspace ID is not available.', workspace?.id);
     }
   }, [workspace?.id, fetchFolders]);
 
@@ -152,16 +151,6 @@ const Dashboard = () => {
     }
   };
 
-  const recentChats = [
-    {
-      id: '1',
-      title: 'Create a mood board for a new product',
-      agentId: 'agent-2',
-      agentName: 'Web',
-      agentAvatar: 'https://api.dicebear.com/7.x/personas/svg?seed=Web',
-      lastUpdate: '2025/05/13 - 15:38',
-    },
-  ];
 
   const handlePin = (name: string) => {
     setFolders(prev => {
@@ -173,7 +162,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 bg-background text-foreground">
+    <div className="space-y-6 text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -182,7 +171,7 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-          <Button className="flex hover:bg-gray-900 color-black items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
+          <Button className="flex hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text color-black items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
             <span className="text-lg">+</span> Create agent
           </Button>
           <Button variant="outline" className="flex items-center  justify-center gap-2 w-full sm:w-auto hover:bg-gray">
@@ -196,13 +185,26 @@ const Dashboard = () => {
 
       <div className="grid gap-4">
         {loadingFolders ? (
-          <div className="text-sm text-muted-foreground">Loading...</div>
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-6 w-40 mb-4" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                  {[...Array(4)].map((_, j) => (
+                    <Skeleton key={j} className="h-32 w-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : errorFolders ? (
+          <div className="text-sm text-red-500">Lỗi khi tải thư mục: {errorFolders.message}</div>
         ) : folders.length > 0 ? (
           folders.map((folder) => (
             <div key={folder.id} className="mb-8 md:mb-10">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Folder className="h-5 w-5 text-primary" />
+                  <Folder className="h-5 w-5 text-gradient" />
                   <h2 
                     className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
                     onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
@@ -231,15 +233,15 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 <Card 
-                  className="border-dashed border-2 rounded-xl transition-colors cursor-pointer group bg-muted/30 border-border hover:border-primary"
+                  className="border-dashed border-2 rounded-xl transition-colors cursor-pointer group bg-muted/30 border-border hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
                   onClick={() => {
                     setSelectedFolderId(folder.id);
                     setShowAddAgentDialog(true);
                   }}
                 >
                   <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-accent">
-                      <Plus className="h-6 w-6 text-primary" />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
+                      <Plus className="h-6 w-6 text-primary " />
                     </div>
                     <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
                     <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
@@ -251,7 +253,7 @@ const Dashboard = () => {
             </div>
           ))
         ) : (
-          <div className="text-sm text-muted-foreground">Chưa có thư mục nào</div>
+          <div className="text-sm text-muted-foreground text-center py-10">Chưa có thư mục nào. Tạo thư mục đầu tiên của bạn!</div>
         )}
       </div>
 
@@ -362,8 +364,6 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
     staleTime: 300000, // Keep data fresh for 5 minutes
   });
 
-  console.log('Rendering AgentsForFolder for folder', folderId, '; isLoading:', isLoadingAgents, '; agentsData:', agentsData); // Log on render
-
   if (isLoadingAgents) {
     return <Skeleton className="h-32 w-full" />;
   }
@@ -385,12 +385,12 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
       {agents.map((agent: Agent) => (
         <Card 
           key={agent.id} 
-          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-accent/50 transition-colors"
+          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-colors"
           onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
         >
           <Avatar className="w-12 h-12">
              {/* Replace with actual agent avatar if available */}
-            <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-blue-800 text-lg font-medium">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center text-primary-foreground text-lg font-medium">
               {agent.name.charAt(0)}
             </div>
           </Avatar>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getWorkspace, WorkspaceResponse } from "@/services/api";
+import React from "react";
 
 export const useSelectedWorkspace = () => {
   const selectedWorkspaceId =
@@ -33,6 +34,17 @@ export const useSelectedWorkspace = () => {
       : [];
   const workspace =
     workspaces.find((ws) => ws.id === selectedWorkspaceId) || null;
+
+  // Memoize the returned value to prevent unnecessary re-renders
+  const memoizedValue = React.useMemo(
+    () => ({
+      workspace,
+      isLoading: isWorkspacesLoading,
+      error: workspacesError,
+    }),
+    [workspace, isWorkspacesLoading, workspacesError]
+  );
+
   // Trả về thông tin workspace đang chọn và trạng thái loading/error từ query danh sách
-  return { workspace, isLoading: isWorkspacesLoading, error: workspacesError };
+  return memoizedValue;
 };

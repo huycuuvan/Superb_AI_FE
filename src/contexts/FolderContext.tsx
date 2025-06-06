@@ -2,16 +2,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getFolders } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-
-interface FolderType {
-  id: string;
-  name: string;
-  workspace_id: string;
-}
+import { FolderType } from '@/types';
 
 interface FolderContextType {
   folders: FolderType[];
   loadingFolders: boolean;
+  errorFolders: Error | null;
   fetchFolders: (workspaceId: string) => Promise<void>;
   setFolders: React.Dispatch<React.SetStateAction<FolderType[]>>;
 }
@@ -20,16 +16,23 @@ const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [folders, setFolders] = useState<FolderType[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(true);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [errorFolders, setErrorFolders] = useState<Error | null>(null);
   const { workspace } = useSelectedWorkspace();
 
   const fetchFolders = useCallback(async (workspaceId: string) => {
     setLoadingFolders(true);
+    setErrorFolders(null);
     try {
-      const data = await getFolders(workspaceId);
-      setFolders(data.data);
+      const response = await getFolders(workspaceId);
+      if (response?.data) {
+        setFolders(response.data);
+      } else {
+        setFolders([]);
+      }
     } catch (error: any) {
-      console.error('Lỗi khi lấy danh sách folder:', error);
+      console.error('Error fetching folders:', error);
+      setErrorFolders(error);
       setFolders([]);
     } finally {
       setLoadingFolders(false);
@@ -43,7 +46,7 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [workspace?.id, fetchFolders]);
 
   return (
-    <FolderContext.Provider value={{ folders, loadingFolders, fetchFolders, setFolders }}>
+    <FolderContext.Provider value={{ folders, loadingFolders, errorFolders, fetchFolders, setFolders }}>
       {children}
     </FolderContext.Provider>
   );

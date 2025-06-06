@@ -373,7 +373,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading} className="hover:bg-primary-pink/30 hover:text-primary-pink dark:hover:bg-primary-pink/50 dark:hover:text-primary-pink">
             {t('cancel')}
           </Button>
           <Button onClick={handleCreateAgent} disabled={loading || !agentName.trim() || !roleDescription || (isFolderSelectionNeeded && !selectedFolderId) || !workspace?.id}>

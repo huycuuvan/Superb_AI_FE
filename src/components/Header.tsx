@@ -30,7 +30,7 @@ import {
 
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
 import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember } from "@/services/api"; // Removed unused workspace profile imports for this snippet
+import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById } from "@/services/api"; // Import getAgentById
 
 import { LanguageToggle } from "./LanguageToggle";
 // Dialog imports not used in this specific Header logic, but kept if used elsewhere
@@ -45,11 +45,19 @@ import {
 // import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
 
 import { Puzzle, Share2 } from 'lucide-react'; // Edit icon not used in this part
-import { agents } from '@/services/mockData';
 
 import React from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react"; // Import Loader2
+
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"; // Import breadcrumb components
 
 interface DetailedInvitation extends Invitation {
   WorkspaceName?: string;
@@ -65,8 +73,17 @@ const Header = React.memo(() => {
   const navigate = useNavigate();
 
   const { workspace } = useSelectedWorkspace(); // isLoading, error not directly used in dropdown rendering logic shown
-  const { agentId } = useParams<{ agentId: string }>();
-  const currentAgent = agents.find(agent => agent.id === agentId);
+  const { agentId, threadId: paramThreadId } = useParams<{ agentId: string; threadId?: string }>();
+
+  // Fetch current agent details using React Query
+  const { data: agentData, isLoading: isLoadingAgent, error: agentError } = useQuery({
+    queryKey: ['agent', agentId], // Query key includes agentId
+    queryFn: () => getAgentById(agentId!), // Fetch agent details
+    enabled: !!agentId, // Only fetch if agentId is available
+  });
+
+  // Use fetched agent data, fall back to mock/placeholder if needed
+  const currentAgent = agentData?.data || null; // Access the 'data' property from the API response
 
   // const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // Not used in provided snippet
   const [showMobileHistory, setShowMobileHistory] = useState(false);
@@ -191,6 +208,9 @@ const Header = React.memo(() => {
       }
   };
 
+  // Determine if current path is agent chat page and agentId exists
+  const isAgentChatPage = location.pathname.startsWith('/dashboard/agents/') && agentId;
+
   const breadcrumbs = pathSegments.map((segment, index) => {
     const displayName = segment.charAt(0).toUpperCase() + segment.slice(1);
     return {
@@ -228,10 +248,10 @@ const Header = React.memo(() => {
   const memberToConfirmRemoval = membersData?.data.find(member => member.user_id === memberToRemoveId);
 
   return (
-    <header className="bg-background border-b border-border relative z-10">
+    <header className="bg-primary-gradient border-b border-border relative z-10">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
         {/* Left Section: Mobile Menu Toggle & Breadcrumbs/Agent Info */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-grow"> {/* Add flex-grow here */} 
           <Button
             variant="ghost"
             size="icon"
@@ -240,49 +260,90 @@ const Header = React.memo(() => {
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          {location.pathname.startsWith('/dashboard/agent-chat/') ? (
-            <div className="flex items-center space-x-3 md:space-x-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 md:h-9 md:w-9 bg-background hover:bg-muted hover:text-foreground"
-                aria-label="Lịch sử chat"
-                onClick={() => setShowMobileHistory(true)}
-              >
-                <Clock className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-base md:text-lg font-semibold">{currentAgent?.name || 'Agent'}</h1>
-                <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+
+          {/* Content for the left section - Agent Info (mobile) or Breadcrumb (desktop) */}
+          {isAgentChatPage ? (
+            // Content specific to Agent Chat Page
+            <>
+              {/* Mobile Agent Info (hidden on md and up) */}
+              <div className="flex items-center space-x-3 md:hidden"> {/* Mobile view */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-primary-gradient hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
+                  aria-label="Lịch sử chat"
+                  onClick={() => setShowMobileHistory(true)}
+                >
+                  <Clock className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-base font-semibold">{currentAgent?.name || 'Agent'}</h1>
+                  <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+                </div>
               </div>
-            </div>
+
+              {/* Desktop Agent Chat Breadcrumb (visible on md and up) */}
+              <div className="hidden md:flex items-center gap-2 text-muted-foreground text-sm"> {/* Desktop view */}
+                 <Breadcrumb>
+                   <BreadcrumbList>
+                     <BreadcrumbItem>
+                       <BreadcrumbLink asChild>
+                         <Link to="/dashboard">Dashboard</Link>
+                       </BreadcrumbLink>
+                     </BreadcrumbItem>
+                     <BreadcrumbSeparator />
+                     <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                          <Link to="/dashboard/agents">Agents</Link>
+                        </BreadcrumbLink>
+                     </BreadcrumbItem>
+                     <BreadcrumbSeparator />
+                     <BreadcrumbItem>
+                        {/* Display Agent Name */}
+                        <BreadcrumbPage>{currentAgent?.name || agentId || 'Agent'}</BreadcrumbPage>
+                     </BreadcrumbItem>
+                     {paramThreadId && ( // Optionally add Thread ID if it exists in URL
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            <BreadcrumbPage>{paramThreadId}</BreadcrumbPage>
+                          </BreadcrumbItem>
+                        </>
+                      )}
+                   </BreadcrumbList>
+                 </Breadcrumb>
+              </div>
+            </>
           ) : (
-            <div className="hidden md:flex items-center gap-2 text-muted-foreground text-sm">
-              {breadcrumbs.length === 0 ? (
-                <span>{getGreeting()}, {user?.name || 'Guest'}</span>
-              ) : (
-                <>
-                  {breadcrumbs[0]?.name.toLowerCase() !== 'dashboard' && (
-                    <>
-                      <Link to="/dashboard" className="hover:text-foreground transition-colors">
-                        Dashboard
-                      </Link>
-                      <span className="mx-1 text-muted-foreground">/</span>
-                    </>
-                  )}
-                  {breadcrumbs.map((crumb, i) => (
-                    <div key={i} className="flex items-center">
-                      {i > 0 && <span className="mx-1 text-muted-foreground">/</span>}
-                      <Link 
-                        to={crumb.path}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        {crumb.name}
-                      </Link>
-                    </div>
-                  ))}
-                </>
-              )}
+            // Standard Breadcrumb Section for other pages
+            <div className="flex items-center gap-2 text-muted-foreground text-sm flex-grow"> {/* Visible on md+, flex-grow */} 
+               {breadcrumbs.length === 0 ? (
+                 <span>{getGreeting()}, {user?.name || 'Guest'}</span>
+               ) : (
+                 <>
+                   {/* Only show Dashboard link if not the first segment */}
+                   {breadcrumbs[0]?.name.toLowerCase() !== 'dashboard' && ( // Check if first segment is not dashboard
+                     <>
+                       <Link to="/dashboard" className="hover:text-foreground transition-colors">
+                         Dashboard
+                       </Link>
+                       <span className="mx-1 text-muted-foreground">/</span>
+                     </>
+                   )}
+                   {/* Render breadcrumbs from path segments */}
+                   {breadcrumbs.map((crumb, i) => (
+                     <div key={i} className="flex items-center">
+                       {i > 0 && <span className="mx-1 text-muted-foreground">/</span>}
+                       <Link
+                         to={crumb.path}
+                         className="hover:text-foreground transition-colors"
+                       >
+                         {crumb.name}
+                       </Link>
+                     </div>
+                   ))}
+                 </>
+               )}
             </div>
           )}
         </div>
@@ -292,7 +353,7 @@ const Header = React.memo(() => {
           {/* Notification Sheet (as implemented before) */}
           <Sheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
                 <Bell className="h-5 w-5" />
                 {pendingInvitations.length > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
@@ -371,8 +432,8 @@ const Header = React.memo(() => {
             </div>
           ) : (
             <>
-              <LanguageToggle />
-              <Button variant="outline" size="sm" className="hidden md:inline-flex hover:bg-muted hover:text-foreground">
+              <LanguageToggle className="hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text" />
+              <Button variant="outline" size="sm" className="hidden md:inline-flex hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
                 {t('editBrand')}
               </Button>
 
@@ -380,8 +441,8 @@ const Header = React.memo(() => {
               {workspace && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent transition-colors">
-                      <Avatar className="bg-primary-foreground text-primary w-8 h-8 flex items-center justify-center border">
+                    <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
+                      <Avatar className="bg-gradient-to-r from-primary-from to-primary-to text-primary-text  w-8 h-8 flex items-center justify-center border">
                         <span className="font-bold text-sm">
                           {/* Display first letter of workspace name, or user email, or 'W' */}
                           {workspace.name ? workspace.name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : "W")}
@@ -404,18 +465,18 @@ const Header = React.memo(() => {
                       </>
                     )}
                     {/* Added View Members DropdownMenuItem */}
-                    <DropdownMenuItem onClick={handleViewMembers} className="cursor-pointer">
+                    <DropdownMenuItem onClick={handleViewMembers} className="cursor-pointer hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text  ">
                       <Users className="mr-2 h-4 w-4" />
                       Xem thành viên
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer">
+                    <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
                       Chọn workspace khác
                     </DropdownMenuItem>
                     {/* You can add more items here, e.g., "Workspace Settings" */}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <Button variant="outline" size="icon" onClick={handleLogout} className="hover:bg-muted hover:text-foreground" aria-label="Logout">
+              <Button variant="outline" size="icon" onClick={handleLogout} className="hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text" aria-label="Logout">
                 <LogOut className="h-5 w-5" />
               </Button>
             </>
@@ -430,7 +491,7 @@ const Header = React.memo(() => {
             const isActive = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path}
-                className={cn("flex items-center px-3 py-2 rounded-md text-sm font-medium", isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/70 hover:text-accent-foreground", "transition-colors")}
+                  className={cn("flex items-center px-3 py-2 rounded-md text-sm font-medium", isActive ? "bg-primary-pink/30 text-primary-foreground dark:bg-primary-pink/50 dark:text-primary-pink" : "hover:bg-primary-pink/30 hover:text-primary-pink dark:hover:bg-primary-pink/50 dark:hover:text-primary-pink", "transition-colors")}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <span className="mr-2.5">{item.icon}</span>

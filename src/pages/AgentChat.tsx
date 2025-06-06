@@ -20,6 +20,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
+import { Label } from '@/components/ui/label';
+import { DialogDescription } from '@/components/ui/dialog';
 
 interface TaskInput {
   id: string;
@@ -466,8 +468,8 @@ const AgentChat = () => {
     }
   } catch (error) {
     console.error('Lỗi khi tạo thread mới:', error);
-    toast({
-      title: "Lỗi!",
+            toast({
+              title: "Lỗi!",
       description: `Không thể tạo cuộc hội thoại mới: ${error instanceof Error ? error.message : String(error)}`,
       variant: "destructive",
     });
@@ -593,7 +595,7 @@ const AgentChat = () => {
             className="fixed inset-0 z-40 bg-black/40 md:hidden"
             onClick={() => setShowMobileSidebar(false)}
           />
-          <aside className="fixed top-0 left-0 h-full w-64 z-50 bg-card border-r flex flex-col md:hidden">
+          <aside className="fixed top-0 left-0 h-full w-64 z-50 primary-gradient border-r flex flex-col md:hidden">
             <button
               className="absolute top-4 right-4 z-50 p-2 bg-gray-100 dark:bg-slate-800 rounded-full border"
               onClick={() => setShowMobileSidebar(false)}
@@ -631,8 +633,8 @@ const AgentChat = () => {
                     <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
                   </div>
                 </div>
-                <div className="p-4 border-b">
-                  <button className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)} >
+                <div className="p-4 border-b hover:primary-gradient ">
+                  <button className="w-full flex items-center justify-center space-x-2 " onClick={() => handleNewChat(currentAgent?.id)} >
                     <Plus className="h-4 w-4" />
                     <span>New chat</span>
                   </button>
@@ -640,7 +642,7 @@ const AgentChat = () => {
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                   {threadsData?.data?.map((thread) => (
                     <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                      <button className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
+                      <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
                         {thread.title ? thread.title : 'New chat'}
                       </button>
                     </div>
@@ -653,7 +655,7 @@ const AgentChat = () => {
       )}
 
       {/* Sidebar luôn hiện ở PC */}
-      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col hidden md:flex">
+      <aside className="w-64 flex-shrink-0 border-r primary-gradient  flex flex-col hidden md:flex">
         {isLoading ? (
           <div className="p-4 space-y-4">
             <div className="flex items-center space-x-3">
@@ -690,15 +692,15 @@ const AgentChat = () => {
                 {isCreatingThread ? (
                   <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span> // Spinner
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 text-black" />
                 )}
-                <span>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text */}
+                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text and color */}
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {threadsData?.data?.map((thread) => (
                 <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                  <button className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
+                  <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
                     {thread.title ? thread.title : 'New chat'}
                   </button>
                 </div>
@@ -760,11 +762,11 @@ const AgentChat = () => {
                     getMessageStyle(msg.sender)
                   )}>
                     {msg.sender === 'agent' ? (
-                       <div className="chat-message">
+                       <div className="chat-message text-card-foreground">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                        </div>
                     ) : (
-                    <p>{msg.content}</p>
+                    <p className="text-primary-foreground">{msg.content}</p>
                     )}
                     <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
                       {/* Check if date is valid before formatting */}
@@ -797,7 +799,7 @@ const AgentChat = () => {
               {/* Vùng hiển thị Task Logs */}
               <div className="mt-4">
                 <button
-                  className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border"
+                  className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border text-muted-foreground"
                   onClick={() => setShowTaskLogs(v => !v)}
                 >
                   {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
@@ -854,7 +856,7 @@ const AgentChat = () => {
                       <div className="flex justify-start mt-4">
                   <Button 
                     variant="outline" 
-                    className="flex items-center gap-2 text-sm"
+                    className="flex items-center gap-2 text-sm text-primary"
                     onClick={handleDailyTaskClick}
                   >
                     <ListPlus className="h-4 w-4" />
@@ -879,7 +881,7 @@ const AgentChat = () => {
                        <Button
                          key={task.id}
                          variant="outline"
-                         className="w-full justify-start border-border"
+                         className="w-full justify-start border-border text-foreground"
                          onClick={() => handleTaskSelect(task)}
                        >
                          {/* Chỉ báo trạng thái thực thi task */}
@@ -915,12 +917,12 @@ const AgentChat = () => {
                            value={selectedTaskInputs[key] || ''} // Lấy giá trị từ state selectedTaskInputs
                            onChange={(e) => handleInputChange(key, e.target.value)}
                            placeholder={`Enter ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).toLowerCase()}`}
-                           className="bg-background text-card-foreground border-border"
+                           className="bg-background text-foreground border-border placeholder:text-primary"
                          />
                      </div>
                    ))}
-                   <Button onClick={handleSubmitTaskInputs} className="teampal-button w-full">Submit Task</Button>
-                   <Button variant="outline" className="w-full border-border" onClick={() => setAboveInputContent('taskList')}>Back to Tasks</Button>
+                   <Button onClick={handleSubmitTaskInputs} className="w-full" variant="default">Submit Task</Button>
+                   <Button variant="outline" className="w-full border-border hover:text-primary" onClick={() => setAboveInputContent('taskList')}>Back to Tasks</Button>
                  </div>
                )}
 
@@ -950,7 +952,7 @@ const AgentChat = () => {
                  <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
                     <Textarea
                       placeholder={t('askAI')}
-                      className="flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-card-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-black focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -966,7 +968,7 @@ const AgentChat = () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
+                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
@@ -977,7 +979,7 @@ const AgentChat = () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
+                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
                           onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
@@ -988,11 +990,11 @@ const AgentChat = () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border border-border h-10 w-10 bg-background hover:bg-muted text-primary md:hidden"
+                          className="rounded-full border border-border h-10 w-10  hover:bg-muted text-black md:hidden"
                           onClick={() => setShowMobileSidebar(true)}
                           aria-label="Lịch sử chat"
                           type="button"
-                          disabled={isCreatingThread || isLoading} // Disable when creating thread or initial loading
+                          disabled={isCreatingThread || isLoading}
                        >
                           <Clock className="h-5 w-5" />
                        </Button>
@@ -1001,7 +1003,7 @@ const AgentChat = () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border-border text-foreground hover:bg-muted h-10 w-10 bg-background"
+                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
                           disabled={isAgentThinking || isCreatingThread || isLoading}
                        >
                           <Paperclip className="h-5 w-5" />
@@ -1012,7 +1014,7 @@ const AgentChat = () => {
                     <Button
                       type="submit"
                       size="icon"
-                      className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="flex-shrink-0  text-black hover:bg-black"
                       onClick={handleSendMessage}
                       disabled={!message.trim() || isSending || !currentThread || isAgentThinking || isCreatingThread || isLoading} // Disable if message is empty, sending, no thread, agent thinking, creating thread, or initial loading
                     >

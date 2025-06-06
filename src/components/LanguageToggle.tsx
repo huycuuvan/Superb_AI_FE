@@ -8,13 +8,13 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
-export const LanguageToggle = () => {
+export const LanguageToggle = ({ className }: { className?: string }) => {
   const { language, setLanguage, t } = useLanguage();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" className={className}>
           {language === 'en' ? 'EN' : 'VN'}
         </Button>
       </DropdownMenuTrigger>

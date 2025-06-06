@@ -161,7 +161,7 @@ const AdminSidebar = () => {
 
   return (
     <div className={cn(
-      'fixed left-0 top-0 h-screen flex flex-col bg-white/40 dark:bg-slate-900/40 border-r border-white/30 dark:border-slate-700/30 backdrop-blur-xl shadow-xl transition-all duration-300 z-50 overflow-hidden',
+      'fixed left-0 top-0 h-screen flex flex-col bg-primary-gradient border-r border-white/30 dark:border-slate-700/30 backdrop-blur-xl shadow-xl transition-all duration-300 z-50 overflow-hidden',
       sidebarWidth
     )}>
       {/* Header */}

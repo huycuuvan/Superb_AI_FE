@@ -50,7 +50,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   children, 
   pageTitle, 
   pageSubtitle, 
-  bgColor = 'bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100',
+  bgColor = 'bg-primary-gradient',
   titleCentered = true 
 }) => {
   const headerRef = useRef<HTMLDivElement>(null);
@@ -68,11 +68,11 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   }, []);
 
   return (
-    <div className={`min-h-screen flex flex-col antialiased font-sans selection:bg-pink-300 selection:text-pink-900 ${bgColor}`}>
+    <div className={`min-h-screen flex flex-col antialiased font-sans selection:bg-primary-pink selection:text-white ${bgColor}`}>
       <div className="absolute inset-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-70">
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-300/30 rounded-full filter blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-pink-300/30 rounded-full filter blur-3xl animate-pulse-slower animation-delay-1000"></div>
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-sky-300/30 rounded-full filter blur-3xl animate-pulse-slow animation-delay-500"></div>
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-primary-purple/30 rounded-full filter blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-primary-pink/30 rounded-full filter blur-3xl animate-pulse-slower animation-delay-1000"></div>
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-primary-indigo/30 rounded-full filter blur-3xl animate-pulse-slow animation-delay-500"></div>
       </div>
       
       <Header />

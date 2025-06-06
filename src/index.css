@@ -311,3 +311,8 @@
 .chat-message tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }
+
+.primary-gradient {
+  @apply bg-gradient-to-r from-[#fdfaff] to-[#fff7fb] text-pink-700;
+}
+

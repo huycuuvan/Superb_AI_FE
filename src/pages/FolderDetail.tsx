@@ -121,17 +121,17 @@ const FolderDetail = () => {
    }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 ">
       {/* Header Folder Detail */}
       <div className="flex items-center gap-2 mb-4">
-        <Folder className="h-6 w-6 text-teampal-500" />
-        <h1 className="text-2xl font-bold">{folder.name}</h1> {/* Hiển thị tên folder từ API */}
+        <Folder className="h-6 w-6 text-primary-text" />
+        <h1 className="text-2xl font-bold text-primary-text">{folder.name}</h1> {/* Hiển thị tên folder từ API */}
         {/* Thêm Dropdown menu cho folder actions nếu cần */}
       </div>
 
       {/* Agents Section Header with Search and Create Button */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-         <h2 className="text-xl font-semibold">Agents ({filteredAgents.length})</h2>
+         <h2 className="text-xl font-semibold text-primary-text">Agents ({filteredAgents.length})</h2>
          <div className="flex flex-col sm:flex-row gap-4">
            <div className="relative w-full sm:w-64">
              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -173,14 +173,14 @@ const FolderDetail = () => {
             {/* Sử dụng canCreateAgent để điều kiện hiển thị Card thêm agent */}
             {canCreateAgent && folder?.id && (
               <Card 
-                className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:border-teampal-300 transition-colors cursor-pointer group"
+                className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-colors cursor-pointer group"
                 onClick={() => {
                   setSelectedAgentFolderId(folder.id);
                   setShowAddAgentDialog(true);
                 }}
               >
                 <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                  <div className="w-12 h-12 rounded-full bg-teampal-100 flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
                     <Plus className="h-6 w-6 text-teampal-500" />
                   </div>
                   <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
@@ -197,17 +197,17 @@ const FolderDetail = () => {
           filteredAgents.map((agent) => (
             <Card 
               key={agent.id} 
-              className="bg-teampal-50 border-none rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              className=" border-none rounded-xl shadow-sm hover:shadow-md hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-shadow cursor-pointer"
               onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
             >
-              <CardHeader className="pb-2 md:pb-3">
+              <CardHeader className="pb-2 md:pb-3 ">
                 <div className="flex items-center gap-2 md:gap-3">
-                  <Avatar className="h-10 w-10 md:h-12 md:w-12 rounded-full overflow-hidden border bg-white flex items-center justify-center">
+                  <Avatar className="h-10 w-10 md:h-12 md:w-12 rounded-full overflow-hidden border bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center">
                     <AvatarImage
                       src={agent.avatar}
                       alt={agent.name}
                     />
-                    <AvatarFallback className="text-teampal-500 font-bold text-lg md:text-xl">
+                    <AvatarFallback className=" font-bold text-lg md:text-xl bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
                       {agent.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>

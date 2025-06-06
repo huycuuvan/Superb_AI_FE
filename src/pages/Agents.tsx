@@ -163,7 +163,7 @@ export const Agents = () => {
           <p className="text-muted-foreground">Manage and interact with your AI agents</p>
         </div>
         {canCreateAgent && (
-          <Button className="teampal-button" onClick={() => setShowAddAgentDialog(true)}>
+          <Button className="bg-gradient-to-r from-primary-from to-primary-to text-primary-text" onClick={() => setShowAddAgentDialog(true)}>
             Create agent
           </Button>
         )}
@@ -314,21 +314,22 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
                 variant="outline" 
                 size="sm" 
                 onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+                className="hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
               >
                 Chat
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)}>View Profile</Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)} className="bg-gradient-to-r from-primary-from to-primary-to text-primary-text">View Profile</Button>
             </div>
           </CardContent>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2">
-                <MoreVertical className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
+                <MoreVertical className="h-4 w-4 hover:text-primary-pink" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onEdit(agent)}>
-                <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
+                <Edit className="mr-2 h-4 w-4 hover:text-primary-pink" /> Chỉnh sửa
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onDelete(agent)}>
                 <Trash className="mr-2 h-4 w-4 text-destructive" /> Xóa
