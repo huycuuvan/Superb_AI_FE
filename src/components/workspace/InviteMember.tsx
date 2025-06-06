@@ -98,7 +98,7 @@ export function InviteMember({ workspaceId, iconOnly }: InviteMemberProps) {
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className={`flex items-center justify-center transition-all duration-150 ease-in-out ${iconOnly ? "w-9 h-9 p-0 rounded-full" : "gap-2 px-3 py-2 text-sm"}`} // Tinh chỉnh style cho iconOnly
+          className={`flex hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text  items-center justify-center transition-all duration-150 ease-in-out ${iconOnly ? "w-9 h-9 p-0 rounded-full" : "gap-2 px-3 py-2 text-sm"}`} // Tinh chỉnh style cho iconOnly
           size={iconOnly ? "icon" : "default"}
           aria-label="Invite member"
         >

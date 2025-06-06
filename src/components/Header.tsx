@@ -242,13 +242,13 @@ const Header = React.memo(() => {
   const pendingInvitations = invitationsData?.data?.filter(inv => inv.Status === 'pending') || [];
 
   // Determine if the current user is the owner of the selected workspace
-  const isWorkspaceOwner = user && workspace && workspace.ownerId === user.id;
+  const isWorkspaceOwner = user && workspace && workspace.owner_id === user.id;
 
   // Find the member object to display info in the confirmation modal
   const memberToConfirmRemoval = membersData?.data.find(member => member.user_id === memberToRemoveId);
 
   return (
-    <header className="bg-primary-gradient border-b border-border relative z-10">
+    <header className="bg-primary-gradient border-b border-border relative z-10 dark:bg-slate-900 dark:border-slate-800">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
         {/* Left Section: Mobile Menu Toggle & Breadcrumbs/Agent Info */}
         <div className="flex items-center gap-4 flex-grow"> {/* Add flex-grow here */} 

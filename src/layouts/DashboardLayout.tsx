@@ -13,11 +13,11 @@ const DashboardLayout = () => {
     <ProtectedRoute>
       <ThemeProvider>
         <LanguageProvider>
-          <div className="flex h-screen primary-gradient">
-            <Sidebar className="hidden md:block" />
+          <div className="flex h-screen primary-gradient ">
+            <Sidebar className="hidden md:block dark:bg-slate-900 dark:border-slate-800" />
             <div className="flex flex-col flex-1 overflow-hidden w-full">
               <Header />
-              <main className={`flex-1 overflow-y-auto bg-primary-gradient ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
+              <main className={`flex-1 overflow-y-auto dark:bg-slate-900 dark:border-slate-800 bg-primary-gradient ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
                 <Outlet />
               </main>
             </div>

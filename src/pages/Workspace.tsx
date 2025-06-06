@@ -219,7 +219,7 @@ const WorkspacePage = () => {
         <LogOut className="w-4 h-4" />
         Logout
       </Button>
-      <div ref={cardRef} className="w-full max-w-md relative z-10">
+      <div ref={cardRef} className="w-full max-w-lg relative z-10">
         <Card className="shadow-2xl rounded-xl bg-white border border-gray-200 dark:bg-[#18181b] dark:border-gray-700">
           <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800 dark:text-white">Your Workspace</CardTitle>
@@ -288,42 +288,54 @@ const WorkspacePage = () => {
               <>
                 {workspaces.length > 0 && (
                   <div className="w-full space-y-4">
-                    {workspaces.map((workspace) => (
-                      <div key={workspace.id} className="mb-3 last:mb-0">
-                        <div
-                          className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
-                          onClick={() => handleSelectWorkspace(workspace.id)}
-                        >
-                          <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base dark:bg-gray-700 dark:text-white">
-                            <span className="font-bold dark:text-white">{workspace.name.charAt(0).toUpperCase()}</span>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-base text-slate-800 dark:text-white truncate leading-tight">{workspace.name}</div>
-                            {workspace.description && (
-                              <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight">{workspace.description}</div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 ml-auto">
-                            <InviteMember workspaceId={workspace.id} iconOnly={true} />
-                            <button
-                              className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                              onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
-                              aria-label="Go to Dashboard"
-                            >
-                              <ArrowRight className="w-5 h-5" />
-                            </button>
-                            <Button 
-                              variant="default"
-                              size="sm"
-                              className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 dark:text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
-                              onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
-                            >
-                              Go to Dashboard
-                            </Button>
+                    {workspaces.map((workspace) => {
+                      console.log('Workspace:', workspace.name);
+                      console.log('Workspace Owner ID:', workspace.owner_id);
+                      console.log('Current User ID:', user?.id);
+                      return (
+                        <div key={workspace.id} className="mb-3 last:mb-0">
+                          <div
+                            className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
+                            onClick={() => handleSelectWorkspace(workspace.id)}
+                          >
+                            <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base dark:bg-gray-700 dark:text-white">
+                              <span className="font-bold dark:text-white">{workspace.name.charAt(0).toUpperCase()}</span>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-base text-slate-800 dark:text-white leading-tight flex items-center gap-2">
+                                <span className="truncate">{workspace.name}</span>
+                                {user && (
+                                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50">
+                                    {workspace.owner_id === user.id ? 'Sở hữu' : 'Thành viên'}
+                                  </span>
+                                )}
+                              </div>
+                              {workspace.description && (
+                                <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight">{workspace.description}</div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 ml-auto">
+                              <InviteMember workspaceId={workspace.id} iconOnly={true} />
+                              <button
+                                className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
+                                aria-label="Go to Dashboard"
+                              >
+                                <ArrowRight className="w-5 h-5" />
+                              </button>
+                              <Button 
+                                variant="default"
+                                size="sm"
+                                className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 dark:text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
+                                onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
+                              >
+                                Go to Dashboard
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>

@@ -175,7 +175,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           className
         )}
       >
-        <div className="flex items-center p-[14px] border-b border-border dark:border-slate-800">
+        <div className="flex items-center p-[14px] border-b border-border dark:bg-slate-900 dark:border-slate-800">
           <div className="flex items-center space-x-2">
             
             {!collapsed && (

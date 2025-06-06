@@ -162,7 +162,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 text-foreground">
+    <div className="space-y-6 text-foreground ">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -232,20 +232,18 @@ const Dashboard = () => {
                 </DropdownMenu>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                <Card 
-                  className="border-dashed border-2 rounded-xl transition-colors cursor-pointer group bg-muted/30 border-border hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
+                <Card
+                  className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
                   onClick={() => {
                     setSelectedFolderId(folder.id);
                     setShowAddAgentDialog(true);
                   }}
                 >
-                  <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
-                      <Plus className="h-6 w-6 text-primary " />
-                    </div>
-                    <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
-                    <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
-                  </CardContent>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
+                    <Plus className="h-6 w-6 text-primary " />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
+                  <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
                 </Card>
                 {/* Render AgentsForFolder component for this folder */}
                 <AgentsForFolder folderId={folder.id} navigate={navigate} />
@@ -383,9 +381,9 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
   return (
     <>
       {agents.map((agent: Agent) => (
-        <Card 
-          key={agent.id} 
-          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-colors"
+        <Card
+          key={agent.id}
+          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40"
           onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
         >
           <Avatar className="w-12 h-12">
@@ -394,9 +392,9 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
               {agent.name.charAt(0)}
             </div>
           </Avatar>
-          <div>
-            <CardTitle className="text-lg">{agent.name}</CardTitle>
-            <CardDescription>{agent.role_description}</CardDescription>
+          <div className="flex-1 overflow-hidden">
+            <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground line-clamp-2">{agent.role_description}</CardDescription>
           </div>
         </Card>
       ))}
