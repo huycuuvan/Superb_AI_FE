@@ -17,7 +17,12 @@ import {
   ShoppingCart,
   DollarSign,
   Activity,
-  ChevronDown
+  ChevronDown,
+  Star,
+  BrainCircuit,
+  BarChart3,
+  PieChart,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -37,7 +42,7 @@ import {
   Bar,
   LineChart,
   Line,
-  PieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell,
   RadarChart,
@@ -186,12 +191,16 @@ const performanceData = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-// 3D illustration URLs
-const DASHBOARD_3D_ICON = "https://cdn.iconscout.com/3d/premium/thumb/dashboard-4567890-3801234.png";
-const USERS_3D_ICON = "https://cdn.iconscout.com/3d/premium/thumb/user-group-4567890-3801234.png";
-const SESSIONS_3D_ICON = "https://cdn.iconscout.com/3d/premium/thumb/online-status-4567890-3801234.png";
-const DOCS_3D_ICON = "https://cdn.iconscout.com/3d/premium/thumb/document-4567890-3801234.png";
-const CLOCK_3D_ICON = "https://cdn.iconscout.com/3d/premium/thumb/clock-4567890-3801234.png";
+// Free 3D illustrations & animations from IconScout
+// const DASHBOARD_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-dashboard-1954033-1650720.png?f=webp";
+// const USERS_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-users-group-3695642-3081772.png?f=webp";
+// const SESSIONS_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-message-7291434-5950901.png?f=webp";
+// const DOCS_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-document-1459459-1231535.png?f=webp"; 
+// const CLOCK_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-clock-1439794-1214370.png?f=webp";
+// const CHART_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-bar-chart-1767002-1502119.png?f=webp";
+// const TASK_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-task-completion-1976138-1673546.png?f=webp";
+// const AVATAR_3D_ICON = "https://static.iconscout.com/icon/free/png-256/free-avatar-370-456322.png?f=webp";
+// const ACTIVITY_3D_ANIMATION = "https://static.iconscout.com/animation/free/preview/loading-5123018-4299174.gif";
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -206,13 +215,74 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // TODO: Replace with actual API calls
-        const response = await fetch('/api/admin/dashboard');
-        const data = await response.json();
-        
-        setStats(data.stats || defaultStats);
-        setActivities(data.activities || defaultActivities);
-        setProjects(data.projects || defaultProjects);
+        // Simulate API call with mock data
+        setTimeout(() => {
+          setStats({
+            totalUsers: 1456,
+            activeSessions: 342,
+            totalDocuments: 2570,
+            avgResponseTime: 1.8,
+            change: {
+              users: 12.5,
+              sessions: 8.3,
+              documents: 15.2,
+              responseTime: -6.2
+            }
+          });
+          
+          setActivities([
+            {
+              id: 1,
+              user: "John Doe",
+              action: "uploaded a new document",
+              target: "Financial Report Q2",
+              time: "5 mins ago",
+              avatar: "https://ui-avatars.com/api/?name=John+Doe&background=6366f1&color=fff"
+            },
+            {
+              id: 2,
+              user: "Sarah Johnson",
+              action: "created a new workspace",
+              target: "Marketing Team",
+              time: "30 mins ago",
+              avatar: "https://ui-avatars.com/api/?name=Sarah+Johnson&background=10b981&color=fff"
+            },
+            {
+              id: 3,
+              user: "Mike Brown",
+              action: "added new members to",
+              target: "Sales Department",
+              time: "2 hours ago",
+              avatar: "https://ui-avatars.com/api/?name=Mike+Brown&background=f59e0b&color=fff"
+            }
+          ]);
+          
+          setProjects([
+            {
+              name: "Product Launch",
+              progress: 75,
+              status: "In Progress",
+              team: ["John D.", "Sarah J.", "Mike B."],
+              dueDate: "Jul 15, 2024"
+            },
+            {
+              name: "Marketing Campaign",
+              progress: 45,
+              status: "In Progress",
+              team: ["Emily R.", "Chris P."],
+              dueDate: "Aug 3, 2024"
+            },
+            {
+              name: "Website Redesign",
+              progress: 90,
+              status: "Completed",
+              team: ["Alex T.", "Mia L.", "Daniel S."],
+              dueDate: "Jun 30, 2024"
+            }
+          ]);
+          
+          setLoading(false);
+        }, 800);
       } catch (err) {
         setError('Failed to load dashboard data');
         toast({
@@ -220,7 +290,6 @@ const AdminDashboard = () => {
           description: "Failed to load dashboard data. Please try again later.",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
       }
     };
@@ -230,8 +299,13 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <img 
+          src="https://static.iconscout.com/animation/free/preview/loading-5123018-4299174.gif" 
+          alt="Loading" 
+          className="w-20 h-20 mb-4" 
+        />
+        <p className="text-muted-foreground">Loading dashboard data...</p>
       </div>
     );
   }
@@ -244,11 +318,11 @@ const AdminDashboard = () => {
     );
   }
 
-  const StatCard = ({ title, value, change, isPositive, icon: Icon, description, color, chartData, chartType = 'line', gradientFrom, gradientTo, illustration }) => (
-    <Card className="hover:shadow-2xl transition-shadow bg-white/40 dark:bg-slate-900/40 border border-white/30 dark:border-slate-700/40 backdrop-blur-xl shadow-xl rounded-xl group overflow-hidden">
+  const StatCard = ({ title, value, change, isPositive, icon: Icon, description, color, chartData, chartType = 'line', gradientFrom, gradientTo }) => (
+    <Card className="hover:shadow-lg transition-all duration-300 bg-white/40 dark:bg-slate-900/40 border border-white/30 dark:border-slate-700/40 backdrop-blur-sm shadow-md rounded-xl overflow-hidden transform hover:translate-y-[-2px]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          {illustration && <img src={illustration} alt="" className="h-7 w-7" />}
+          <Icon className={`h-7 w-7 ${color} drop-shadow-md animate-pulse`} />
           {title}
         </CardTitle>
         <span className="rounded-full p-2 bg-gradient-to-br from-white/60 to-white/10 dark:from-slate-700/60 dark:to-slate-900/10 shadow-md">
@@ -256,446 +330,316 @@ const AdminDashboard = () => {
         </span>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-slate-900 dark:text-white drop-shadow-sm">{value}</div>
-        <div className="flex items-center text-xs text-muted-foreground mb-4">
-          {isPositive ? (
-            <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-          ) : (
-            <ArrowDownRight className="h-3 w-3 text-rose-500 mr-1" />
+        <div className="flex items-end gap-2">
+          <span className="text-3xl font-bold">{value}</span>
+          {typeof change === 'number' && (
+            <span className={`text-xs font-semibold ${isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+              {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+              {Math.abs(change)}%
+            </span>
           )}
-          {change} {description}
         </div>
-        <div className="h-[100px]">
-          <ResponsiveContainer width="100%" height="100%">
+        {description && <div className="text-xs text-muted-foreground mt-1">{description}</div>}
+        {chartData && (
+          <div className="mt-2">
             {chartType === 'line' ? (
-              <LineChart data={chartData}>
-                <defs>
-                  <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={gradientFrom} stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor={gradientTo} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'var(--background)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={gradientFrom} 
-                  strokeWidth={2}
-                  dot={false}
-                  fill={`url(#gradient-${title})`}
-                />
-              </LineChart>
-            ) : chartType === 'area' ? (
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={gradientFrom} stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor={gradientTo} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'var(--background)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={gradientFrom} 
-                  fill={`url(#gradient-${title})`}
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            ) : (
-              <RechartsBarChart data={chartData}>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'var(--background)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px'
-                  }}
-                />
-                <Bar dataKey="value" fill={`url(#gradient-${title})`}>
-                  <defs>
-                    <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={gradientFrom} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={gradientTo} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                </Bar>
-              </RechartsBarChart>
-            )}
-          </ResponsiveContainer>
-        </div>
+              <ResponsiveContainer width="100%" height={32}>
+                <LineChart data={chartData}>
+                  <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : null}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header with 3D illustration */}
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
-          <img src={DASHBOARD_3D_ICON} alt="Dashboard" className="h-12 w-12" />
+    <div className="space-y-6 p-4 sm:p-6 bg-gradient-to-br from-white to-slate-50 dark:from-slate-950 dark:to-slate-900 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+            <img src="https://static.iconscout.com/icon/free/png-256/free-dashboard-1954033-1650720.png?f=webp" alt="Dashboard" className="h-8 w-8" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Here's what's happening with your admin panel today.
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300">
+              Dashboard
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Welcome to your administration dashboard
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              {timeRanges.map((range) => (
-                <SelectItem key={range.value} value={range.value}>
-                  {range.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={timeRange}
+          onValueChange={setTimeRange}
+        >
+          <SelectTrigger className="w-[180px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <SelectValue placeholder="Time Range" />
+          </SelectTrigger>
+          <SelectContent>
+            {timeRanges.map((range) => (
+              <SelectItem key={range.value} value={range.value}>
+                {range.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Stats Grid with 3D icons */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
-          value={stats.totalUsers.toLocaleString()}
-          change={`${stats.change.users}%`}
+          value={stats.totalUsers}
+          change={stats.change.users}
           isPositive={stats.change.users > 0}
           icon={Users}
-          description="From last month"
+          description="vs last month"
           color="text-blue-500"
           chartData={userStatsData}
-          chartType="area"
+          chartType="line"
           gradientFrom="#6366f1"
-          gradientTo="#a5b4fc"
-          illustration={USERS_3D_ICON}
+          gradientTo="#6366f140"
         />
         <StatCard
           title="Active Sessions"
-          value={stats.activeSessions.toLocaleString()}
-          change={`${stats.change.sessions}%`}
+          value={stats.activeSessions}
+          change={stats.change.sessions}
           isPositive={stats.change.sessions > 0}
-          icon={UserCheck}
-          description="Active in last 24h"
-          color="text-emerald-500"
+          icon={MessageSquare}
+          description="vs last month"
+          color="text-green-500"
           chartData={sessionStatsData}
           chartType="line"
           gradientFrom="#10b981"
-          gradientTo="#6ee7b7"
-          illustration={SESSIONS_3D_ICON}
+          gradientTo="#10b98140"
         />
         <StatCard
           title="Total Documents"
-          value={stats.totalDocuments.toLocaleString()}
-          change={`${stats.change.documents}%`}
+          value={stats.totalDocuments}
+          change={stats.change.documents}
           isPositive={stats.change.documents > 0}
           icon={FileText}
-          description="From last month"
+          description="vs last month"
           color="text-amber-500"
           chartData={documentStatsData}
-          chartType="bar"
-          gradientFrom="#f59e42"
-          gradientTo="#fde68a"
-          illustration={DOCS_3D_ICON}
+          chartType="line"
+          gradientFrom="#f59e0b"
+          gradientTo="#f59e0b40"
         />
         <StatCard
-          title="Avg. Response Time"
+          title="Response Time"
           value={`${stats.avgResponseTime}s`}
-          change={`${stats.change.responseTime}s`}
+          change={stats.change.responseTime}
           isPositive={stats.change.responseTime < 0}
           icon={Clock}
-          description="From last week"
-          color="text-rose-500"
+          description="vs last month"
+          color="text-purple-500"
           chartData={responseTimeData}
           chartType="line"
-          gradientFrom="#f43f5e"
-          gradientTo="#fda4af"
-          illustration={CLOCK_3D_ICON}
+          gradientFrom="#8b5cf6"
+          gradientTo="#8b5cf640"
         />
       </div>
 
-      {/* Main Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Sales Overview Chart */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Sales Overview</CardTitle>
-            <CardDescription>Monthly sales performance</CardDescription>
+      {/* Middle Charts Section */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-2 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-white dark:bg-slate-950 pb-2 border-b border-slate-100 dark:border-slate-800/60 flex flex-row items-center">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-6 w-6 text-blue-500" />
+                <CardTitle>User Activity</CardTitle>
+              </div>
+              <CardDescription>Users and sessions over time</CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary" className="bg-blue-50 hover:bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                <Users className="h-3.5 w-3.5 mr-1" />
+                Users
+              </Badge>
+              <Badge variant="secondary" className="bg-green-50 hover:bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                <Activity className="h-3.5 w-3.5 mr-1" />
+                Sessions
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
+          <CardContent className="p-0">
+            <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
+                <ComposedChart
+                  data={userActivityData}
+                  margin={{
+                    top: 20,
+                    right: 20,
+                    bottom: 20,
+                    left: 20,
+                  }}
+                >
+                  <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
-                  <Area type="monotone" dataKey="value" stroke="#8884d8" fillOpacity={1} fill="url(#colorValue)" />
-                </AreaChart>
+                  <Legend />
+                  <Bar dataKey="users" fill="#6366f1" name="Users" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="sessions" stroke="#10b981" strokeWidth={2} name="Sessions" />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Task Distribution Chart */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Task Distribution</CardTitle>
-            <CardDescription>Current task status overview</CardDescription>
+        <Card className="overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-white dark:bg-slate-950 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <div className="flex items-center gap-2">
+              <PieChart className="h-6 w-6 text-purple-500" />
+              <CardTitle>Task Distribution</CardTitle>
+            </div>
+            <CardDescription>Current task status</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <RechartsPieChart>
                   <Pie
                     data={taskDistributionData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
+                    innerRadius={60}
                     outerRadius={80}
                     fill="#8884d8"
+                    paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
                     {taskDistributionData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
-                </PieChart>
+                </RechartsPieChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Secondary Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* User Activity Chart */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>User Activity</CardTitle>
-            <CardDescription>Daily user engagement metrics</CardDescription>
+      {/* Bottom Grid Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        {/* Recent Activity Section */}
+        <Card className="lg:col-span-3 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-white dark:bg-slate-950 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-500" />
+              Recent Activity
+            </CardTitle>
+            <CardDescription>Latest user activities</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={userActivityData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="users" stroke="#8884d8" name="Users" />
-                  <Line type="monotone" dataKey="sessions" stroke="#82ca9d" name="Sessions" />
-                </LineChart>
-              </ResponsiveContainer>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {activities.map((activity) => (
+                <div key={activity.id} className="flex items-start p-4 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors duration-200">
+                  <Avatar className="h-9 w-9 mr-4 border-2 border-white shadow-sm">
+                    <AvatarImage src={activity.avatar} alt={activity.user} />
+                    <AvatarFallback>
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium leading-none">
+                        <span className="font-semibold">{activity.user}</span>{" "}
+                        <span className="text-muted-foreground">{activity.action}</span>{" "}
+                        <span className="font-medium">{activity.target}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {activities.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                  <img src="https://static.iconscout.com/icon/free/png-256/free-empty-3665355-3065657.png?f=webp" className="w-16 h-16 mb-4 opacity-50" alt="No activities" />
+                  <p className="text-sm text-muted-foreground">No recent activities found</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Performance Metrics Chart */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Performance Metrics</CardTitle>
-            <CardDescription>Team performance by category</CardDescription>
+        {/* Performance Chart */}
+        <Card className="lg:col-span-2 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-white dark:bg-slate-950 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+              System Performance
+            </CardTitle>
+            <CardDescription>Metrics by category</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={performanceData}>
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceData}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="name" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <PolarRadiusAxis />
                   <Radar
                     name="Performance"
                     dataKey="value"
-                    stroke="#8884d8"
-                    fill="#8884d8"
+                    stroke="#6366f1"
+                    fill="#6366f1"
                     fillOpacity={0.6}
                   />
-                  <Tooltip />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Recent Activity and Projects Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Activity */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest actions in your workspace</CardDescription>
+        {/* Projects Status */}
+        <Card className="lg:col-span-2 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-white dark:bg-slate-950 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-amber-500" />
+              Projects Status
+            </CardTitle>
+            <CardDescription>Ongoing project progress</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {activities.length > 0 ? (
-                activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start">
-                    <Avatar className="h-9 w-9 mr-3">
-                      <AvatarImage src={activity.avatar} alt="Avatar" />
-                      <AvatarFallback>{activity.user[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">
-                          {activity.user}{' '}
-                          <span className="font-normal text-muted-foreground">
-                            {activity.action}{' '}
-                            <span className="font-medium text-foreground">
-                              {activity.target}
-                            </span>
-                          </span>
-                        </p>
-                        <div className="text-xs text-muted-foreground">
-                          {activity.time}
-                        </div>
-                      </div>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {projects.map((project, index) => (
+                <div key={index} className="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors duration-200">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="font-medium">{project.name}</div>
+                    <Badge variant={
+                      project.status === 'Completed' ? 'default' : 
+                      project.status === 'In Progress' ? 'secondary' :
+                      project.status === 'On Hold' ? 'outline' : 'destructive'
+                    }>
+                      {project.status}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{project.team.join(', ')}</span>
+                      <span className="font-medium">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-1" />
+                    <div className="flex justify-between text-xs">
+                      <span>Due: <span className="text-muted-foreground">{project.dueDate}</span></span>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent activities
-                </p>
+                </div>
+              ))}
+              {projects.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                  <img src="https://static.iconscout.com/icon/free/png-256/free-empty-3665355-3065657.png?f=webp" className="w-16 h-16 mb-4 opacity-50" alt="No projects" />
+                  <p className="text-sm text-muted-foreground">No projects found</p>
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Projects Progress */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Active Projects</CardTitle>
-            <CardDescription>Track your team's progress</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {projects.length > 0 ? (
-                projects.map((project, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium">{project.name}</h3>
-                      <Badge variant="outline">{project.status}</Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Progress: {project.progress}%</span>
-                        <span>Due: {project.dueDate}</span>
-                      </div>
-                      <Progress value={project.progress} className="h-2" />
-                      <div className="flex -space-x-2">
-                        {project.team.map((member, i) => (
-                          <Avatar key={i} className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={member} />
-                            <AvatarFallback>TM</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No active projects
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Stats with Illustrations */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              New Messages
-            </CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">+12</div>
-                <p className="text-xs text-muted-foreground">
-                  Since last hour
-                </p>
-              </div>
-              <img 
-                src="https://cdn-iconscout.com/illustration/premium/thumb/message-notification-3678644-3098691.png" 
-                alt="Messages" 
-                className="h-16 w-16 object-contain"
-              />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Documents Pending Review
-            </CardTitle>
-            <FileCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground">
-                  Waiting for approval
-                </p>
-              </div>
-              <img 
-                src="https://cdn-iconscout.com/illustration/premium/thumb/document-review-3678644-3098691.png" 
-                alt="Documents" 
-                className="h-16 w-16 object-contain"
-              />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              System Health
-            </CardTitle>
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">Operational</div>
-                <p className="text-xs text-muted-foreground">
-                  All systems normal
-                </p>
-              </div>
-              <img 
-                src="https://cdn-iconscout.com/illustration/premium/thumb/system-health-3678644-3098691.png" 
-                alt="System Health" 
-                className="h-16 w-16 object-contain"
-              />
             </div>
           </CardContent>
         </Card>
@@ -704,4 +648,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

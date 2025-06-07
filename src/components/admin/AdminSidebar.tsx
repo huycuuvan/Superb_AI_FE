@@ -121,32 +121,32 @@ const AdminSidebar = () => {
       <Tooltip key={item.href}>
         <TooltipTrigger asChild>
           <Link to={item.href} className="block relative">
-            <Button
-              variant="ghost"
+            <div
               className={cn(
-                'w-full justify-start h-12 transition-all duration-200 font-semibold rounded-xl relative z-10',
-                isCollapsed ? 'px-3' : 'px-4',
+                'w-full flex h-11 items-center px-3 mb-1 rounded-lg transition-all duration-200',
+                isCollapsed && 'justify-center',
                 isActive
-                  ? 'bg-neutral-200/70 dark:bg-neutral-800/70 text-slate-900 dark:text-white shadow'
-                  : 'hover:bg-black/10 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/50'
               )}
             >
-              <span className={cn(
-                'rounded-full p-2 flex items-center justify-center',
-                isActive
-                  ? 'bg-white/70 dark:bg-slate-800/70'
-                  : 'bg-white/30 dark:bg-slate-800/30'
-              )}>
-                <Icon className={cn('h-5 w-5', isActive ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400')} />
-              </span>
+              <Icon className={cn(
+                'h-5 w-5 flex-shrink-0',
+                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+              )} />
+              
               {!isCollapsed && (
-                <span className="ml-3">{item.title}</span>
+                <span className="ml-3 text-sm">{item.title}</span>
               )}
-            </Button>
+              
+              {!isCollapsed && isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-blue-600 dark:bg-blue-500 rounded-full" />
+              )}
+            </div>
           </Link>
         </TooltipTrigger>
         {isCollapsed && (
-          <TooltipContent side="right" className="ml-2">
+          <TooltipContent side="right" align="start" className="ml-2 border-none shadow-lg bg-white dark:bg-slate-800">
             <p>{item.title}</p>
             <p className="text-xs text-muted-foreground">{item.description}</p>
           </TooltipContent>
@@ -161,52 +161,51 @@ const AdminSidebar = () => {
 
   return (
     <div className={cn(
-      'fixed left-0 top-0 h-screen flex flex-col bg-primary-gradient border-r border-white/30 dark:border-slate-700/30 backdrop-blur-xl shadow-xl transition-all duration-300 z-50 overflow-hidden',
+      'fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 z-50 overflow-hidden',
       sidebarWidth
     )}>
       {/* Header */}
-      <div className={cn(
-        'flex items-center justify-between h-16 px-4 border-b border-white/30 dark:border-slate-700/30 relative z-10',
-        isCollapsed ? 'px-3' : 'px-4'
-      )}>
+      <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800">
         {!isCollapsed && (
           <Link to="/admin/dashboard" className="flex items-center gap-2">
-            <span className="p-2 rounded-lg bg-white/70 dark:bg-slate-800/70 shadow">
-              <Bot className="h-6 w-6 text-blue-600" />
-            </span>
-            <span className="text-lg font-extrabold text-slate-900 dark:text-white">Admin Panel</span>
+            <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-blue-600 text-white">
+              <Bot className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">EmployeeAI</span>
           </Link>
         )}
         {isCollapsed && (
           <div className="flex justify-center w-full">
-            <span className="p-2 rounded-lg bg-white/70 dark:bg-slate-800/70 shadow">
-              <Bot className="h-6 w-6 text-blue-600" />
-            </span>
+            <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-blue-600 text-white">
+              <Bot className="h-5 w-5" />
+            </div>
           </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="h-8 w-8"
+          className="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-full"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 relative z-10">
-        {menuItems.map((item, index) => renderNavItem(item, index))}
-      </nav>
+      <div className="flex flex-col px-3 py-4 flex-1 overflow-y-auto">
+        <div className="space-y-1">
+          {menuItems.map((item, index) => renderNavItem(item, index))}
+        </div>
+      </div>
 
       {/* Footer */}
-      <div className="border-t border-white/30 dark:border-slate-700/30 p-4 relative z-10">
-        <div className="flex items-center justify-between">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-3">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
                 <AvatarImage src="/avatars/admin.png" alt="Admin" />
-                <AvatarFallback>AD</AvatarFallback>
+                <AvatarFallback className="bg-blue-600 text-white">AD</AvatarFallback>
               </Avatar>
               <div className="text-sm">
                 <p className="font-medium text-slate-900 dark:text-white">Admin User</p>
@@ -214,12 +213,19 @@ const AdminSidebar = () => {
               </div>
             </div>
           )}
-          <Button variant="ghost" size="icon">
-            <LogOut className="h-5 w-5 text-slate-500 dark:text-slate-400" />
-          </Button>
-        </div>
-        <div className="mt-4 flex justify-center">
-          <ThemeToggle />
+          {isCollapsed && (
+            <div className="flex justify-center w-full">
+              <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
+                <AvatarImage src="/avatars/admin.png" alt="Admin" />
+                <AvatarFallback className="bg-blue-600 text-white">AD</AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+          {!isCollapsed && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-full">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -3,22 +3,23 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; 
-import { Button } from '@/components/ui/button';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/swiper-bundle.css';
 import { createAvatar } from '@dicebear/core';
 import { openPeeps } from '@dicebear/collection';
+import Lottie from "lottie-react"; // Import thư viện Lottie
 
+// Đăng ký plugin GSAP một lần và đảm bảo nó chỉ chạy ở phía client
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
 }
 
+// === COMPONENT ICON PLACEHOLDER ===
 const PlaceholderIcon: React.FC<{ className?: string; path?: string }> = ({ className, path }) => (
   <svg className={`w-6 h-6 ${className}`} fill="currentColor" viewBox="0 0 20 20">
     <path d={path || "M10 3a7 7 0 100 14 7 7 0 000-14zM2 10a8 8 0 1116 0 8 8 0 01-16 0z"} />
   </svg>
 );
 
+// === HEADER ===
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -32,33 +33,36 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <>
       <header 
-        className={`fixed left-0 right-0 z-40 transition-all duration-300 ease-in-out 
-                    ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-lg py-3 top-0' : 'py-4 top-0'}`}
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold text-gray-800">
-            Superb AI
+      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ease-in-out 
+                  ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] py-3' : 'py-4'}`}
+    >
+      <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center text-2xl font-bold text-gray-800">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="mr-2 h-7 w-7 text-purple-600">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+          </svg>
+          <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Superb AI</span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-5 lg:space-x-7">
-            <a href="pricing" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Pricing</a>
-            <a href="about" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">About</a>
-            <a href="docs" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Docs</a>
-            <a href="blog" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Blog</a>
+        <nav className="hidden items-center space-x-8 md:flex">
+          {['Pricing', 'About', 'Docs', 'Blog'].map(item => (
+            <a key={item} href={`#${item.toLowerCase()}`} className="group relative text-base font-medium text-gray-600 transition-colors hover:text-purple-600">
+              {item}
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          ))}
           </nav>
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <Link to="/login" className="text-md font-medium text-gray-700 hover:text-purple-600 transition-colors">Login</Link>
-            <Link to="/register" className="bg-purple-600 text-white px-4 py-2 sm:px-5 sm:py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center group">
-              Sign up
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transform transition-transform duration-200 group-hover:translate-x-0.5">
+        <div className="flex items-center space-x-4">
+          <Link to="/login" className="text-base font-medium text-gray-600 transition-colors hover:text-purple-600">Login</Link>
+          <Link to="/register" className="group flex items-center rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30">
+            Sign Up Free
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="ml-1.5 h-4 w-4 transform transition-transform duration-300 group-hover:translate-x-1">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
               </svg>
             </Link>
           </div>
         </div>
       </header>
-    </>
   );
 };
 
@@ -69,105 +73,73 @@ const HeroSection: React.FC = () => {
   useEffect(() => {
     if (!heroRef.current) return;
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' }});
-    gsap.killTweensOf(heroRef.current.querySelectorAll(".hero-plus, h1, .hero-subtitle, .hero-cta, .hero-lovedby"));
+    gsap.killTweensOf(".hero-element");
 
-    tl.from(heroRef.current.querySelectorAll(".hero-plus"), {
-        scale: 0,
+    tl.from(".hero-element", {
+      y: 50,
         opacity: 0,
         stagger: 0.15,
-        duration: 0.7,
+      duration: 0.8,
         delay: 0.3 
-      })
-      .from(heroRef.current.querySelector("h1"), { y: 60, opacity: 0, duration: 0.9 }, "-=0.4")
-      .from(heroRef.current.querySelector(".hero-subtitle"), { y: 40, opacity: 0, duration: 0.7 }, "-=0.6")
-      .from(heroRef.current.querySelector(".hero-cta"), { scale: 0.7, opacity: 0, duration: 0.6, ease: 'back.out(1.7)' }, "-=0.4")
-      .from(heroRef.current.querySelector(".hero-lovedby"), { y: 30, opacity: 0, duration: 0.5 }, "-=0.3");
+    }).from(".browser-mockup-element", {
+      y: 80,
+      scale: 0.9,
+      opacity: 0,
+      duration: 1.2,
+      ease: 'expo.out'
+    }, "-=0.6");
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center  pb-16 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
-      <div className="hero-plus absolute top-[20%] right-[20%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute top-[22%] right-[30%] w-7 h-7 md:w-10 md:h-10 text-pink-400 opacity-70 transform -rotate-6 animate-pulse-slower animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[50%] left-[25%] w-4 h-4 md:w-6 md:h-6 text-indigo-400 opacity-50 transform rotate-45 animate-pulse-slow delay-200 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[40%] right-[30%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-      <div className="hero-plus absolute bottom-[55%] right-[70%] w-6 h-6 md:w-9 md:h-9 text-purple-300 opacity-60 transform rotate-[-30deg] animate-pulse-slower delay-400 animate-rotateInfinite"><svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg></div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <p className="text-2xl sm:text-sm font-medium text-purple-600 mb-2 sm:mb-3 tracking-wider uppercase">COMPLETE YOUR WORK IN MINUTES</p>
-        <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-6xl font-extrabold text-gray-900 mb-5 sm:mb-6 leading-tight">
-        Your AI Workforce Management Platform<br className="hidden sm:block"/>
-          <span className="relative inline-block mx-1">
-            every
-            <span className="absolute inset-x-0 bottom-0 h-2 sm:h-2.5 md:h-3 bg-purple-200 -z-10 transform translate-y-0.5 sm:translate-y-1"></span>
-          </span>
-          <span className="text-purple-600">task</span>
-        </h1>
-        <p className="hero-subtitle text-base sm:text-lg md:text-xl text-gray-600 max-w-xl md:max-w-2xl mx-auto mb-8 sm:mb-10">
-          Superb AI is your all-in-one AI workspace for writing, research, AI chat, voiceovers, image creation and beyond.
-        </p>
-        <button className="hero-cta bg-purple-600 text-white px-7 py-3 sm:px-8 sm:py-3.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 text-base sm:text-lg flex items-center mx-auto group">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-          </svg>
-          Get Started - It's free
-        </button>
+    <section ref={heroRef} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/50 pt-20 pb-16">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute -top-1/4 -left-1/4 h-1/2 w-1/2 rounded-full bg-purple-200/20 opacity-50 blur-3xl"></div>
+        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-pink-200/20 opacity-50 blur-3xl"></div>
       </div>
-    </section>
-  );
-};
-
-// === DASHBOARD PREVIEW SECTION ===
-const DashboardPreviewSection: React.FC = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    gsap.from(sectionRef.current.querySelector(".dashboard-image-wrapper"), {
-        y: 100,
-        opacity: 0,
-        scale: 0.95,
-        duration: 1,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 80%",
-            toggleActions: "play none none none"
-        }
-    });
-     gsap.from(sectionRef.current.querySelectorAll(".trusted-by-text, .trusted-by-logos img, .trusted-by-logos span"), {
-        y: 50,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.08,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: sectionRef.current.querySelector(".trusted-by-text"),
-            start: "top 85%",
-            toggleActions: "play none none none"
-        }
-    });
-  }, []);
-
-  return (
-    <section ref={sectionRef} className="py-16 md:py-24 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="dashboard-image-wrapper max-w-4xl lg:max-w-5xl mx-auto mb-16 md:mb-20">
-          <img 
-            src={dashboardImageUrl}
+      <div className="mt-[100px] container relative z-10 mx-auto px-4 text-center sm:px-6 lg:px-8">
+        <div className="hero-element mb-6 inline-flex items-center rounded-full bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
+          <span className="relative mr-2 flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+          </span>
+          <p className="text-sm font-medium text-gray-700">Your AI-Powered Workspace Awaits</p>
+        </div>
+        <h1 className="hero-element text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl lg:text-7xl">
+          <span className="block">Build Your AI Workforce,</span>
+          <span className="block bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Lightning Fast.</span>
+        </h1>
+        <p className="hero-element mx-auto mt-6 max-w-md text-lg text-gray-600 md:max-w-2xl md:text-xl">
+          Superb AI is your all-in-one platform to create, manage, and deploy specialized AI agents for writing, research, marketing, and beyond.
+        </p>
+        <div className="hero-element mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <Link to="/register" className="group flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/30 sm:w-auto">
+            Get Started for Free
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+          </svg>
+          </Link>
+          <a href="#features" className="group flex w-full items-center justify-center rounded-xl bg-white px-8 py-4 text-lg font-bold text-purple-600 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-lg sm:w-auto">
+            Explore Features
+          </a>
+        </div>
+        <div className="browser-mockup-element relative mx-auto mt-16 max-w-4xl lg:mt-20">
+          <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r from-purple-400 to-indigo-400 opacity-20 blur-2xl"></div>
+          <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-2xl shadow-gray-400/10">
+            <div className="flex h-9 items-center border-b border-gray-200 bg-gray-100 px-4">
+              <div className="flex space-x-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-red-400"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-yellow-400"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-green-400"></div>
+              </div>
+      </div>
+            <div className="p-1 sm:p-2">
+              <img
+                src="/image.png"
             alt="Superb AI Dashboard Preview" 
-            className="rounded-xl shadow-2xl border-gray-800 object-cover w-full"
+                className="w-full rounded-md"
             onError={(e) => (e.currentTarget.src = '/image.png')}
           />
         </div>
-        <div className="text-center">
-          <p className="trusted-by-text text-gray-500 mb-6 text-sm sm:text-base">
-            Trusted by students, startups, universities, NGOs and big corporations across the world
-          </p>
-          <div className="trusted-by-logos flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-8 md:gap-x-10 gap-y-4">
-            {/* THAY THẾ BẰNG LOGO THẬT (SVG hoặc PNG trong suốt) */}
-            <span className="text-gray-400 font-semibold text-lg sm:text-xl italic">Deloitte.</span>
-            <span className="text-gray-400 font-semibold text-lg sm:text-xl italic">Microsoft</span>
-            <span className="text-gray-400 font-semibold text-lg sm:text-xl italic">Accenture</span>
-            <span className="text-gray-400 font-semibold text-lg sm:text-xl italic">HubSpot</span>
           </div>
         </div>
       </div>
@@ -175,52 +147,62 @@ const DashboardPreviewSection: React.FC = () => {
   );
 };
 
-// === FEATURES GRID SECTION ("Say hello to AI...") ===
+// === FEATURES GRID SECTION ===
 interface FeatureCardProps {
-  iconPath?: string; 
   iconBgColor?: string;
   iconColor?: string;
   title: string;
   description: string;
   animationDelay?: number;
-  avatarSvg?: string; // Add new prop for avatar SVG
+  avatarSvg?: string;
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ iconPath, iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0, avatarSvg }) => {
+const FeatureCard: React.FC<FeatureCardProps> = ({ iconBgColor = 'bg-purple-100', iconColor = 'text-purple-600', title, description, animationDelay = 0, avatarSvg }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [lottieData, setLottieData] = useState<any>(null);
   useEffect(() => {
     if(!cardRef.current) return;
     gsap.from(cardRef.current, {
-        y: 60,
-        opacity: 0,
-        scale: 0.95,
-        duration: 0.7,
-        delay: animationDelay,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: cardRef.current,
-            start: 'top 85%',
-            toggleActions: 'play none none none'
-        }
-    })
+        y: 60, opacity: 0, scale: 0.95, duration: 0.7, delay: animationDelay, ease: 'power3.out',
+        scrollTrigger: { trigger: cardRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+    });
   }, [animationDelay]);
 
-  // Conditionally define icon content
-  let iconContent;
-  if (avatarSvg) {
-    iconContent = <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: avatarSvg }} />;
-  } else {
-    iconContent = <PlaceholderIcon className="w-7 h-7" path={iconPath} />;
-  }
+  // Use animated 3D illustration from IconScout for visuals
+  const iconScoutLottie = {
+    'AI IT Agent': 'https://assets2.lottiefiles.com/packages/lf20_2ks3pjua.json',
+    'AI Sales Agent': 'https://assets2.lottiefiles.com/packages/lf20_4kx2q32n.json',
+    'AI Marketing Agent': 'https://assets2.lottiefiles.com/packages/lf20_1pxqjqps.json',
+    'AI Accountant Agent': 'https://assets2.lottiefiles.com/packages/lf20_4kx2q32n.json',
+  };
+
+  useEffect(() => {
+    const url = iconScoutLottie[title];
+    if (url) {
+      fetch(url)
+        .then(res => res.json())
+        .then(data => setLottieData(data))
+        .catch(() => setLottieData(null));
+    }
+  }, [title]);
 
   return (
-    <div ref={cardRef} className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-200/50 h-full text-left flex flex-col items-center"> {/* Use flexbox flex-col and center items */}
-      <div className={`w-20 h-20 rounded-lg ${avatarSvg ? '' : iconBgColor} flex-shrink-0 flex items-center justify-center mb-4 ${avatarSvg ? '' : iconColor}`}> {/* Icon container, larger size, mb-4 */}
-        {iconContent}
+    <div
+      ref={cardRef}
+      className="group flex h-full flex-col items-center rounded-3xl border border-gray-200/40 bg-white/90 p-8 text-center shadow-xl shadow-gray-400/10 backdrop-blur-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-200/30"
+    >
+      <div className={`mb-7 flex h-28 w-28 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 overflow-hidden ${iconColor} transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-6`}>
+        {lottieData ? (
+          <Lottie animationData={lottieData} loop={true} style={{ width: 90, height: 90 }} />
+        ) : avatarSvg ? (
+          <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: avatarSvg }} />
+        ) : (
+          <PlaceholderIcon className="h-10 w-10" />
+        )}
       </div>
-      <div className="flex-1 text-center"> {/* Text content container, centered text */}
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
-        <p className="text-gray-600 text-sm">{description}</p>
+      <div className="flex-1">
+        <h3 className="mb-3 text-xl font-bold text-gray-800">{title}</h3>
+        <p className="text-base leading-relaxed text-gray-600">{description}</p>
       </div>
     </div>
   );
@@ -230,125 +212,41 @@ const FeaturesGridSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
    useEffect(() => {
     if (!sectionRef.current) return;
-    gsap.from(sectionRef.current.querySelectorAll(".section-tag, .section-title-main"), {
-        y: 50,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: sectionRef.current,
-        start: "top 80%",
-            toggleActions: "play none none none"
-        }
+        const elements = sectionRef.current.querySelectorAll(".section-header-element");
+        gsap.from(elements, {
+            y: 50, opacity: 0, duration: 0.8, stagger: 0.15, ease: 'power3.out',
+            scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" }
     });
   }, []);
 
   const featuresData = [
-   
-    { title: 'AI IT Agent', description: 'Provides technical support, troubleshoots issues, and manages IT systems.', avatarSeed: 'IT' },
-    { title: 'AI Sales Agent', description: 'Optimizes sales processes, interacts with potential customers, and closes deals effectively.', avatarSeed: 'Sale' },
-    { title: 'AI Marketing Agent', description: 'Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.', avatarSeed: 'Marketing' },
-    { title: 'AI Accountant Agent', description: 'Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.', avatarSeed: 'Accountant' },
+    { title: 'AI IT Agent', description: 'Provides technical support, troubleshoots issues, and manages IT systems.' },
+    { title: 'AI Sales Agent', description: 'Optimizes sales processes, interacts with potential customers, and closes deals effectively.' },
+    { title: 'AI Marketing Agent', description: 'Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.' },
+    { title: 'AI Accountant Agent', description: 'Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.' },
   ];
 
   return (
-    <section ref={sectionRef} className="py-16 md:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <span className="section-tag inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-          Popular Superb AI Tools & Agents
+    <section ref={sectionRef} id="features" className="py-24 md:py-32 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
+      <div className="container mx-auto px-4 text-center sm:px-8 lg:px-16">
+        <span className="section-header-element mb-6 inline-block rounded-full bg-purple-100 px-6 py-2 text-base font-semibold uppercase text-purple-700 tracking-wide">
+          Popular AI Agents
         </span>
-        <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-12 md:mb-16">
-          Say hello to AI that is <br className="sm:hidden"/> built for every scenario
+        <h2 className="section-header-element text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl mb-4">
+          AI Built for Every Scenario
         </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {featuresData.map((feature, index) => {
-            let avatarSvgString = undefined;
-            if (feature.avatarSeed) {
-              const avatar = createAvatar(openPeeps, {
-                seed: feature.avatarSeed,
-              });
-              avatarSvgString = avatar.toString();
-            }
-
-            return (
+        <p className="section-header-element mx-auto mt-4 max-w-2xl text-xl text-gray-600 mb-12">
+          Delegate tasks to specialized AI agents and watch your productivity soar.
+        </p>
+        <div className="mx-auto mt-12 grid max-w-6xl gap-12 sm:grid-cols-2 lg:grid-cols-4">
+          {featuresData.map((feature, index) => (
               <FeatureCard
                 key={feature.title}
                 title={feature.title}
                 description={feature.description}
                 animationDelay={index * 0.1}
-                avatarSvg={avatarSvgString} // Pass the generated SVG string
-              />
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// === SUPERCHARGED GENERATIVE AI SECTION ===
-const SuperchargedAISection: React.FC = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const elementsToAnimate = sectionRef.current.querySelectorAll(".section-tag, .section-title-main, .section-description, .content-card-wrapper, .video-placeholder-wrapper");
-    gsap.from(elementsToAnimate, {
-        y: 60,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.12,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 75%",
-            toggleActions: "play none none none"
-        }
-    });
-  }, []);
-
-  return (
-    <section ref={sectionRef} className="py-16 md:py-24 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <span className="section-tag inline-block bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-          Seamless Content Generation
-        </span>
-        <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-          Supercharged Generative AI
-        </h2>
-        <p className="section-description text-gray-600 max-w-xl md:max-w-2xl mx-auto mb-12 md:mb-16">
-          Experience the power of Superb AI at your fingertips—intelligent, fast, and ready to transform how you work.
-        </p>
-
-        <div className="content-card-wrapper max-w-5xl mx-auto bg-slate-50/70 backdrop-blur-sm p-6 sm:p-8 md:p-10 rounded-2xl shadow-xl border border-gray-200/60">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            <div className="text-left">
-              <h3 className="text-2xl font-semibold text-gray-800 mb-3">Smarter Writing Companion</h3>
-              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-                Superb AI's intelligent writing assistant helps you write, edit, and reference with ease. Save valuable time and boost your writing efficiency on your next academic project.
-              </p>
-              <ul className="space-y-2.5 text-sm">
-                {['Paraphrase & Rewrite', 'Unlimited Generation', 'Multilingual Support'].map(item => (
-                  <li key={item} className="flex items-center text-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500 mr-2.5 flex-shrink-0">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.707a.75.75 0 00-1.06-1.06L9 10.94l-1.798-1.797a.75.75 0 10-1.06 1.06L7.94 12l-1.797 1.797a.75.75 0 101.06 1.06L9 13.06l1.798 1.798a.75.75 0 101.06-1.06L10.06 12l1.797-1.797z" clipRule="evenodd" />
-                    </svg>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-          </div>
-            <div className="video-placeholder-wrapper">
-              {/* THAY THẾ BẰNG VIDEO HOẶC HÌNH ẢNH VIDEO THẬT */}
-              <div className="aspect-video bg-gray-800 rounded-lg shadow-lg flex items-center justify-center">
-                <p className="text-gray-400">Video Placeholder</p>
-                 {/* Icon Play nếu muốn */}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 text-white/50">
-                    <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            </div>
+            />
+          ))}
           </div>
         </div>
       </section>
@@ -359,41 +257,43 @@ const SuperchargedAISection: React.FC = () => {
 interface WavyFeatureItemProps {
   title: string;
   description: string;
-  imageSrc?: string; // Nguồn ảnh thật
+  lottieUrl?: string;
   alignLeft?: boolean;
-  animationOrder: number;
   itemNumber: number;
   actionText?: string;
   actionLink?: string;
 }
 
-const WavyFeatureItem: React.FC<WavyFeatureItemProps> = ({ title, description, imageSrc, alignLeft = true, itemNumber, actionText, actionLink }) => {
+const WavyFeatureItem: React.FC<WavyFeatureItemProps> = ({ title, description, lottieUrl, alignLeft = true, itemNumber, actionText, actionLink }) => {
   const itemRef = useRef<HTMLDivElement>(null);
+  const [animationData, setAnimationData] = useState(null);
+
+  useEffect(() => {
+    if (lottieUrl) {
+      fetch(lottieUrl)
+        .then((response) => response.json())
+        .then((data) => setAnimationData(data))
+        .catch((error) => console.error("Error fetching Lottie animation:", error));
+    }
+  }, [lottieUrl]);
 
   useEffect(() => {
     if(!itemRef.current) return;
     gsap.from(itemRef.current, {
-        opacity: 0,
-        y: 80,
-        scale: 0.95,
-        duration: 0.9,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: itemRef.current,
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-        }
-    })
+        opacity: 0, y: 80, scale: 0.95, duration: 1, ease: 'expo.out',
+        scrollTrigger: { trigger: itemRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+    });
   }, []);
 
   const textContent = (
-    <div className={`md:w-1/2 ${alignLeft ? 'text-left' : 'text-left md:text-right md:order-1'}`}>
-        <h3 className="text-2xl font-semibold text-gray-800 mb-3">{title}</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+    <div className={`md:w-1/2 ${alignLeft ? 'text-left' : 'md:order-2 text-left'}`}>
+      <span className="mb-4 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-800">FEATURE 0{itemNumber}</span>
+      <h3 className="text-2xl font-bold text-gray-800 md:text-3xl">{title}</h3>
+      <p className="mt-3 text-base leading-relaxed text-gray-600">{description}</p>
         {actionText && (
-             <a href={actionLink || '#'} className="mt-4 text-purple-600 font-medium text-sm hover:text-purple-800 group flex items-center transition-colors duration-200 ${alignLeft ? '' : 'md:justify-end'}">
+        <a href={actionLink || '#'} className="group mt-6 inline-flex items-center font-semibold text-purple-600 transition-colors hover:text-purple-800">
                 {actionText}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 ml-1.5 transform transition-transform duration-200 group-hover:translate-x-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="ml-1.5 h-4 w-4 transform transition-transform duration-200 group-hover:translate-x-1">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
             </a>
@@ -401,24 +301,32 @@ const WavyFeatureItem: React.FC<WavyFeatureItemProps> = ({ title, description, i
     </div>
   );
 
-  const imageContent = (
-    <div className={`md:w-1/2 ${alignLeft ? 'md:pl-6 lg:pl-10' : 'md:pr-6 lg:pr-10'}`}>
-      <div className="aspect-video bg-gray-200 rounded-lg shadow-lg flex items-center justify-center mt-6 md:mt-0 overflow-hidden">
-        {imageSrc ? (
-            <img src={imageSrc} alt={title} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = `https://placehold.co/600x338/E0E0E0/B0B0B0?text=Error+Loading`)}/>
+  const lottieAnimation = (
+    <div className={`md:w-1/2 ${alignLeft ? 'md:pl-10' : 'md:pr-10 md:order-1'}`}>
+      <div className="group relative mt-8 flex items-center justify-center rounded-2xl bg-purple-50/50 p-4 md:mt-0 aspect-square md:aspect-auto">
+        {animationData ? (
+          <Lottie
+            animationData={animationData}
+            loop={true}
+            style={{ width: '100%', height: '100%', maxWidth: '400px' }}
+          />
         ) : (
-            <p className="text-gray-400 p-4 text-center">Image Placeholder for {title}</p>
+          <div className="aspect-video w-full bg-gray-200 rounded-xl flex items-center justify-center">
+             <p className="text-gray-400">Animation loading...</p>
+          </div>
         )}
       </div>
     </div>
   );
 
   return (
-    <div ref={itemRef} className={`relative z-10 bg-white/60 backdrop-blur-md p-6 md:p-8 rounded-2xl shadow-xl border border-gray-200/50 mb-12 md:mb-16 lg:mb-20 max-w-4xl mx-auto ${imageSrc ? 'md:flex md:items-center' : ''}`}>
-        {alignLeft ? [textContent, imageContent] : [imageContent, textContent]}
+    <div ref={itemRef} className="relative z-10 mx-auto mb-16 max-w-5xl rounded-3xl border border-purple-100/50 bg-white/70 p-6 shadow-xl shadow-purple-200/20 backdrop-blur-xl md:p-10 lg:mb-24">
+      <div className={`flex flex-col md:flex-row md:items-center ${alignLeft ? '' : 'md:justify-between'} gap-8 md:gap-0`}>
+        {alignLeft ? [textContent, lottieAnimation] : [lottieAnimation, textContent]}
+      </div>
     </div>
-  )
-}
+  );
+};
 
 const WavyLineBackground: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -431,53 +339,27 @@ const WavyLineBackground: React.FC = () => {
     ScrollTrigger.create({
       trigger: svgRef.current,
       start: "top center",
-      end: "bottom center+=200", // Kéo dài trigger một chút để đảm bảo vẽ hết path
-      scrub: 1.2,
+      end: "bottom center",
+      scrub: 1.5,
       onUpdate: self => {
-        gsap.to(pathRef.current, { drawSVG: `${self.progress * 100}%`, duration: 0.1, ease: "none" });
+        gsap.to(pathRef.current, { drawSVG: `0% ${self.progress * 100}%`, duration: 0.1, ease: "none" });
       },
     });
   }, []);
 
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-      <svg
-        ref={svgRef}
-        width="100%"
-        height="2000px" // Tăng chiều cao để chứa path dài hơn, điều chỉnh nếu cần
-        viewBox="0 0 1440 2000" // Điều chỉnh viewBox cho phù hợp
-        preserveAspectRatio="xMidYMin slice" 
-      >
-        {/* THAY THẾ PATH NÀY BẰNG SVG PATH CHI TIẾT CỦA BẠN! */}
-        {/* Path này phức tạp hơn, cố gắng mô phỏng đường lượn sóng trong thiết kế */}
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 1440 2200" preserveAspectRatio="xMidYMin slice">
         <path
           ref={pathRef}
-          d="M -50 250 
-             C 200 100, 400 400, 720 300 
-             S 1000 100, 1200 280 
-             L 1490 350
-             C 1200 550, 1000 450, 720 600
-             S 400 800, 200 700
-             L -50 850
-             C 250 1050, 450 950, 720 1150
-             S 1000 1300, 1250 1200
-             L 1490 1350
-             C 1150 1550, 950 1450, 720 1650
-             S 350 1900, 150 1750
-             L -50 1900
-            "
-          stroke="url(#wavyPathGradient)"
-          strokeWidth="150" // Độ dày lớn để tạo hiệu ứng mờ
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          d="M -100 250 C 400 100, 300 500, 720 400 S 1140 200, 1540 350 C 1040 600, 1120 800, 720 850 S 320 1000, -100 1050 C 520 1250, 320 1500, 720 1550 S 1120 1700, 1540 1800"
+          stroke="url(#wavyPathGradient)" strokeWidth="300" fill="none" strokeLinecap="round" strokeLinejoin="round"
         />
          <defs>
             <linearGradient id="wavyPathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(192, 132, 252, 0.08)" /> {/* purple-300 with low opacity */}
-                <stop offset="33%" stopColor="rgba(244, 114, 182, 0.06)" /> {/* pink-400 with low opacity */}
-                <stop offset="66%" stopColor="rgba(129, 140, 248, 0.08)" /> {/* indigo-400 with low opacity */}
-                <stop offset="100%" stopColor="rgba(165, 180, 252, 0.07)" />{/* indigo-300 with low opacity */}
+            <stop offset="0%" stopColor="rgba(192, 132, 252, 0.08)" />
+            <stop offset="50%" stopColor="rgba(244, 114, 182, 0.06)" />
+            <stop offset="100%" stopColor="rgba(129, 140, 248, 0.08)" />
             </linearGradient>
         </defs>
       </svg>
@@ -489,132 +371,67 @@ const WavyFeaturesSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
    useEffect(() => {
     if (!sectionRef.current) return;
-    const titleElements = sectionRef.current.querySelectorAll(".section-tag, .section-title-main, .section-description");
-     gsap.from(titleElements, {
+        const elements = sectionRef.current.querySelectorAll(".section-header-element");
+        gsap.from(elements, {
         y: 50, opacity: 0, duration: 0.8, stagger: 0.15, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: "top 70%", toggleActions: "play none none none" }
+            scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" }
     });
   }, []);
 
   const wavyFeaturesData: WavyFeatureItemProps[] = [
-    { itemNumber: 2, title: "Streamline Image Creation", description: "Superb AI Image Editor makes creating and editing visuals seamless with live previews, smart controls, and instant style variations for effortless design.", imageSrc: "https://placehold.co/600x338/A78BFA/FFFFFF?text=Image+Editor", alignLeft: true, animationOrder: 0},
-    { itemNumber: 3, title: "Seamless Export Options", description: "Export your work to PDF, MS Word (.docx), or HTML formats with zero loss in formatting or structure.", alignLeft: false, animationOrder: 1}, 
-    { itemNumber: 4, title: "Team Collaboration", description: "Collaborate seamlessly in real-time with your team. Add members to your paid plan and share files, chat, and collaborate on documents effortlessly.", alignLeft: true, animationOrder: 2, actionText: "Learn More", actionLink: "#collaboration-details" },
-    { itemNumber: 5, title: "AI File Chat", description: "Extract specific information from a PDF, .doc or CSV document. Superb AI now swiftly navigates through the document, providing you with instant insights, summaries, or key data points.", imageSrc: "https://placehold.co/600x338/F472B6/FFFFFF?text=AI+File+Chat", alignLeft: false, animationOrder: 3 },
-    { itemNumber: 6, title: "Plagiarism Checker", description: "Superb AI enables you to scan millions of online sources in seconds to detect instances of plagiarism or content duplication, providing corresponding links to the plagiarized content found online.", imageSrc: "https://placehold.co/600x338/34D399/FFFFFF?text=Plagiarism+Check", alignLeft: true, animationOrder: 4 },
-    { itemNumber: 7, title: "AI Chatbot", description: "Get instant answers to your questions, no matter the topic. Whether you're trying to book a reservation, get product recommendations, or just chat about the weather, Superb AI is always ready and willing to help.", imageSrc: "https://placehold.co/600x338/60A5FA/FFFFFF?text=AI+Chatbot", alignLeft: false, animationOrder: 5 },
+    {
+      itemNumber: 1,
+      title: "AI IT Agent",
+      description: "Your 24/7 technical support specialist. Instantly troubleshoots issues, manages IT systems, and keeps your business running smoothly.",
+      lottieUrl: "https://assets2.lottiefiles.com/packages/lf20_4kx2q32n.json",
+      alignLeft: true
+    },
+    {
+      itemNumber: 2,
+      title: "AI Sales Agent",
+      description: "Automates lead generation, follows up with prospects, and closes deals efficiently. Supercharge your sales pipeline with AI precision.",
+      lottieUrl: "https://assets2.lottiefiles.com/packages/lf20_1pxqjqps.json",
+      alignLeft: false
+    },
+    {
+      itemNumber: 3,
+      title: "AI Marketing Agent",
+      description: "Plans campaigns, creates content, and analyzes results across channels. Reach your audience and grow your brand with data-driven marketing.",
+      lottieUrl: "https://assets7.lottiefiles.com/packages/lf20_2ks3pjua.json",
+      alignLeft: true,
+      actionText: "See how it works",
+      actionLink: "#"
+    },
+    {
+      itemNumber: 4,
+      title: "AI Accountant Agent",
+      description: "Tracks expenses, manages invoices, and generates financial reports. Stay on top of your business finances with automated accuracy.",
+      lottieUrl: "https://assets1.lottiefiles.com/packages/lf20_8wREpI.json",
+      alignLeft: false
+    },
   ];
 
   return (
-    <section ref={sectionRef} className="relative py-16 md:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 overflow-hidden">
+    <section ref={sectionRef} className="relative overflow-hidden bg-white py-24 md:py-32">
       <WavyLineBackground />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-12 md:mb-16 lg:mb-20">
-          <span className="section-tag inline-block bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-            UNIFIED SUPERPOWER
+      <div className="container relative z-10 mx-auto px-4 sm:px-8 lg:px-16">
+        <div className="mb-20 text-center md:mb-24">
+          <span className="section-header-element mb-6 inline-block rounded-full bg-pink-100 px-6 py-2 text-base font-semibold uppercase text-pink-700 tracking-wide">
+            Unified Superpowers
           </span>
-          <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-            Whatever you need done, <br className="sm:hidden"/> Superb AI can do
+          <h2 className="section-header-element text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl mb-4">
+            Whatever you need done, Superb AI can do.
           </h2>
-          <p className="section-description text-gray-600 text-base sm:text-lg">Turn ideas into AI, lightning fast.</p>
         </div>
-
         {wavyFeaturesData.map((feature) => (
-           <WavyFeatureItem 
-            key={feature.itemNumber}
-            {...feature}
-           />
+          <WavyFeatureItem key={feature.itemNumber} {...feature} />
         ))}
       </div>
     </section>
   );
 };
 
-// === AI VOICE CHATBOT SECTION === (Đã định nghĩa ở Part 2)
-const AIVoiceChatbotSection: React.FC = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const elementsToAnimate = sectionRef.current.querySelectorAll(
-      ".section-tag, .section-title-main, .section-description, .feature-list-item, .action-button, .image-placeholder-wrapper, .decorative-blobs div"
-    );
-    gsap.from(elementsToAnimate, {
-      y: 60, opacity: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out',
-      scrollTrigger: { trigger: sectionRef.current, start: "top 75%", toggleActions: "play none none none" }
-    });
-  }, []);
-
-  return (
-    <section ref={sectionRef} className="py-16 md:py-24 bg-white relative overflow-hidden">
-      <div className="decorative-blobs absolute inset-0 pointer-events-none z-0 opacity-70">
-        <div className="absolute top-1/4 left-10 w-40 h-40 sm:w-48 sm:h-48 bg-pink-100 rounded-full blur-2xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/4 right-10 w-48 h-48 sm:w-56 sm:h-56 bg-purple-100 rounded-full blur-2xl animate-pulse-slower delay-500"></div>
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid md:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
-          <div className="text-left">
-            <span className="section-tag inline-block bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase">
-              NEW FEATURE
-            </span>
-            <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              AI Voice Chatbot
-            </h2>
-            <p className="section-description text-gray-600 mb-6 leading-relaxed">
-              Create and deploy lifelike AI voice chatbots for websites with natural conversations, ultra-low latency, and human-like tone and responsiveness for any use case.
-            </p>
-            <ul className="space-y-3 mb-8">
-              {[
-                { text: 'Available for team plans only', iconColor: 'text-purple-500' },
-                { text: 'Ease of integration', iconColor: 'text-green-500' }
-              ].map((item, index) => (
-                <li key={index} className="feature-list-item flex items-center text-gray-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-5 h-5 ${item.iconColor} mr-2.5 flex-shrink-0`}>
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.707a.75.75 0 00-1.06-1.06L9 10.94l-1.798-1.797a.75.75 0 10-1.06 1.06L7.94 12l-1.797 1.797a.75.75 0 101.06 1.06L9 13.06l1.798 1.798a.75.75 0 101.06-1.06L10.06 12l1.797-1.797z" clipRule="evenodd" />
-                  </svg>
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-            <button className="action-button bg-gray-800 text-white px-6 py-3 sm:px-7 rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-md hover:shadow-lg transform hover:scale-105 text-base flex items-center group">
-              See It In Action
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 ml-2 transform transition-transform duration-200 group-hover:translate-x-0.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
-              </svg>
-            </button>
-          </div>
-          <div className="image-placeholder-wrapper mt-10 md:mt-0 relative">
-            <div className="bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 p-0.5 sm:p-1 rounded-xl shadow-2xl">
-              <div className="bg-white p-4 sm:p-6 rounded-lg">
-                <div className="flex items-center mb-4">
-                  <img src="https://placehold.co/48x48/1F2937/FFFFFF?text=AI" alt="AI Avatar" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full mr-3 object-cover"/>
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm sm:text-base">Hey, I'm Nexus!</p>
-                    <p className="text-xs text-gray-500">Need help? Give me a call.</p>
-              </div>
-            </div>
-                <button className="w-full bg-gray-800 text-white py-2.5 rounded-md hover:bg-gray-700 transition-colors text-sm font-medium flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.051-.996-.148-1.467l-2.16-7.902a2.25 2.25 0 0 0-2.162-1.684h-1.732a2.25 2.25 0 0 0-2.162 1.684l-2.16 7.902A2.25 2.25 0 0 1 5.25 19.5V2.25a2.25 2.25 0 0 0-2.25-2.25H2.25Z" />
-                </svg>
-                  Start Call
-                </button>
-              </div>
-            </div>
-            <div className="decorative-blobs absolute -bottom-12 -right-12 w-28 h-28 sm:w-32 sm:h-32 opacity-30 -z-10 transform rotate-12">
-                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="#FBCFE8" d="M60.5,-40.1C73.8,-20.9,76.7,7.8,67.3,32.1C57.9,56.4,36.2,76.3,10.5,80.7C-15.1,85.1,-44.7,74,-60.2,52.9C-75.7,31.8,-77.1,0.7,-67.8,-22.9C-58.5,-46.5,-38.5,-62.6,-17.7,-65.5C3.1,-68.4,24.8,-59.2,42.4,-50.2C50.5,-45.1,60.5,-40.1,60.5,-40.1Z" transform="translate(100 100) scale(0.7)" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-  );
-};
-
-// === PRICING SECTION === (Đã định nghĩa ở Part 2)
+// === PRICING SECTION ===
 interface PricingTierProps {
   name: string;
   price: string;
@@ -623,51 +440,54 @@ interface PricingTierProps {
   features: string[];
   isPopular?: boolean;
   buttonText: string;
-  buttonVariant?: 'primary' | 'outline';
   animationDelay?: number;
 }
 
-const PricingTierCard: React.FC<PricingTierProps> = ({
-  name, price, priceSuffix = '/month', description, features, isPopular, buttonText, buttonVariant = 'outline', animationDelay = 0
-}) => {
+const PricingTierCard: React.FC<PricingTierProps> = ({ name, price, priceSuffix = '/ month', description, features, isPopular, buttonText, animationDelay = 0 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if(!cardRef.current) return;
     gsap.from(cardRef.current, {
         y: 70, opacity: 0, scale: 0.95, duration: 0.8, delay: animationDelay, ease: 'power3.out',
         scrollTrigger: { trigger: cardRef.current, start: 'top 85%', toggleActions: 'play none none none' }
-    })
+    });
   }, [animationDelay]);
 
   return (
-    <div ref={cardRef} className={`relative p-6 md:p-8 rounded-xl border h-full flex flex-col transition-all duration-300
-      ${isPopular ? 'bg-gray-800 text-white border-purple-500 shadow-2xl lg:scale-105' : 'bg-white text-gray-800 border-gray-200 shadow-lg hover:shadow-xl'}`}>
+    <div
+      ref={cardRef}
+      className={`relative flex h-full flex-col rounded-2xl p-8 transition-all duration-300 ${
+        isPopular ? 'border-2 border-purple-500 bg-gray-900 text-white lg:scale-105 shadow-2xl shadow-purple-500/20' : 'border border-gray-200 bg-white text-gray-800'
+      }`}
+    >
       {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
-          POPULAR
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
+          Most Popular
         </div>
       )}
-      <h3 className={`text-xl font-semibold mb-1 ${isPopular ? 'text-white' : 'text-gray-800'}`}>{name}</h3>
-      <div className="mb-6">
-        <span className={`text-4xl font-bold ${isPopular ? 'text-white' : 'text-gray-800'}`}>{price}</span>
-        {price !== "$0" && <span className={`text-sm ml-1 ${isPopular ? 'text-gray-300' : 'text-gray-500'}`}>{priceSuffix}</span>}
-        {description && <p className={`text-xs mt-1 ${isPopular ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>}
+      <h3 className="text-xl font-semibold">{name}</h3>
+      {description && <p className={`mt-1 text-sm ${isPopular ? 'text-gray-300' : 'text-gray-500'}`}>{description}</p>}
+      <div className="mt-4 flex items-baseline">
+        <span className="text-4xl font-extrabold tracking-tight">{price}</span>
+        {price !== "Free" && <span className={`ml-1 text-base font-medium ${isPopular ? 'text-gray-400' : 'text-gray-500'}`}>{priceSuffix}</span>}
       </div>
-      <ul className="space-y-3 mb-8 flex-grow">
+      <ul className="mt-6 flex-grow space-y-3">
         {features.map((feature, index) => (
           <li key={index} className="flex items-start text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-5 h-5 mr-2.5 flex-shrink-0 ${isPopular ? 'text-purple-400' : 'text-purple-500'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`mr-2.5 mt-0.5 h-5 w-5 flex-shrink-0 ${isPopular ? 'text-purple-400' : 'text-purple-600'}`}>
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
             <span className={isPopular ? 'text-gray-300' : 'text-gray-600'}>{feature}</span>
           </li>
         ))}
       </ul>
-      <button className={`w-full py-3 rounded-lg font-medium transition-colors duration-200 mt-auto transform hover:scale-105
-        ${isPopular || buttonVariant === 'primary'
-          ? `bg-purple-600 text-white hover:bg-purple-700 shadow-md ${isPopular ? 'hover:shadow-purple-400/50' : ''}`
-          : `border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 ${isPopular ? 'border-purple-400 text-white hover:bg-purple-500' : ''}`
-        }`}>
+      <button
+        className={`mt-8 w-full rounded-lg py-3 text-base font-bold transition-all duration-300 hover:scale-105 ${
+          isPopular
+            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20'
+            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+        }`}
+      >
         {buttonText}
       </button>
     </div>
@@ -677,58 +497,57 @@ const PricingTierCard: React.FC<PricingTierProps> = ({
 const PricingSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isYearly, setIsYearly] = useState(false);
-
   useEffect(() => {
     if (!sectionRef.current) return;
-    gsap.from(sectionRef.current.querySelectorAll(".section-title-main, .section-subtitle, .toggle-switch-wrapper"), {
+        const elements = sectionRef.current.querySelectorAll(".section-header-element, .toggle-switch-wrapper");
+        gsap.from(elements, {
         y: 50, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out',
         scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" }
     });
   }, []);
 
   const tiersData = [
-    { name: 'Free', price: '$0', description: 'No Credit Card Required', features: ['500 AI Words', 'AI Disguise', 'In-text Citations', 'AI Writer & Editor', 'Limited PDF Uploads', 'AI Images (Basic)', 'Advanced AI Models (Limited)'], buttonText: 'Start for free' },
-    { name: 'Premium', priceMonthly: '$18', priceYearly: '$15', isPopular: true, features: ['Everything in free, plus:', 'Unlimited AI Words', 'AI Academic Writer', 'AI Image Generator (Standard)', 'AI File Chat & Vision', 'Plagiarism Checker', 'AI Voiceover', 'AI Video Generator (Basic)'], buttonText: 'Join This Plan', buttonVariant: 'primary' },
-    { name: 'Ultimate', priceMonthly: '$35', priceYearly: '$29', features: ['Everything in premium, plus:', 'AI Video Generator (Advanced)', 'AI Voiceover Pro', 'AI Voice Clone', 'AI Voice Isolator', 'Priority Support', 'Analytics and Reporting', 'New Features Early Access'], buttonText: 'Join This Plan' },
+    { name: 'Free', priceMonthly: 'Free', priceYearly: 'Free', description: 'For individuals starting out', features: ['500 AI Words/month', 'Basic AI Models', 'AI Writer & Editor', 'Limited File Uploads'], buttonText: 'Start for Free' },
+    { name: 'Premium', priceMonthly: '$18', priceYearly: '$15', isPopular: true, description: 'For professionals & teams', features: ['Everything in Free, plus:', 'Unlimited AI Words', 'Advanced AI Models', 'AI Image Generator', 'AI File Chat & Vision', 'Plagiarism Checker', 'Team Collaboration'], buttonText: 'Choose Premium' },
+    { name: 'Ultimate', priceMonthly: '$35', priceYearly: '$29', description: 'For power users & agencies', features: ['Everything in Premium, plus:', 'AI Voice Generation', 'AI Video Tools (Beta)', 'Priority Support', 'API Access', 'Early access to new features'], buttonText: 'Choose Ultimate' },
   ];
 
   return (
     <section ref={sectionRef} id="pricing" className="py-16 md:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-          Simple Transparent Pricing.
+      <div className="container mx-auto px-4 text-center sm:px-6 lg:px-8">
+        <h2 className="section-header-element text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          Simple, Transparent Pricing
           </h2>
-        <p className="section-subtitle text-gray-600 max-w-lg md:max-w-xl mx-auto mb-8 md:mb-12">
-          Save up to 30% on annual plans. Cancel Anytime. No hidden fees.
+        <p className="section-header-element mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          Choose the plan that's right for you. Cancel anytime. No hidden fees.
         </p>
 
-        <div className="toggle-switch-wrapper flex justify-center items-center space-x-3 mb-10 md:mb-12">
-          <span className={`text-sm font-medium transition-colors ${!isYearly ? 'text-purple-600' : 'text-gray-500'}`}>Monthly</span>
+        <div className="toggle-switch-wrapper mt-10 flex items-center justify-center space-x-4">
+          <span className={`text-base font-medium transition-colors ${!isYearly ? 'text-purple-600' : 'text-gray-500'}`}>Monthly</span>
           <button
             aria-label="Toggle billing period"
             onClick={() => setIsYearly(!isYearly)}
-            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 ${isYearly ? 'bg-purple-600' : 'bg-gray-300'}`}
+            className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${isYearly ? 'bg-purple-600' : 'bg-gray-300'}`}
           >
-            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${isYearly ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isYearly ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
-          <span className={`text-sm font-medium transition-colors ${isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
-            Yearly <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md ml-1 font-semibold">Save 30%</span>
+          <span className={`text-base font-medium transition-colors ${isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
+            Yearly <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Save 15%</span>
           </span>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto items-stretch">
+        <div className="mx-auto mt-12 grid max-w-6xl items-stretch gap-8 md:grid-cols-2 lg:grid-cols-3">
           {tiersData.map((tier, index) => (
             <PricingTierCard
               key={tier.name}
               name={tier.name}
-              price={isYearly && tier.priceYearly ? tier.priceYearly : (tier.priceMonthly || tier.price)}
-              priceSuffix={tier.price === "$0" ? "" : (isYearly ? "/year" : "/month")}
+              price={isYearly ? tier.priceYearly : tier.priceMonthly}
+              priceSuffix={tier.priceMonthly === "Free" ? "" : (isYearly ? '/ month, billed annually' : '/ month')}
               description={tier.description}
               features={tier.features}
               isPopular={tier.isPopular}
               buttonText={tier.buttonText}
-              buttonVariant={tier.buttonVariant as 'primary' | 'outline'}
-              animationDelay={index * 0.1}
+              animationDelay={index * 0.15}
             />
           ))}
                 </div>
@@ -737,163 +556,65 @@ const PricingSection: React.FC = () => {
   );
 };
 
-// === GLOBAL PRESENCE SECTION === (Đã định nghĩa ở Part 2)
-const GlobalPresenceSection: React.FC = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const titleElements = sectionRef.current.querySelectorAll(".section-tag, .section-title-main, .section-description");
-    const mapImage = sectionRef.current.querySelector(".map-image-container");
-    const flags = sectionRef.current.querySelectorAll(".country-flag");
-    const ctaButton = sectionRef.current.querySelector(".cta-button");
-
-    gsap.from(titleElements, {
-        y: 50, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" }
-    });
-    if (mapImage) {
-      gsap.from(mapImage, {
-          scale: 0.85, opacity: 0, duration: 1, ease: 'expo.out', delay: 0.2,
-          scrollTrigger: { trigger: mapImage, start: "top 75%", toggleActions: "play none none none" }
-      });
-    }
-    gsap.from(flags, {
-        scale: 0.5, opacity: 0, duration: 0.6, stagger: 0.05, ease: 'back.out(1.7)', delay: 0.5,
-        scrollTrigger: { trigger: flags[0] || mapImage, start: "top 70%", toggleActions: "play none none none" }
-    });
-    if(ctaButton) {
-        gsap.from(ctaButton, {
-            y: 30, opacity: 0, duration: 0.7, ease: 'back.out(1.7)', delay: 0.7,
-            scrollTrigger: { trigger: ctaButton, start: "top 90%", toggleActions: "play none none none" }
-        });
-    }
-  }, []);
-
-  const flagsData = [
-    { name: 'USA', position: 'top-[25%] left-[20%]', icon: '🇺🇸' },
-    { name: 'Brazil', position: 'bottom-[30%] left-[30%]', icon: '🇧🇷' },
-    { name: 'UK', position: 'top-[30%] left-[45%]', icon: '🇬🇧' },
-    { name: 'Turkey', position: 'top-[28%] right-[38%]', icon: '🇹🇷' },
-    { name: 'India', position: 'bottom-[45%] right-[30%]', icon: '🇮🇳' },
-    { name: 'South Africa', position: 'bottom-[20%] left-[52%]', icon: '🇿🇦' },
-    { name: 'Japan', position: 'bottom-[40%] right-[15%]', icon: '🇯🇵' },
-    { name: 'China', position: 'top-[35%] right-[22%]', icon: '🇨🇳' },
-  ];
-
-  return (
-    <section ref={sectionRef} className="py-16 md:py-24 bg-white relative overflow-hidden">
-        <div className="absolute top-10 left-10 w-5 h-5 bg-purple-400/50 rounded-full animate-ping"></div>
-        <div className="absolute bottom-10 right-10 w-7 h-7 bg-pink-400/50 rounded-lg transform rotate-45 animate-pulse-slow"></div>
-        <div className="absolute top-1/2 -translate-y-1/2 right-20 w-4 h-4 bg-blue-300/50 rounded-sm animate-bounce delay-500"></div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <span className="section-tag inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 sm:mb-4 uppercase">
-          AVAILABLE WORLDWIDE
-        </span>
-        <h2 className="section-title-main text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-          Loved Around the World
-        </h2>
-        <p className="section-description text-gray-600 max-w-md md:max-w-lg mx-auto mb-12 md:mb-16">
-          Use Superb AI whenever and wherever you are.
-        </p>
-
-        <div className="map-image-container relative max-w-3xl mx-auto mb-12 md:mb-16">
-          {/* THAY THẾ BẰNG ẢNH BẢN ĐỒ SVG CHI TIẾT HƠN */}
-          <img 
-            src="https://placehold.co/1000x500/F3F4F6/D1D5DB?text=World+Map+Placeholder" 
-            alt="World Map" 
-            className="w-full h-auto opacity-70"
-            onError={(e) => (e.currentTarget.src = 'https://placehold.co/1000x500/F3F4F6/D1D5DB?text=Map+Error')}
-          />
-          {flagsData.map(flag => (
-            <div
-              key={flag.name}
-              className={`country-flag absolute ${flag.position} transform -translate-x-1/2 -translate-y-1/2 p-1.5 sm:p-2 bg-white rounded-full shadow-lg hover:scale-125 transition-transform duration-200 cursor-pointer`}
-              title={flag.name}
-            >
-              <span className="text-xl sm:text-2xl md:text-3xl">{flag.icon}</span>
-            </div>
-          ))}
-              </div>
-              
-        <button className="cta-button bg-purple-600 text-white px-7 py-3 sm:px-8 sm:py-3.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 text-base sm:text-lg flex items-center mx-auto group">
-           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-2.5">
-             <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A11.978 11.978 0 0 1 12 16.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 0 3 12c0 .778.099 1.533.284 2.253m0 0A11.953 11.953 0 0 0 12 10.5c2.998 0 5.74 1.1 7.843 2.918" />
-           </svg>
-          Join Us
-        </button>
-              </div>
-    </section>
-  );
-};
-
-// === FOOTER === (Đã định nghĩa ở Part 2)
+// === FOOTER ===
 const Footer: React.FC = () => {
   const footerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!footerRef.current) return;
-    // Delay animation slightly to ensure page layout is stable
-    const timer = setTimeout(() => {
-        if (footerRef.current) { // Check again in case component unmounted
-            gsap.from(footerRef.current.querySelectorAll(".footer-column, .footer-bottom-text, .footer-social-link"), {
-                y: 40, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power2.out',
+        gsap.from(footerRef.current.querySelectorAll(".footer-element"), {
+            y: 40, opacity: 0, duration: 0.8, stagger: 0.08, ease: 'power2.out',
                 scrollTrigger: { trigger: footerRef.current, start: "top 95%", toggleActions: "play none none none" }
             });
-        }
-    }, 100);
-    return () => clearTimeout(timer);
   }, []);
 
   const footerLinksData = {
-    Product: ['Features', 'Integrations', 'Pricing', 'Changelog', 'Docs'],
-    Company: ['About', 'Blog', 'Careers', 'Customers', 'Brand'],
+    Product: ['Features', 'Pricing', 'Integrations', 'Changelog'],
+    Company: ['About Us', 'Blog', 'Careers', 'Brand Kit'],
     Resources: ['Community', 'Contact', 'Privacy Policy', 'Terms of Service'],
-    Developers: ['API', 'Status', 'GitHub', 'VS Code Extension']
+    Developers: ['API Docs', 'Status', 'GitHub', 'Open Source'],
   };
 
   const socialIconsData = [
-    { name: 'Facebook', href: '#', iconPath: "M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" },
     { name: 'Twitter', href: '#', iconPath: "M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-.422.724-.665 1.56-.665 2.452 0 1.606.816 3.021 2.062 3.847-.76-.025-1.474-.234-2.102-.576v.075c0 2.244 1.593 4.111 3.704 4.543-.387.105-.796.16-.966.162-.299 0-.59-.029-.874-.081.589 1.839 2.303 3.179 4.337 3.216-1.581 1.238-3.575 1.975-5.746 1.975-.373 0-.74-.022-1.102-.065 2.042 1.319 4.476 2.089 7.084 2.089 8.49 0 13.139-7.039 13.139-13.14 0-.201 0-.402-.013-.602.902-.652 1.684-1.466 2.3-2.389z" },
     { name: 'GitHub', href: '#', iconPath: "M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" },
     { name: 'LinkedIn', href: '#', iconPath: "M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z" },
   ];
 
   return (
-    <footer ref={footerRef} className="bg-gray-900 text-gray-400 pt-16 sm:pt-20 pb-8">
+    <footer ref={footerRef} className="bg-gray-900 pt-16 pb-8 text-gray-400 sm:pt-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 mb-12">
-          <div className="footer-column col-span-2 md:col-span-3 lg:col-span-1 pr-0 sm:pr-8">
-            <Link to="/" className="text-2xl font-bold text-white mb-3 inline-block">
-              {/* THAY THẾ BẰNG LOGO THẬT (SVG trắng hoặc sáng màu) */}
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-5 lg:gap-12">
+          <div className="footer-element col-span-2 md:col-span-5 lg:col-span-1">
+            <Link to="/" className="mb-4 inline-flex items-center text-xl font-bold text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="mr-2 h-6 w-6 text-purple-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+              </svg>
               Superb AI
             </Link>
-            <p className="text-sm mb-4 leading-relaxed">
-              The All-In-One AI Workspace for accelerated teams. Empowering innovation with intelligent automation.
+            <p className="pr-4 text-sm leading-relaxed">
+              The All-In-One AI Workspace for accelerated teams.
             </p>
-            <div className="flex space-x-4">
-              {socialIconsData.map(social => (
-                <a key={social.name} href={social.href} title={social.name} target="_blank" rel="noopener noreferrer" className="footer-social-link text-gray-500 hover:text-purple-400 transition-colors">
-                  <PlaceholderIcon className="w-5 h-5" path={social.iconPath} />
-                </a>
-              ))}
-            </div>
           </div>
-          
           {Object.entries(footerLinksData).map(([category, links]) => (
-            <div key={category} className="footer-column">
-              <h4 className="text-white font-semibold text-sm mb-4 tracking-wider uppercase">{category}</h4>
-              <ul className="space-y-2.5">
+            <div key={category} className="footer-element">
+              <h4 className="mb-4 text-sm font-semibold tracking-wider text-white uppercase">{category}</h4>
+              <ul className="space-y-3">
                 {links.map(link => (
-                  <li key={link}><a href="#" className="text-sm hover:text-purple-400 transition-colors">{link}</a></li>
+                  <li key={link}><a href="#" className="text-sm transition-colors hover:text-purple-400">{link}</a></li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-
-        <div className="footer-bottom-text border-t border-gray-700 pt-8 text-center text-xs">
-          <p>&copy; {new Date().getFullYear()} Superb AI. All rights reserved. Crafted with passion by AI enthusiasts.</p>
+        <div className="footer-element mt-12 border-t border-gray-800 pt-8 sm:flex sm:items-center sm:justify-between">
+          <p className="text-xs">&copy; {new Date().getFullYear()} Superb AI. All Rights Reserved.</p>
+          <div className="mt-4 flex space-x-5 sm:mt-0 sm:justify-center">
+            {socialIconsData.map(social => (
+              <a key={social.name} href={social.href} title={social.name} target="_blank" rel="noopener noreferrer" className="text-gray-500 transition-colors hover:text-purple-400">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d={social.iconPath} clipRule="evenodd" /></svg>
+              </a>
+            ))}
+          </div>
           </div>
         </div>
       </footer>
@@ -902,63 +623,49 @@ const Footer: React.FC = () => {
 
 // === MAIN LANDING PAGE COMPONENT ===
 const LandingPage: React.FC = () => {
+    // Scroll-to-section handler
   useEffect(() => {
-    // GSAP defaults for better performance with will-change
-    gsap.defaults({
-      willChange: "transform, opacity"
-    });
-    ScrollTrigger.defaults({
-      // markers: process.env.NODE_ENV === "development" // Enable markers in dev
-    });
-    
-    const handleScrollToSection = (targetId: string) => {
-        const targetElement = document.getElementById(targetId);
-        if (targetElement) {
-            const headerElement = document.querySelector('header') as HTMLElement;
-            const gradientElement = document.querySelector('.bg-gradient-to-r') as HTMLElement;
-            const headerHeight = (headerElement?.offsetHeight || 0) + (gradientElement?.offsetHeight || 0);
-            gsap.to(window, { duration: 1, scrollTo: { y: targetElement, offsetY: headerHeight + 20 }, ease: 'power2.inOut' });
-        }
-    };
+        const handleScrollTo = (e: Event) => {
+            e.preventDefault();
+            const targetId = (e.currentTarget as HTMLAnchorElement).getAttribute('href')?.substring(1);
+            const targetElement = targetId ? document.getElementById(targetId) : null;
+            if (targetElement) {
+                const headerOffset = 80;
+                const elementPosition = targetElement.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
-    const navLinks = document.querySelectorAll('header a[href^="#"]');
-    navLinks.forEach(anchor => {
-        anchor.addEventListener('click', function (this: HTMLAnchorElement, e) {
-            const hrefAttribute = this.getAttribute('href');
-            if (hrefAttribute && hrefAttribute.startsWith("#") && hrefAttribute.length > 1) {
-                const targetId = hrefAttribute.substring(1);
-                if (document.getElementById(targetId)) { // Check if element exists
-                    e.preventDefault();
-                    handleScrollToSection(targetId);
-                }
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
             }
-        });
+        };
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', handleScrollTo);
     });
 
     return () => {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.removeEventListener('click', handleScrollTo);
+            });
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-      gsap.killTweensOf(window); // Kill scroll tweens
+            gsap.killTweensOf(window);
     };
   }, []);
 
   return (
-    <div className="bg-white text-gray-800 antialiased font-sans"> {/* Nên định nghĩa font-family chung ở body hoặc html */}
+        <div className="bg-white font-sans text-gray-800 antialiased">
       <Header />
-      <main style={{ paddingTop: '76px' }}> {/* Approximate height of fixed header + top banner */}
+            <main>
         <HeroSection />
-        <DashboardPreviewSection />
         <FeaturesGridSection />
-        <SuperchargedAISection />
         <WavyFeaturesSection />
-        <AIVoiceChatbotSection />
         <PricingSection />
-        <GlobalPresenceSection />
       </main>
       <Footer />
     </div>
   );
 };
-
-const dashboardImageUrl = (typeof window !== 'undefined' && (window as any).dashboardImageUrl) ? (window as any).dashboardImageUrl : '/image.png';
 
 export default LandingPage;
