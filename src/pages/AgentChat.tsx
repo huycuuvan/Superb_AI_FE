@@ -763,7 +763,7 @@ const AgentChat = () => {
                     getMessageStyle(msg.sender)
                   )}>
                     {msg.sender === 'agent' ? (
-                       <div className="chat-message text-card-foreground">
+                       <div className="chat-message text-card-foreground prose">
                           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                        </div>
                     ) : (

@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
+import typography from "@tailwindcss/typography";
 
 export default {
   darkMode: ["class"],
@@ -173,7 +174,33 @@ export default {
         inter: ["Inter", "sans-serif"],
         rubik: ["Rubik", "sans-serif"],
       },
+      typography: ({ theme }) => ({
+        DEFAULT: {
+          css: {
+            ul: {
+              "margin-top": "0",
+              "margin-bottom": "0",
+            },
+            ol: {
+              "margin-top": "0",
+              "margin-bottom": "0",
+            },
+            li: {
+              "margin-top": "0",
+              "margin-bottom": "0",
+            },
+            "li p": {
+              "margin-top": "0",
+              "margin-bottom": "0",
+            },
+            p: {
+              "margin-top": "0",
+              "margin-bottom": "0",
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [animate],
+  plugins: [animate, typography],
 } satisfies Config;
