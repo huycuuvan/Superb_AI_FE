@@ -18,6 +18,7 @@ import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessag
 import { Skeleton } from '@/components/ui/skeleton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
@@ -763,7 +764,7 @@ const AgentChat = () => {
                   )}>
                     {msg.sender === 'agent' ? (
                        <div className="chat-message text-card-foreground">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                        </div>
                     ) : (
                     <p className="text-primary-foreground">{msg.content}</p>
