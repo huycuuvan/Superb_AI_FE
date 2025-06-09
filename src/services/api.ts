@@ -103,6 +103,7 @@ export const createAgent = async (agentData: {
   language: string;
   position: string;
   status: string;
+  greeting_message?: string;
   model_config?: ModelConfig;
 }) => {
   const token = localStorage.getItem("token");
@@ -354,6 +355,7 @@ export interface UpdateAgentRequest {
   status?: string;
   model_config?: ModelConfig;
   folder_id?: string;
+  greeting_message?: string;
 }
 
 export const updateAgent = async (

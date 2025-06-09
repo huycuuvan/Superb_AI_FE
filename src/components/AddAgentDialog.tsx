@@ -38,6 +38,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
   const [jobBrief, setJobBrief] = useState('');
   const [language, setLanguage] = useState('Tiếng Việt');
   const [position, setPosition] = useState('');
+  const [greetingMessage, setGreetingMessage] = useState('');
   const [model, setModel] = useState('gpt-4');
   const [temperature, setTemperature] = useState('0.8');
   const [webhookUrl, setWebhookUrl] = useState('https://mvp2.xcel.bot/webhook/12122');
@@ -114,6 +115,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
         job_brief: jobBrief,
         language: language,
         position: position,
+        greeting_message: greetingMessage,
         model_config: modelConfig,
         status: status,
         folder_id: targetFolderId,
@@ -149,11 +151,13 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
       setRoleDescription('');
       setJobBrief('');
       setPosition('');
+      setLanguage('Tiếng Việt');
       setModel('gpt-4');
       setTemperature('0.8');
       setWebhookUrl('https://mvp2.xcel.bot/webhook/12122');
       setBuildPromptWebhookUrl('https://mvp2.xcel.bot/webhook/build-prompt');
       setStatus(user?.role === 'super_admin' ? 'system_public' : user?.role === 'admin' ? 'private' : 'workspace_shared');
+      setGreetingMessage('');
       setOpen(false);
     } catch (error) {
       console.error('Error creating agent:', error);
@@ -264,6 +268,20 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
                   placeholder="Ví dụ: Phòng Kinh doanh, Phòng Kỹ thuật, Phòng Marketing..."
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="greeting-message" className="text-right">
+                  Lời chào
+                </Label>
+                <Textarea
+                  id="greeting-message"
+                  className="col-span-3"
+                  value={greetingMessage}
+                  onChange={(e) => setGreetingMessage(e.target.value)}
+                  placeholder="Nhập lời chào mở đầu khi người dùng bắt đầu chat với agent"
+                  rows={3}
                 />
               </div>
             </div>

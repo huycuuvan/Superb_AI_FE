@@ -32,6 +32,7 @@ export interface Agent {
   job_brief?: string;
   language?: string;
   position?: string;
+  greeting_message?: string;
   creator_id: string;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 import typography from "@tailwindcss/typography";
+import lineClamp from "@tailwindcss/line-clamp";
 
 export default {
   darkMode: ["class"],
@@ -180,6 +181,8 @@ export default {
             ul: {
               "margin-top": "0",
               "margin-bottom": "0",
+
+              "list-style-type": "disc",
             },
             ol: {
               "margin-top": "0",
@@ -202,5 +205,5 @@ export default {
       }),
     },
   },
-  plugins: [animate, typography],
+  plugins: [lineClamp, animate, typography],
 } satisfies Config;

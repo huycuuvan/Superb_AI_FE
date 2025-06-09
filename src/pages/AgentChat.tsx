@@ -21,9 +21,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
-import { Label } from '@/components/ui/label';
-import { DialogDescription } from '@/components/ui/dialog';
-
+import { AgentTypingIndicator } from '@/components/ui/agent-typing-indicator';
+import { ChatMessageContent } from '@/components/chat/ChatMessageContent';
 interface TaskInput {
   id: string;
   label: string;
@@ -101,6 +100,8 @@ const AgentChat = () => {
   const lastAgentMessageIdRef = useRef<string | null>(null);
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
+  const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
@@ -132,6 +133,11 @@ const AgentChat = () => {
             // Xử lý tin nhắn từ Agent (dạng chunk)
             if (receivedData.sender_type === "agent") {
               setIsAgentThinking(false); // Agent đã trả lời, mở lại input
+              setIsTimeoutOccurred(false); // Clear timeout status
+              if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+              }
               setMessages(prevMessages => {
                 // Nếu message cuối cùng là agent, append chunk
                 if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
@@ -186,6 +192,11 @@ const AgentChat = () => {
           } else if (receivedData.type === "done") {
              lastAgentMessageIdRef.current = null; // Kết thúc chuỗi chunking
              setIsAgentThinking(false); // Tắt trạng thái typing khi nhận done (nếu backend gửi sau typing)
+             setIsTimeoutOccurred(false); // Clear timeout status
+             if (timeoutRef.current) {
+               clearTimeout(timeoutRef.current);
+               timeoutRef.current = null;
+             }
           } else if (receivedData.type === "status") {
              setTaskLogs(logs => [...logs, receivedData.content]); // Thêm nội dung vào state taskLogs
           }
@@ -197,11 +208,20 @@ const AgentChat = () => {
   
       ws.current.onclose = (event) => {
         console.log("WebSocket Disconnected. Code:", event.code, "Reason:", event.reason, "Was Clean:", event.wasClean);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
       };
   
       ws.current.onerror = (error) => {
         console.error("WebSocket Error:", error);
-        // console.error("WebSocket Error Event:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        setIsAgentThinking(false); // Stop typing indicator
+        setIsTimeoutOccurred(true); // Indicate timeout/error
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
       };
   
       return () => {
@@ -231,7 +251,8 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
-          console.log('Agent loaded:', agentData.data);
+          console.log('Agent loaded:', agentData.data.greeting_message
+          );
 
           // TODO: Fetch tasks for the agent
           if (agentId) {
@@ -250,18 +271,19 @@ const AgentChat = () => {
           }
 
           let threadId: string | null = null;
-          let threadCheck: { exists: boolean, thread_id?: string } | null = null;
-          
-          if (currentWorkspaceId && agentData.data) { // Ensure we have workspace and agent data
-            threadCheck = await checkThreadExists(agentId, currentWorkspaceId);
-            
-            if (threadCheck.exists && threadCheck.thread_id) { // Also check if thread_id is provided
-              threadId = threadCheck.thread_id; // Use existing thread ID
-              // Fetch existing messages for the thread
+          let initialMessages: ChatMessage[] = [];
+
+          if (!threadId) {
+            let threadCheck = null;
+            if (currentWorkspaceId) {
+              threadCheck = await checkThreadExists(agentId, currentWorkspaceId);
+            }
+
+            if (threadCheck && threadCheck.exists && threadCheck.thread_id) {
+              threadId = threadCheck.thread_id;
               try {
                 const messagesResponse = await getThreadMessages(threadId);
-                // Map API response (ApiMessage[]) to ChatMessage type and sort
-                const formattedMessages: ChatMessage[] = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+                initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
                     id: msg.id,
                     content: msg.message_content,
                     sender: msg.sender_type,
@@ -269,18 +291,24 @@ const AgentChat = () => {
                     agentId: msg.sender_agent_id
                 })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-                setMessages(formattedMessages);
+                if (initialMessages.length === 0 && agentData.data.greeting_message) {
+                  const welcomeMessage: ChatMessage = {
+                    id: Date.now().toString(),
+                    content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                    sender: 'agent',
+                    timestamp: new Date().toISOString(),
+                    agentId: agentData.data.id
+                  };
+                  initialMessages.push(welcomeMessage);
+                }
 
-                // Add console.log here to inspect fetched messages
                 console.log("Fetched messages for thread:", threadId, messagesResponse.data);
-                console.log("Formatted messages state:", formattedMessages);
+                console.log("Formatted messages state:", initialMessages);
 
               } catch (fetchError) {
                 console.error('Error fetching initial messages:', fetchError);
-                // Decide how to handle fetch error - maybe proceed without history or show error message
               }
             } else {
-              // Create new thread (only if check returns exists: false or thread_id is missing)
               const threadData = {
                 agent_id: agentId,
                 workspace_id: currentWorkspaceId,
@@ -289,44 +317,45 @@ const AgentChat = () => {
               const threadResponse = await createThread(threadData);
               threadId = threadResponse.data.id;
 
-              // Add initial welcome message for a new thread
-              // This message is created on the frontend, so timestamp format should be fine
               const welcomeMessage: ChatMessage = {
                 id: Date.now().toString(),
-                content: 'Hello! How can I help you?',
+                content: agentData.data.greeting_message || 'Hello! How can I help you?',
                 sender: 'agent',
-                timestamp: new Date().toISOString(), // Use ISO string for frontend message
+                timestamp: new Date().toISOString(),
                 agentId: agentData.data.id
               };
-              // Add welcome message after fetching history (for new thread)
-              // Note: If getThreadMessages for a new thread returns an empty array, this will be the first message
-              setMessages(prev => [...prev, welcomeMessage]);
+              initialMessages = [welcomeMessage];
+            }
+          } else {
+            try {
+              const messagesResponse = await getThreadMessages(threadId);
+              initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+                  id: msg.id,
+                  content: msg.message_content,
+                  sender: msg.sender_type,
+                  timestamp: msg.created_at,
+                  agentId: msg.sender_agent_id
+              })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+              if (initialMessages.length === 0 && agentData.data.greeting_message) {
+                const welcomeMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                  sender: 'agent',
+                  timestamp: new Date().toISOString(),
+                  agentId: agentData.data.id
+                };
+                initialMessages.push(welcomeMessage);
+              }
+
+            } catch (fetchError) {
+              console.error('Error fetching initial messages:', fetchError);
             }
           }
 
           setCurrentThread(threadId);
+          setMessages(initialMessages);
           console.log("Thread ID set to:", threadId);
-
-          // After threadId is set (old or new), load message history
-          if (threadId) {
-             try {
-               const messagesResponse = await getThreadMessages(threadId);
-               // Map API response (ApiMessage[]) to ChatMessage type and sort
-               const formattedMessages: ChatMessage[] = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
-                   id: msg.id,
-                   content: msg.message_content,
-                   sender: msg.sender_type,
-                   timestamp: msg.created_at,
-                   agentId: msg.sender_agent_id
-               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-               setMessages(formattedMessages);
-
-             } catch (fetchError) {
-               console.error('Error fetching initial messages:', fetchError); // Updated error message
-               // Decide how to handle fetch error - maybe proceed without history or show error message
-             }
-          }
 
         } catch (error) {
           console.error('Error initializing chat:', error);
@@ -349,6 +378,18 @@ const AgentChat = () => {
     if (message.trim() && currentThread) { // Check if threadId exists
       setIsSending(true); // Start loading
       setIsAgentThinking(true); // Khóa input, chờ agent trả lời
+      setIsTimeoutOccurred(false); // Reset timeout status for new message
+
+      // Set a timeout for the agent's response (e.g., 30 seconds)
+      timeoutRef.current = setTimeout(() => {
+        setIsAgentThinking(false); // Stop typing indicator
+        setIsTimeoutOccurred(true); // Set timeout status
+        toast({
+          title: "Lỗi!",
+          description: "Agent không phản hồi. Vui lòng thử lại.",
+          variant: "destructive",
+        });
+      }, 30000); // 30 seconds
 
       const userMessage: ChatMessage = {
         id: Date.now().toString(), // Temporary ID
@@ -375,7 +416,18 @@ const AgentChat = () => {
         setIsSending(false); 
       } catch (error) {
         console.error('Error sending message via WebSocket:', error);
-        setIsSending(false); 
+        setIsSending(false);
+        setIsAgentThinking(false); // Stop typing indicator
+        setIsTimeoutOccurred(true); // Indicate error
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        toast({
+          title: "Lỗi!",
+          description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
+          variant: "destructive",
+        });
         // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
       }
 
@@ -535,7 +587,18 @@ const AgentChat = () => {
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Update the state with messages from the clicked thread
-      setMessages(formattedMessages);
+      if (formattedMessages.length === 0 && currentAgent?.greeting_message) {
+        const welcomeMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: currentAgent.greeting_message || 'Hello! How can I help you?',
+          sender: 'agent',
+          timestamp: new Date().toISOString(),
+          agentId: currentAgent.id
+        };
+        setMessages([welcomeMessage]);
+      } else {
+        setMessages(formattedMessages);
+      }
       // Update the currentThread state
       setCurrentThread(threadId);
 
@@ -641,11 +704,16 @@ const AgentChat = () => {
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {threadsData?.data?.map((thread) => (
-                    <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                      <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
-                        {thread.title ? thread.title : 'New chat'}
-                      </button>
+                  {threadsData?.data?.map((thread, index, arr) => (
+                    <div key={thread.id}>
+                      <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                        <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
+                          {thread.title ? thread.title : 'New chat'}
+                        </button>
+                      </div>
+                      {index < arr.length - 1 && (
+                        <div className="border-b border-muted-foreground/20 my-2"></div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -699,11 +767,16 @@ const AgentChat = () => {
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {threadsData?.data?.map((thread) => (
-                <div key={thread.id} className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                  <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
-                    {thread.title ? thread.title : 'New chat'}
-                  </button>
+              {threadsData?.data?.map((thread, index, arr) => (
+                <div key={thread.id}>
+                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
+                    <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
+                      {thread.title ? thread.title : 'New chat'}
+                    </button>
+                  </div>
+                  {index < arr.length - 1 && (
+                    <div className="border-b border-muted-foreground/20 my-2"></div>
+                  )}
                 </div>
               ))}
             </div>
@@ -736,7 +809,7 @@ const AgentChat = () => {
             <div
               ref={chatContainerRef}
               className={cn(
-                "flex-1 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
+                "flex-1  min-h-0 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
                 aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
               )}
             >
@@ -759,16 +832,13 @@ const AgentChat = () => {
                     </Avatar>
                   )}
                   <div className={cn(
-                    "max-w-[70%] p-3 rounded-lg shadow-md break-words whitespace-pre-wrap",
+                    "max-w-[50%] p-3 rounded-lg shadow-md break-words",
                     getMessageStyle(msg.sender)
                   )}>
-                    {msg.sender === 'agent' ? (
-                       <div className="chat-message text-card-foreground prose">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
-                       </div>
-                    ) : (
-                    <p className="text-primary-foreground">{msg.content}</p>
-                    )}
+                   <ChatMessageContent 
+                      content={msg.content} 
+                      isAgent={msg.sender === 'agent'}
+                  />
                     <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
                       {/* Check if date is valid before formatting */}
                       {new Date(msg.timestamp).toString() !== 'Invalid Date'
@@ -778,10 +848,9 @@ const AgentChat = () => {
                   </div>
                   {msg.sender === 'user' && (
                     <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
-                       {/* User avatar image if available */}
+                      
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                         {/* User initial or fallback */}
-                         {/* Replace with actual user initial/fallback logic */}
+                  
                          U
                        </AvatarFallback>
                     </Avatar>
@@ -791,20 +860,22 @@ const AgentChat = () => {
 
               {/* Agent Thinking Indicator */}
               {isAgentThinking && (
-                <div className="flex items-center justify-center gap-2 py-4">
-                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
-                  <span className="text-primary font-semibold">Đang chờ agent trả lời...</span>
-                </div>
+                <AgentTypingIndicator
+                  agentName={currentAgent?.name}
+                  agentAvatar={currentAgent?.avatar}
+                />
               )}
 
               {/* Vùng hiển thị Task Logs */}
               <div className="mt-4">
-                <button
-                  className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border text-muted-foreground"
-                  onClick={() => setShowTaskLogs(v => !v)}
-                >
-                  {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
-                </button>
+                {taskLogs.length > 0 && (
+                  <button
+                    className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border text-muted-foreground"
+                    onClick={() => setShowTaskLogs(v => !v)}
+                  >
+                    {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
+                  </button>
+                )}
                 {showTaskLogs && taskLogs.length > 0 && (
                   <div className="p-3 border border-border rounded-lg bg-card text-card-foreground text-sm overflow-y-auto max-h-[200px]">
                     <h4 className="font-semibold mb-2">Task Logs:</h4>
@@ -907,7 +978,7 @@ const AgentChat = () => {
                  <div className="mb-3 space-y-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
                    <h3 className="text-lg font-semibold text-foreground">{selectedTask.name} Inputs</h3> {/* Sử dụng task.name hoặc title */}
                    {/* Render inputs dựa trên execution_config */}
-                   {Object.entries(selectedTask.execution_config).map(([key, defaultValue]) => (
+                   {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
                      <div key={key} className="space-y-1">
                        {/* Sử dụng key làm label và input id */}
                        <label htmlFor={key} className="text-sm font-medium text-foreground">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label> {/* Tự động tạo label từ key */}
@@ -947,6 +1018,12 @@ const AgentChat = () => {
                     <Button variant="outline" className="w-full border-border mt-4" onClick={() => setAboveInputContent('none')}>Close Knowledge</Button>
                   </div>
                 )}
+
+               {isTimeoutOccurred && (
+                 <div className="p-3 text-red-500 bg-red-100 border border-red-200 rounded-lg mb-3">
+                   <p>Agent không phản hồi trong thời gian quy định. Vui lòng thử lại hoặc kiểm tra kết nối.</p>
+                 </div>
+               )}
 
                <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
                  
