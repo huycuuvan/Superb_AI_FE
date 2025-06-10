@@ -28,33 +28,65 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#c7d2fe", // hoặc pick màu bạn thích dùng cho trường hợp tĩnh
-          from: "#c7d2fe", // điểm bắt đầu gradient
-          to: "#fbc2eb", // điểm kết thúc gradient
-          text: "#334155", // slate-700
+          DEFAULT: "#6366f1", // indigo-500
+          50: "#eef2ff",
+          100: "#e0e7ff", 
+          200: "#c7d2fe",
+          300: "#a5b4fc",
+          400: "#818cf8",
+          500: "#6366f1",
+          600: "#4f46e5",
+          700: "#4338ca",
+          800: "#3730a3",
+          900: "#312e81",
           foreground: "hsl(var(--primary-foreground))",
-          gradient: "linear-gradient(to right, #c7d2fe, #fbc2eb)",
-          purple: "#A259F7",
-          pink: "#E9428E",
-          indigo: "#6366F1",
-          hover: "#9DF1D7",
-          light: "#FFF4F8",
-          dark: "#A4F5D8",
         },
-
+        purple: {
+          DEFAULT: "#9333ea", // purple-600
+          50: "#faf5ff",
+          100: "#f3e8ff",
+          200: "#e9d5ff", 
+          300: "#d8b4fe",
+          400: "#c084fc",
+          500: "#a855f7",
+          600: "#9333ea",
+          700: "#7c3aed",
+          800: "#6b21a8",
+          900: "#581c87",
+        },
+        cyan: {
+          DEFAULT: "#06b6d4", // cyan-500  
+          50: "#ecfeff",
+          100: "#cffafe",
+          200: "#a5f3fc",
+          300: "#67e8f9", 
+          400: "#22d3ee",
+          500: "#06b6d4",
+          600: "#0891b2",
+          700: "#0e7490",
+          800: "#155e75",
+          900: "#164e63",
+        },
         secondary: {
-          DEFAULT: "#FFF4F8",
-          foreground: "#4A5568",
-          hover: "#EBEEFC",
-          light: "#F8FAFC",
-          dark: "#A4F5D8",
+          DEFAULT: "#f1f5f9", // slate-100
+          foreground: "#475569", // slate-600
+          hover: "#e2e8f0", // slate-200
+          light: "#f8fafc", // slate-50
+          dark: "#64748b", // slate-500
         },
         accent: {
-          DEFAULT: "#9DF1D7",
-          foreground: "#2D3748",
-          hover: "#A4F5D8",
-          light: "#D2FAE1",
-          dark: "#EBEEFC",
+          DEFAULT: "#10b981", // emerald-500
+          50: "#ecfdf5",
+          100: "#d1fae5", 
+          200: "#a7f3d0",
+          300: "#6ee7b7",
+          400: "#34d399",
+          500: "#10b981",
+          600: "#059669",
+          700: "#047857",
+          800: "#065f46",
+          900: "#064e3b",
+          foreground: "#ffffff",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
