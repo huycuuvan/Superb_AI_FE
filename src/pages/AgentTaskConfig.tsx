@@ -9,9 +9,12 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Database, CheckCircle } from 'lucide-react'; // Assuming these icons are available
 import * as XLSX from 'xlsx';
+import { useTheme } from '@/hooks/useTheme';
 
 const AgentTaskConfig = () => {
   const { agentId } = useParams<{ agentId: string }>();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   // State for scheduler settings
   const [frequency, setFrequency] = useState('daily'); // Default to Daily
@@ -210,7 +213,7 @@ const AgentTaskConfig = () => {
               <Button variant="outline" onClick={handleCancel} className="border-border text-foreground hover:bg-muted">
                 Cancel
               </Button>
-              <Button onClick={() => handleSave()} className="teampal-button">
+              <Button onClick={() => handleSave()} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
                 Save Settings
               </Button>
             </div>
@@ -227,28 +230,28 @@ const AgentTaskConfig = () => {
                 <Button 
                   variant={selectedDataSource === 'csv' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('csv')}
-                  className={selectedDataSource === 'csv' ? '' : 'border-border text-foreground hover:bg-muted'}
+                  className={selectedDataSource === 'csv' ? `${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white` : 'border-border text-foreground hover:bg-muted'}
                 >
                   Upload CSV
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'excel' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('excel')}
-                  className={selectedDataSource === 'excel' ? '' : 'border-border text-foreground hover:bg-muted'}
+                  className={selectedDataSource === 'excel' ? `${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white` : 'border-border text-foreground hover:bg-muted'}
                 >
                   Upload Excel
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'google-sheets' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('google-sheets')}
-                  className={selectedDataSource === 'google-sheets' ? '' : 'border-border text-foreground hover:bg-muted'}
+                  className={selectedDataSource === 'google-sheets' ? `${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white` : 'border-border text-foreground hover:bg-muted'}
                 >
                   Google Sheets
                 </Button>
                 <Button 
                   variant={selectedDataSource === 'api' ? 'default' : 'outline'}
                   onClick={() => setSelectedDataSource('api')}
-                  className={selectedDataSource === 'api' ? '' : 'border-border text-foreground hover:bg-muted'}
+                  className={selectedDataSource === 'api' ? `${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white` : 'border-border text-foreground hover:bg-muted'}
                 >
                   API
                 </Button>
@@ -355,7 +358,7 @@ const AgentTaskConfig = () => {
               <Button variant="outline" onClick={() => setCurrentStep(0)} className="border-border text-foreground hover:bg-muted">
                 Previous
               </Button>
-              <Button onClick={() => setCurrentStep(2)} className="teampal-button">
+              <Button onClick={() => setCurrentStep(2)} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
                 Next
               </Button>
             </div>

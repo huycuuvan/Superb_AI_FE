@@ -162,7 +162,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 text-foreground ">
+    <div className="space-y-6 text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -171,10 +171,10 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-          <Button className="flex hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text color-black items-center justify-center gap-2 w-full sm:w-auto" onClick={() => setShowAddAgentDialog(true)}>
+          <Button className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddAgentDialog(true)}>
             <span className="text-lg">+</span> Create agent
           </Button>
-          <Button variant="outline" className="flex items-center  justify-center gap-2 w-full sm:w-auto hover:bg-gray">
+          <Button variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-gray">
             <span className="text-lg">+</span> Create folder
           </Button>
         </div>
@@ -352,6 +352,8 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
 
 // New component to fetch and display agents for a folder
 const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.memo(({ folderId, navigate }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
     queryKey: ['agentsByFolder', folderId],
     queryFn: () => {
@@ -383,12 +385,11 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
       {agents.map((agent: Agent) => (
         <Card
           key={agent.id}
-          className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40"
+          className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
           onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
         >
           <Avatar className="w-12 h-12">
-             {/* Replace with actual agent avatar if available */}
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center text-primary-foreground text-lg font-medium">
+            <div className={`w-12 h-12 rounded-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white flex items-center justify-center text-lg font-medium`}>
               {agent.name.charAt(0)}
             </div>
           </Avatar>

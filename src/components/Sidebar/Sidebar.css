@@ -1,0 +1,32 @@
+/* src/components/Sidebar.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Định nghĩa style chung cho các link trong sidebar */
+  .sidebar-link {
+    @apply flex items-center px-3 py-2 rounded-md text-sm transition-colors;
+  }
+
+  /*
+   * Style cho link ở trạng tháiปกติ (không active, không hover).
+   * Dùng màu chữ phụ (muted).
+  */
+  .sidebar-link-default {
+    @apply text-muted-foreground hover:text-accent-foreground hover:bg-accent;
+  }
+
+  /*
+   * Style cho link KHI ĐANG ACTIVE.
+   * Dùng màu primary để làm nổi bật.
+  */
+  .sidebar-link-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  /* Style cho icon trong link */
+  .sidebar-icon {
+    @apply h-4 w-4;
+  }
+}

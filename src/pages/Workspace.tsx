@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTheme } from '@/hooks/useTheme';
 
 interface Workspace {
   id: string;
@@ -41,6 +42,8 @@ const WorkspacePage = () => {
   const { user, logout, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [workspaceIdForMembers, setWorkspaceIdForMembers] = useState<string | null>(null);
@@ -259,7 +262,7 @@ const WorkspacePage = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40"
+                  className={`w-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white shadow-lg hover:shadow-gray-500/40`}
                   disabled={loading}
                   size="lg"
                 >
@@ -317,7 +320,7 @@ const WorkspacePage = () => {
                             <div className="flex items-center gap-2 ml-auto">
                               <InviteMember workspaceId={workspace.id} iconOnly={true} />
                               <button
-                                className="block sm:hidden rounded-full bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                className={`block sm:hidden rounded-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-200`}
                                 onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
                                 aria-label="Go to Dashboard"
                               >
@@ -326,7 +329,7 @@ const WorkspacePage = () => {
                               <Button 
                                 variant="default"
                                 size="sm"
-                                className="hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#c7d2fe] to-[#fbc2eb] text-slate-700 dark:text-slate-700 border-0 shadow hover:from-blue-400 hover:to-purple-400 hover:text-white transition-all"
+                                className={`hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white border-0 shadow transition-all`}
                                 onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
                               >
                                 Go to Dashboard

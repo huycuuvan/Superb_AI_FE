@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/useTheme';
 
 interface TeamMember {
   name: string;
@@ -60,6 +61,8 @@ const teamMembers: TeamMember[] = [
 ];
 
 const AboutPage: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const contentRef = useRef<HTMLDivElement>(null);
   const teamRef = useRef<HTMLDivElement>(null);
 
@@ -323,7 +326,7 @@ const AboutPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="bg-white text-purple-600 hover:bg-purple-50 border-0"
+                  className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white border-0`}
                   asChild
                 >
                   <Link to="/careers">View Open Positions</Link>

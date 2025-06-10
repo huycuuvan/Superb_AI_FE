@@ -45,6 +45,8 @@ const AgentProfilePage = () => {
   const [taskToDelete, setTaskToDelete] = useState<ApiTaskType | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
 
+  const [isDark, setIsDark] = useState(false);
+
   const fetchAgentData = async () => {
     if (!agentId) {
       setError('Agent ID is missing.');
@@ -357,7 +359,7 @@ const AgentProfilePage = () => {
               <h3 className="text-xl font-semibold flex items-center">
                 <ListPlus className="mr-2 text-primary" /> Associated Tasks ({tasks?.length || 0})
               </h3>
-              <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className="flex items-center space-x-2">
+              <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className={`flex items-center space-x-2 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
                 <PlusCircle className="h-4 w-4" /> <span>Create New Task</span>
               </Button>
             </div>
@@ -585,7 +587,7 @@ const AgentProfilePage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateTaskDialogOpen(false)} disabled={isCreatingTask}>Cancel</Button>
-            <Button onClick={handleSaveNewTask} disabled={isCreatingTask || !newTaskData.name || !newTaskData.description || !newTaskData.task_type || !newTaskData.category}>
+            <Button onClick={handleSaveNewTask} disabled={isCreatingTask || !newTaskData.name || !newTaskData.description || !newTaskData.task_type || !newTaskData.category} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
               {isCreatingTask ? 'Creating...' : 'Create Task'}
             </Button>
           </DialogFooter>
@@ -687,7 +689,7 @@ const AgentProfilePage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditTaskDialogOpen(false)} disabled={isSavingTask}>Cancel</Button>
-            <Button onClick={handleSaveEditedTask} disabled={isSavingTask || !editedTaskData.name || !editedTaskData.description || !editedTaskData.task_type || !editedTaskData.category}>
+            <Button onClick={handleSaveEditedTask} disabled={isSavingTask || !editedTaskData.name || !editedTaskData.description || !editedTaskData.task_type || !editedTaskData.category} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
               {isSavingTask ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>

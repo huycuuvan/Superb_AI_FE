@@ -1,88 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@300;400;500;600;700&display=swap');
+/* index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* --- THEME SÁNG --- */
   :root {
-    --background: 340 100% 99%;
-    --foreground: 340 10% 10%;
+    --background: 0 0% 100%; /* Màu nền trắng: #FFFFFF */
+    --foreground: 224 71% 4%; /* Màu chữ đen đậm: #020817 */
 
     --card: 0 0% 100%;
-    --card-foreground: 340 10% 10%;
+    --card-foreground: 224 71% 4%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 340 10% 10%;
+    --popover-foreground: 224 71% 4%;
+    
+    /* Màu chủ đạo của theme sáng là màu Tím */
+    --primary: 262 83% 58%; /* #7C3AED */
+    --primary-foreground: 0 0% 100%; /* Chữ trên nền primary: màu trắng */
 
-    --primary: 340 100% 85%;
-    --primary-foreground: 340 10% 10%;
+    --secondary: 240 5% 96%; /* #F4F4F5 */
+    --secondary-foreground: 240 10% 3.9%; /* #0A0A0A */
 
-    --secondary: 340 50% 95%;
-    --secondary-foreground: 340 10% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%; /* #6F6F7A */
 
-    --muted: 340 10% 96%;
-    --muted-foreground: 340 5% 45%;
+    /* Màu nhấn của theme sáng là màu Hồng */
+    --accent: 289 81% 58%; /* #D946EF */
+    --accent-foreground: 0 0% 100%; /* Chữ trên nền accent: màu trắng */
 
-    --accent: 340 30% 96%;
-    --accent-foreground: 340 10% 10%;
+    --destructive: 0 84% 60%; /* #F87171 */
+    --destructive-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 340 20% 93%;
-    --input: 340 20% 93%;
-    --ring: 340 90% 85%;
+    --border: 240 6% 90%; /* #E4E4E7 */
+    --input: 240 6% 90%;
+    --ring: 262 83% 58%; /* #7C3AED */
 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 340 5% 26%;
-    --sidebar-primary: 340 100% 85%;
-    --sidebar-primary-foreground: 340 5% 10%;
-    --sidebar-accent: 340 20% 96%;
-    --sidebar-accent-foreground: 340 5% 10%;
-    --sidebar-border: 340 20% 93%;
-    --sidebar-ring: 340 90% 85%;
   }
 
+  /* --- THEME TỐI --- */
   .dark {
-    --background: 0 0% 11%; /* #1B1C1D */
-    --foreground: 0 0% 98%;
+    --background: 224 71% 4%; /* Màu nền đen tuyền: #020817 */
+    --foreground: 210 20% 98%; /* Màu chữ trắng ngà: #FAFAFA */
 
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 98%;
+    --card: 224 71% 4%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 340 100% 70%;
-    --primary-foreground: 0 0% 10%;
+    /* Màu chủ đạo của theme tối là màu Xanh Cyan */
+    --primary: 195 89% 48%; /* #22D3EE */
+    --primary-foreground: 224 71% 4%; /* Chữ trên nền primary: màu đen */
 
-    --secondary: 0 0% 25%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 215 28% 17%; /* #1E293B */
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 70%;
-
-    --accent: 0 0% 25%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 340 70% 70%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 16% 57%; /* #828A9A */
     
-    --sidebar-background: 0 0% 6%; /* #0F0F0F */
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 340 90% 70%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 340 90% 70%;
+    /* Màu nhấn của theme tối cũng là Xanh Cyan */
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 63% 31%; /* #991B1B */
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 195 89% 48%; /* #22D3EE */
   }
 }
 
@@ -90,229 +79,49 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
 }
 
-.teampal-gradient {
-  @apply bg-gradient-to-r from-teampal-100 to-teampal-200;
+/* --- Lớp tiện ích cho Gradient --- */
+@layer utilities {
+  .button-gradient-light {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105;
+  }
+  .button-gradient-dark {
+    @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105;
+  }
+  .text-gradient-light {
+      @apply bg-gradient-to-r from-violet-600 to-fuchsia-500 text-transparent bg-clip-text;
+  }
+  .text-gradient-dark {
+      @apply text-cyan-400;
+  }
 }
 
-.teampal-button {
-  @apply bg-gradient-to-r from-teampal-200 to-teampal-300 hover:from-teampal-300 hover:to-teampal-400 text-foreground font-medium py-2 px-4 rounded-md transition-all duration-300;
-}
-
-[data-theme='teampal-pink'] {
-  --main-color: #e9428e;
-  --button-bg: #e9428e;
-  --button-text: #fff;
-  --accent-color: #f9e0ef;
-}
-[data-theme='blue'] {
-  --main-color: #3b82f6;
-  --button-bg: #3b82f6;
-  --button-text: #fff;
-  --accent-color: #e0eaff;
-}
-[data-theme='purple'] {
-  --main-color: #a259f7;
-  --button-bg: #a259f7;
-  --button-text: #fff;
-  --accent-color: #f3e8ff;
-}
-
-.teampal-button {
-  background: var(--button-bg);
-  color: var(--button-text);
-  border: none;
-}
-
-.teampal-button:hover {
-  opacity: 0.9;
-}
-
-.bg-teampal-500 {
-  background: var(--main-color) !important;
-}
-
-.border-teampal-500 {
-  border-color: var(--main-color) !important;
-}
-
-/* Custom sidebar styles */
-.dark .sidebar {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .sidebar-header {
-  @apply border-[#0F0F0F];
-}
-
-.dark .sidebar-search {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .sidebar-search input {
-  @apply bg-[#0F0F0F] border-[#0F0F0F] text-white placeholder-gray-400;
-}
-
-.dark .sidebar-section {
-  @apply border-[#0F0F0F];
-}
-
-.dark .sidebar-footer {
-  @apply border-[#0F0F0F];
-}
-
-/* Override slate colors and other dark mode styles */
-.dark .dark\:border-slate-800 {
-  @apply border-[#0F0F0F];
-}
-
-.dark .dark\:bg-slate-800 {
-  @apply bg-[#0F0F0F];
-}
-
-.dark .dark\:text-slate-400 {
-  @apply text-gray-400;
-}
-
-.dark .dark\:hover\:text-slate-200 {
-  @apply hover:text-gray-200;
-}
-
-/* Additional dark mode overrides */
-.dark .dark\:bg-muted\/50 {
-  @apply bg-[#0F0F0F];
-}
-
-.dark .dark\:border-border {
-  @apply border-[#0F0F0F];
-}
-
-.dark .dark\:bg-background {
-  @apply bg-[#0F0F0F];
-}
-
-.dark .dark\:hover\:bg-accent\/50 {
-  @apply hover:bg-[#1B1C1D];
-}
-
-.dark .dark\:bg-accent {
-  @apply bg-[#1B1C1D];
-}
-
-.dark .dark\:text-accent-foreground {
-  @apply text-white;
-}
-
-/* Override input styles in dark mode */
-.dark input[type="search"] {
-  @apply bg-[#0F0F0F] border-[#0F0F0F] text-white placeholder-gray-400;
-}
-
-/* Override button styles in dark mode */
-.dark button {
-  @apply text-gray-400 hover:text-gray-200;
-}
-
-/* Override specific elements */
-.dark .flex.items-center.p-\[14px\] {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .p-3 {
-  @apply bg-[#0F0F0F];
-}
-
-.dark .flex.items-center.justify-between.px-3.py-2 {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .absolute.bottom-0.left-0.w-full {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .border-b.border-border.p-2 {
-  @apply bg-[#0F0F0F] border-[#0F0F0F];
-}
-
-.dark .p-3.flex.items-center.justify-between {
-  @apply bg-[#0F0F0F];
-}
-
-/* Folder list styles */
-.dark .flex-1.min-h-0.overflow-y-auto {
-  @apply bg-[#0F0F0F];
-}
-
-.dark .flex.items-center.px-3.py-2.mx-2.rounded-md {
-  @apply bg-[#0F0F0F] hover:bg-[#1B1C1D];
-}
-
-.dark .dark\:bg-accent\/50 {
-  @apply bg-[#1B1C1D];
-}
-
-.dark .dark\:hover\:bg-slate-800 {
-  @apply hover:bg-[#1B1C1D];
-}
-
-.dark .dark\:hover\:bg-slate-700 {
-  @apply hover:bg-[#1B1C1D];
-}
-
-/* Dropdown menu styles */
-.dark .dark\:bg-slate-800.dark\:border-slate-700 {
-  @apply bg-[#0F0F0F] border-[#1B1C1D];
-}
-
-.dark .dark\:hover\:bg-slate-700 {
-  @apply hover:bg-[#1B1C1D];
-}
-
-.dark .dark\:focus\:bg-slate-700 {
-  @apply focus:bg-[#1B1C1D];
-}
-
-/* Ensure sidebar background is consistently the dark theme color */
-.dark aside.relative.flex-col.h-full {
-  @apply bg-[#0F0F0F];
-}
-
-/* Thêm đoạn này vào file CSS gốc của bạn (ví dụ: src/index.css hoặc src/globals.css) */
-/* Đảm bảo nó được xử lý bởi Tailwind hoặc hệ thống CSS của bạn */
-.chat-message {
-  overflow-x: auto; /* Cho phép cuộn ngang nếu nội dung tràn */
-  /* Các style chat-message khác nếu có */
-}
+/* --- CSS cho bảng trong tin nhắn chat (giữ nguyên) --- */
 .chat-message table {
-  border-collapse: collapse; /* Giúp các đường viền liền mạch */
-  width: 100%; /* Bảng chiếm toàn bộ chiều rộng của container tin nhắn */
-  margin-top: 1em; /* Khoảng cách trên bảng */
-  margin-bottom: 1em; /* Khoảng cách dưới bảng */
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  overflow-x: auto;
 }
-
 .chat-message th,
 .chat-message td {
-  border: 1px solid #ddd; /* Thêm đường viền mỏng màu xám nhạt */
-  padding: 8px; /* Thêm khoảng đệm bên trong ô */
-  text-align: left; /* Căn lề trái cho nội dung */
+  border: 1px solid hsl(var(--border));
+  padding: 8px;
+  text-align: left;
 }
-
 .chat-message th {
-  background-color: #f2f2f2; /* Màu nền cho header bảng */
-  font-weight: bold; /* In đậm chữ trong header */
+  background-color: hsl(var(--secondary));
+  font-weight: bold;
 }
-
-/* Thêm style cho các hàng xen kẽ (tùy chọn) */
-.chat-message tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.dark .chat-message tbody tr:nth-child(even) {
+  background-color: hsl(var(--background) / 0.5);
 }
-
-.primary-gradient {
-  @apply bg-gradient-to-r from-[#fdfaff] to-[#fff7fb] text-pink-700;
+.light .chat-message tbody tr:nth-child(even) {
+  background-color: hsl(var(--secondary));
 }
-

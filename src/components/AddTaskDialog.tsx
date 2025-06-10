@@ -25,6 +25,7 @@ import { getAgents } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { Agent } from '@/types';
 import { toast } from "sonner";
+import { useTheme } from '@/hooks/useTheme';
 
 interface AddTaskDialogProps {
   onClose: () => void;
@@ -34,6 +35,8 @@ interface AddTaskDialogProps {
 export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
   const { t } = useLanguage();
   const { workspace } = useSelectedWorkspace();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [taskType, setTaskType] = useState<TaskType>('external_webhook');
@@ -381,6 +384,7 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
               !webhookUrl.trim() ||
               !executionConfig.trim()
             }
+            className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}
           >
             {isLoading ? 'Đang tạo...' : t('create')}
           </Button>

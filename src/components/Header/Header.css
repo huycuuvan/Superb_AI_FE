@@ -1,0 +1,21 @@
+/* src/components/Header.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    /* Định nghĩa style cho các link trong menu mobile */
+    .mobile-nav-link {
+        @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100;
+    }
+
+    /* Style cho nút menu mobile */
+    .mobile-menu-button {
+        @apply p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100;
+    }
+
+    /* Style cho container của menu mobile */
+    .mobile-menu-container {
+        @apply fixed inset-0 z-50 bg-white;
+    }
+}

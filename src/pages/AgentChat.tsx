@@ -23,6 +23,8 @@ import { ChatMessageContent } from '@/components/chat/ChatMessageContent';
 import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
 import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
 import { Label } from '@/components/ui/label';
+import { useTheme } from '@/hooks/useTheme';
+
 interface TaskInput {
   id: string;
   label: string;
@@ -702,6 +704,9 @@ const handleSubmitTaskInputs = async () => {
     }
 }, [historyData, taskRunItems.length]); // Thêm taskRunItems.length vào dependency
 
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden">
       
@@ -1118,7 +1123,7 @@ const handleSubmitTaskInputs = async () => {
                        <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10"
+                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
                           onClick={() => setShowTaskHistory(prev => !prev)}
                           title="Xem lịch sử thực thi"
                       >
@@ -1127,7 +1132,7 @@ const handleSubmitTaskInputs = async () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
+                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
                           title="Chọn tệp kiến thức"
@@ -1139,7 +1144,7 @@ const handleSubmitTaskInputs = async () => {
                        <Button
                           variant="outline"
                            size="icon"
-                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
+                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
                           onClick={() => setIsTaskModalOpen(true)}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
                           title="Kiến thức đã được đào tạo"

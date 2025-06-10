@@ -10,6 +10,11 @@ import {
   Search, 
   ChevronRight,
   Plus,
+  Briefcase,
+  Palette,
+  ShoppingCart,
+  Cpu,
+  TrendingUp,
   Folder,
   MoreVertical,
   Edit,
@@ -19,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { workspaces } from '@/services/mockData';
 import { AddFolderDialog } from '@/components/AddFolderDialog';
 import { useLanguage } from '@/hooks/useLanguage';
 import SettingsDropdown from '@/components/SettingsDropdown';
@@ -33,12 +39,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder } from '@/services/api';
+import { getFolders, updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
-import { Skeleton } from './ui/skeleton';
+import { useTheme } from '@/hooks/useTheme';
 
 
   interface SidebarProps {
@@ -62,6 +68,8 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
   const { toast } = useToast();
   const { folders, loadingFolders, fetchFolders } = useFolders();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   // State for rename functionality
   const [showRenameDialog, setShowRenameDialog] = useState(false);
@@ -170,12 +178,12 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     <>
       <aside 
         className={cn(
-          "relative flex flex-col h-full bg-primary-gradient border-r border-border transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
+          "relative flex flex-col h-full bg-white border-r border-border transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
           collapsed ? "w-16" : "w-64",
           className
         )}
       >
-        <div className="flex items-center p-[14px] border-b border-border dark:bg-slate-900 dark:border-slate-800">
+        <div className="flex items-center p-[14px] border-b border-border dark:border-slate-800">
           <div className="flex items-center space-x-2">
             
             {!collapsed && (
@@ -203,10 +211,10 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           </div>
         )}
 
-        <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border dark:border-slate-800  dark:bg-primary-pink/50">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border dark:border-slate-800">
           <div className="flex items-center space-x-2 max-w-[140px]">
             {workspace?.name.startsWith('AI') && (
-              <div className="w-6 h-6 rounded-full  flex items-center justify-center text-white text-xs font-medium">
+              <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
                 AI
               </div>
             )}
@@ -216,9 +224,9 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           </div>
           {!collapsed && (
             <Button 
-              variant="outline" 
+              variant="default" 
               size="icon" 
-              className="h-6 w-6 ml-1 bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
+              className={`h-6 w-6 ml-1 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}
               onClick={() => setShowAddFolderDialog(true)}
             >
               <Plus className="h-4 w-4" />
@@ -228,18 +236,24 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         
         <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {loadingFolders ? (
-            <Skeleton />
+            <div className="px-3 py-2 text-muted-foreground text-sm">Loading...</div>
           ) : (
             folders?.map((folder) => (
               <div
                 key={folder.id}
                 className={cn(
                   "flex items-center px-3 py-2 mx-2 rounded-md text-sm cursor-pointer",
-                  "hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text",
                   "transition-colors",
                   location.pathname === `/dashboard/folder/${folder.id}`
-                    ? "bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? {
+                        [isDark ? 'button-gradient-dark' : 'button-gradient-light']: true,
+                        'text-white': true,
+                      }
+                    : {
+                        'text-muted-foreground': true,
+                        [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
+                        [isDark ? 'hover:text-white' : 'hover:text-gray-900']: true,
+                      }
                 )}
                 onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
               >
@@ -250,7 +264,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button 
-                          className="rounded-full p-1.5 hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text focus:outline-none ml-1" 
+                          className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" 
                           onClick={e => e.stopPropagation()}
                         >
                           <MoreVertical className="sidebar-icon text-muted-foreground" />
@@ -293,10 +307,17 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                   to={item.path}
                   className={cn(
                     "flex items-center px-3 py-2 rounded-md text-sm",
+                    "transition-colors",
                     isActive 
-                      ? "bg-gradient-to-r from-primary-from to-primary-to text-primary-text"
-                      : "hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text",
-                    "transition-colors"
+                      ? {
+                          [isDark ? 'button-gradient-dark' : 'button-gradient-light']: true,
+                          'text-white': true,
+                        }
+                      : {
+                          'text-muted-foreground': true,
+                          [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
+                          [isDark ? 'hover:text-white' : 'hover:text-gray-900']: true,
+                        }
                   )}
                 >
                   <item.icon className="sidebar-icon mr-2" />
@@ -305,13 +326,13 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
               );
             })}
           </div>
-          <div className="p-3 flex items-center justify-between text-primary-text">
+          <div className="p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center text-foreground">
+              <div className="w-8 h-8 rounded-full bg-teampal-200 flex items-center justify-center text-foreground">
                 {user?.name ? user.name.charAt(0) : 'U'}
               </div>
               {!collapsed && (
-                <div className="text-sm  ">{user?.name || 'Guest'}</div>
+                <div className="text-sm">{user?.name || 'Guest'}</div>
               )}
             </div>
             {!collapsed && <SettingsDropdown />}
@@ -344,7 +365,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
             <DialogClose asChild>
               <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
             </DialogClose>
-            <Button onClick={handleRenameFolder} disabled={isRenaming} className="teampal-button">{isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}</Button>
+            <Button onClick={handleRenameFolder} disabled={isRenaming} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>{isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -382,4 +403,3 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
 });
 
 export default Sidebar;
-

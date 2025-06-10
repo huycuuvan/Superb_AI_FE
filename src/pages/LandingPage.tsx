@@ -180,7 +180,7 @@ const Header = ({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () => v
                             {isDark ? <SunIcon /> : <MoonIcon />}
                         </button>
                         <Link to="/login" className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-purple-600'} transition-colors hidden sm:block font-medium`}>Log in</Link>
-                        <Link to="/register" className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-400/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-400/30'} text-white font-semibold px-5 py-2.5 rounded-lg transition-all transform hover:scale-105 shadow-md`}>
+                        <Link to="/register" className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg`}>
                             Try for Free
             </Link>
                         <button className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -240,7 +240,7 @@ const Hero = ({ isDark }: { isDark: boolean }) => {
                                 Ideate & automate your business processes faster and cheaper with intelligent, autonomous AI agents.
                             </p>
                             <div className="flex flex-col sm:flex-row justify-center lg:justify-start items-center gap-5 mb-12">
-                                <Link to="/register" className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/30'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg`}>
+                                <Link to="/register" className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg`}>
                                     Get Started - It's Free
           </Link>
                                 <button className={`flex items-center justify-center ${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} font-semibold space-x-3 transition-colors w-full sm:w-auto group`}>
@@ -358,7 +358,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                 Input your complete requirements, add knowledge bases, create schedules, and configure your AI agent to match your exact business needs.
                             </p>
                             <div className="flex flex-wrap gap-3 mt-8">
-                                <button className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
                                     Add Knowledge
                                 </button>
                                 <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
@@ -428,7 +428,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                 Monitor your agent's performance in real-time. Review execution status, track results, and optimize workflows as your business grows.
                             </p>
                             <div className="flex space-x-3 mt-8">
-                                <button className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
                                     Deploy
                                 </button>
                                 <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
@@ -497,7 +497,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                             <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
                                 Your automation is complete and running smoothly. Now scale to new departments, processes, or create entirely new AI agents for other business needs.
                             </p>
-                            <Link to="/register" className={`inline-block mt-8 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/30'} text-white font-bold px-8 py-3 rounded-lg transition-all transform hover:scale-105 shadow-lg`}>
+                            <Link to="/register" className={`inline-block mt-8 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 shadow-lg`}>
                                 Start Your Journey
                             </Link>
           </div>
@@ -538,7 +538,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                 </div>
                                 
                                 <div className="text-center">
-                                    <button className={`w-full ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'} text-white font-semibold px-4 py-3 rounded-lg transition-all`}>
+                                    <button className={`w-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-3 rounded-lg transition-all`}>
                                         Create Another Agent
                                     </button>
           </div>
