@@ -36,20 +36,37 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
   const { workspace } = useSelectedWorkspace();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [taskType, setTaskType] = useState<TaskType>('pretrained_configurable');
+  const [taskType, setTaskType] = useState<TaskType>('external_webhook');
   const [executionConfig, setExecutionConfig] = useState('');
   const [promptContent, setPromptContent] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('Social Media');
   const [isLoading, setIsLoading] = useState(false);
-  const [creditCost, setCreditCost] = useState(20);
+  const [creditCost, setCreditCost] = useState(5);
   const [isSystemTask, setIsSystemTask] = useState(true);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [imgUrl, setImgUrl] = useState('');
 
   const creditCostOptions = [
-    { value: 20, label: 'Normal (20 credits)' },
-    { value: 50, label: 'Premium (50 credits)' },
-    { value: 100, label: 'Enterprise (100 credits)' }
+    { value: 5, label: 'Basic (5 credits)' },
+    { value: 10, label: 'Standard (10 credits)' },
+    { value: 20, label: 'Premium (20 credits)' }
+  ];
+
+  const taskTypeOptions = [
+    { value: 'external_webhook', label: 'External Webhook' },
+    { value: 'pretrained_configurable', label: 'Pretrained Configurable' },
+    { value: 'prompt_template', label: 'Prompt Template' }
+  ];
+
+  const categoryOptions = [
+    'Social Media',
+    'Marketing',
+    'Content Creation',
+    'Data Analysis',
+    'Customer Service',
+    'Other'
   ];
 
   useEffect(() => {
@@ -74,11 +91,17 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
         try {
           const content = e.target?.result as string;
           // Validate JSON
-          JSON.parse(content);
+          const jsonData = JSON.parse(content);
+          // Kiểm tra xem JSON có phải là object không
+          if (typeof jsonData !== 'object' || jsonData === null) {
+            throw new Error('JSON phải là một object');
+          }
           setExecutionConfig(content);
         } catch (error) {
           console.error('Lỗi khi đọc file JSON:', error);
-          alert('File không phải là JSON hợp lệ');
+          toast.error("File JSON không hợp lệ", {
+            description: "File phải chứa một JSON object hợp lệ"
+          });
         }
       };
       reader.readAsText(file);
@@ -93,18 +116,32 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
       return;
     }
 
-    if (taskType === 'pretrained_configurable' && !executionConfig.trim()) {
-      toast.error("Vui lòng nhập cấu hình JSON", {
-        description: "Cấu hình JSON là bắt buộc cho loại task này"
+    if (!webhookUrl.trim()) {
+      toast.error("Vui lòng nhập webhook URL", {
+        description: "Webhook URL là bắt buộc"
       });
       return;
     }
 
-    if (taskType === 'prompt_template' && !promptContent.trim()) {
-      toast.error("Vui lòng nhập prompt template", {
-        description: "Prompt template là bắt buộc cho loại task này"
+    try {
+      new URL(webhookUrl.trim());
+    } catch (e) {
+      toast.error("Webhook URL không hợp lệ", {
+        description: "Vui lòng nhập một URL hợp lệ"
       });
       return;
+    }
+
+    let executionConfigData = {};
+    if (executionConfig.trim()) {
+      try {
+        executionConfigData = JSON.parse(executionConfig);
+      } catch (e) {
+        toast.error("Cấu hình JSON không hợp lệ", {
+          description: "Vui lòng kiểm tra lại định dạng JSON"
+        });
+        return;
+      }
     }
     
     try {
@@ -113,11 +150,13 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
         name: name.trim(),
         description: description.trim(),
         task_type: taskType,
-        execution_config: taskType === 'pretrained_configurable' ? JSON.parse(executionConfig) : {},
+        execution_config: executionConfigData,
         credit_cost: creditCost,
         category,
         is_system_task: isSystemTask,
-        agent_id: selectedAgentId
+        agent_id: selectedAgentId,
+        webhook_url: webhookUrl.trim(),
+        img_url: imgUrl.trim() || undefined
       };
       
       await onSubmit(taskData);
@@ -125,13 +164,15 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
       // Reset form
       setName('');
       setDescription('');
-      setTaskType('pretrained_configurable');
+      setTaskType('external_webhook');
       setExecutionConfig('');
       setPromptContent('');
-      setCategory('');
-      setCreditCost(20);
+      setCategory('Social Media');
+      setCreditCost(5);
       setIsSystemTask(true);
       setSelectedAgentId('');
+      setWebhookUrl('');
+      setImgUrl('');
       onClose();
     } catch (error) {
       console.error('Lỗi khi tạo task:', error);
@@ -208,71 +249,75 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
                 <SelectValue placeholder="Chọn loại task" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="prompt_template">Prompt Template</SelectItem>
-                <SelectItem value="pretrained_configurable">Pretrained Configurable</SelectItem>
+                {taskTypeOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {taskType === 'pretrained_configurable' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
-                Cấu hình JSON
-              </Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="json-upload"
-                  />
-                  <Label
-                    htmlFor="json-upload"
-                    className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-2 rounded-md hover:bg-secondary/80"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Import JSON</span>
-                  </Label>
-                </div>
-                <Textarea
-                  value={executionConfig}
-                  onChange={(e) => setExecutionConfig(e.target.value)}
-                  placeholder="Nhập cấu hình JSON hoặc import từ file..."
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
-          )}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="webhook-url" className="text-right">
+              Webhook URL
+            </Label>
+            <Input
+              id="webhook-url"
+              className="col-span-3"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="Nhập webhook URL"
+            />
+          </div>
 
-          {taskType === 'prompt_template' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
-                Prompt
-              </Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">
+              Cấu hình JSON
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="json-upload"
+                />
+                <Label
+                  htmlFor="json-upload"
+                  className="flex items-center gap-2 cursor-pointer bg-secondary px-3 py-2 rounded-md hover:bg-secondary/80"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span>Import JSON</span>
+                </Label>
+              </div>
               <Textarea
-                value={promptContent}
-                onChange={(e) => setPromptContent(e.target.value)}
-                placeholder="Nhập prompt template..."
+                value={executionConfig}
+                onChange={(e) => setExecutionConfig(e.target.value)}
+                placeholder="Nhập cấu hình JSON hoặc import từ file..."
                 rows={6}
-                className="col-span-3"
+                className="font-mono text-sm"
               />
             </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="category" className="text-right">
               Danh mục
             </Label>
-            <Input
-              id="category"
-              className="col-span-3"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Ví dụ: design"
-            />
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Chọn danh mục" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map(option => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
@@ -291,6 +336,19 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="img-url" className="text-right">
+              URL ảnh
+            </Label>
+            <Input
+              id="img-url"
+              className="col-span-3"
+              value={imgUrl}
+              onChange={(e) => setImgUrl(e.target.value)}
+              placeholder="Nhập URL ảnh (tùy chọn)"
+            />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
@@ -320,8 +378,8 @@ export const AddTaskDialog = ({ onClose, onSubmit }: AddTaskDialogProps) => {
               !description.trim() || 
               !category.trim() ||
               !selectedAgentId ||
-              (taskType === 'pretrained_configurable' && !executionConfig.trim()) ||
-              (taskType === 'prompt_template' && !promptContent.trim())
+              !webhookUrl.trim() ||
+              !executionConfig.trim()
             }
           >
             {isLoading ? 'Đang tạo...' : t('create')}

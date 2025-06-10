@@ -2,27 +2,27 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
-  ListPlus, Book, Clock
+  ListPlus, Book, Clock,
+  Rocket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card } from '@/components/ui/card';
-import { Agent, ChatTask, ChatMessage, ApiTaskType, Workspace, ApiMessage } from '@/types';
-import { useTheme } from '@/hooks/useTheme';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Agent, ChatTask, ChatMessage, ApiTaskType, Workspace, ApiMessage, TaskRun } from '@/types';
+import { History } from 'lucide-react'
+import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 import { AgentTypingIndicator } from '@/components/ui/agent-typing-indicator';
 import { ChatMessageContent } from '@/components/chat/ChatMessageContent';
+import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
+import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
+import { Label } from '@/components/ui/label';
 interface TaskInput {
   id: string;
   label: string;
@@ -47,6 +47,19 @@ interface Message {
   sender_user_id: string;
 }
 
+// Định nghĩa một kiểu dữ liệu cho output video
+type TaskOutputData = TaskRun['output_data'];
+
+// Type guard cho TaskLog
+function isTaskLogMessage(obj: unknown): obj is TaskLog {
+  return typeof obj === 'object' && obj !== null && 'status' in obj && 'message' in obj;
+}
+
+// Type guard cho TaskOutputData (kết quả video)
+function isTaskOutputData(obj: unknown): obj is TaskOutputData {
+  return typeof obj === 'object' && obj !== null && 'url' in obj && 'snapshot_url' in obj;
+}
+
 // Interface cho log từ WebSocket task
 interface TaskLog {
   message?: string;
@@ -63,7 +76,7 @@ const AgentChat = () => {
   const [isSending, setIsSending] = useState(false); // New state for sending message loading
   const [currentThread, setCurrentThread] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
   const [isCreatingThread, setIsCreatingThread] = useState(false); // State for new thread creation loading
 
@@ -76,16 +89,11 @@ const AgentChat = () => {
 
   // State mới để lưu trữ các log trạng thái từ WebSocket
   const [taskLogs, setTaskLogs] = useState<string[]>([]);
-  // State để đóng/mở vùng log
-  const [showTaskLogs, setShowTaskLogs] = useState(true);
-  // State để xác định đã submit task thành công gần nhất chưa
-  const [taskJustSubmitted, setTaskJustSubmitted] = useState(false);
-
+  const queryClient = useQueryClient();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
-  const [inputAreaMode, setInputAreaMode] = useState<'chat' | 'promptList'>('chat');
   const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
@@ -93,19 +101,16 @@ const AgentChat = () => {
   // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
   const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
 
-  // Ref để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
-  const taskExecutionStatusRef = useRef<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
-
   // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
   const lastAgentMessageIdRef = useRef<string | null>(null);
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
   const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  const [showTaskHistory, setShowTaskHistory] = useState(false);
+  const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
-    // This useEffect will now be for WebSocket connection
     if (currentThread) {
       const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
       if (!token) {
@@ -123,8 +128,8 @@ const AgentChat = () => {
       ws.current.onmessage = (event) => {
         try {
           const receivedData: Message = JSON.parse(event.data);
-          // console.log("Parsed WebSocket Data:", receivedData);
-          // console.log("Message Type:", receivedData.type);
+          console.log("Parsed WebSocket Data:", receivedData);
+          console.log("Message Type:", receivedData.type);
       
           // Kiểm tra type của tin nhắn
           if (receivedData.type === "chat") {
@@ -198,8 +203,36 @@ const AgentChat = () => {
                timeoutRef.current = null;
              }
           } else if (receivedData.type === "status") {
-             setTaskLogs(logs => [...logs, receivedData.content]); // Thêm nội dung vào state taskLogs
-          }
+            console.log("%c[STATUS RECEIVED]", "color: orange; font-weight: bold;", receivedData.content);
+            try {
+                const statusUpdate = JSON.parse(receivedData.content);
+                const runIdToUpdate = statusUpdate.task_run_id;
+        
+                if (runIdToUpdate) {
+                    setTaskRunItems(prevRuns =>
+                        prevRuns.map(run => {
+                            // Tìm đúng item trong danh sách bằng run_id
+                            if (run.id === runIdToUpdate) {
+                                // Cập nhật lại trạng thái và kết quả của nó
+                                return { 
+                                    ...run, 
+                                    status: statusUpdate.status,
+                                    output_data: statusUpdate.response || run.output_data,
+                                    updated_at: new Date().toISOString(),
+                                };
+                            }
+                            return run;
+                        })
+                    );
+                    if (statusUpdate.status === 'completed' || statusUpdate.status === 'error') {
+                      // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
+                      queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
+                  }
+                }
+            } catch (e) {
+                console.error("Error parsing status update: ", e);
+            }
+        }
         } catch (error) {
           // console.error("Error processing WebSocket message:", error);
           // console.error("Raw WebSocket data that caused error:", event.data);
@@ -529,37 +562,40 @@ const AgentChat = () => {
     setIsCreatingThread(false); // End loading on error
   }
 };
-  const handleSubmitTaskInputs = async () => {
-    const selectedTask = tasks.find(t => t.id === selectedTaskId);
-    if (selectedTask && currentThread) {
-      setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'loading' }));
-      // Mở vùng log khi submit
-      setShowTaskLogs(true);
-      setTaskJustSubmitted(false);
-      try {
-        console.log('Executing task...', selectedTask.name, 'with inputs:', selectedTaskInputs, 'thread:', currentThread);
-        const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread);
-        if (response.status === 200 || response.message === 'Task execution started') {
-          console.log('Task initiated/executed successfully:', response);
-          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'success' }));
-          setTaskJustSubmitted(true); // Đánh dấu đã submit thành công
-        } else {
-          console.warn('Task execution failed:', response);
-          setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
-          setTaskJustSubmitted(false);
-        }
-      } catch (error) {
-        console.error('Error executing task:', error);
-        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'error' }));
-        setTaskJustSubmitted(false);
-      }
-      setAboveInputContent('none');
-      setTimeout(() => {
-        setTaskExecutionStatus(prev => ({ ...prev, [selectedTask.id]: 'idle' }));
-      }, 5000);
-    }
-  };
+const handleSubmitTaskInputs = async () => {
+  const selectedTask = tasks.find(t => t.id === selectedTaskId);
+  if (selectedTask && currentThread) {
+    try {
+      const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread);
+      const runId = response.task_run_id;
 
+      if (runId) {
+        const newTaskRun: TaskRun = {
+          id: runId,
+          task_id: selectedTask.id,
+          status: 'initiated',
+          start_time: new Date().toISOString(),
+          input_data: selectedTaskInputs,
+          output_data: {},
+          started_at: new Date().toISOString(),
+          thread_id: currentThread,
+          user_id: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        // Thêm task mới vào ĐẦU danh sách và tự động mở bảng lịch sử
+        setTaskRunItems(prevRuns => [newTaskRun, ...prevRuns]);
+        setShowTaskHistory(true);
+      } else {
+        toast({ title: "Lỗi Phản Hồi", description: "Phản hồi từ server không chứa run ID.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Lỗi Thực Thi", description: "Không thể bắt đầu task.", variant: "destructive" });
+    }
+    setAboveInputContent('none');
+  }
+};
   const handleThreadClick = async (threadId: string) => {
     if (!agentId) {
       // Xử lý trường hợp agentId chưa được load hoặc không tồn tại
@@ -641,12 +677,30 @@ const AgentChat = () => {
     }
   };
 
-  // Handler for daily task button click
-  const handleDailyTaskClick = () => {
-    navigate(`/dashboard/agents/${agentId}/task/config`);
-  };
-
   const { t } = useLanguage();
+
+  // Thêm hàm để lấy lịch sử task
+  const { 
+    data: historyData, 
+    isLoading: isLoadingHistory 
+  } = useQuery({
+    queryKey: ['taskRuns', currentThread, currentAgent?.id],
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
+      const user = JSON.parse(userStr);
+      return getTaskRunsByThreadId(user.id, currentAgent?.id || "");
+    },
+    enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
+  });
+  useEffect(() => {
+    const runsFromApi = historyData?.data;
+    // Chỉ cập nhật từ API nếu state hiện tại đang rỗng (tức là người dùng mới mở bảng)
+    if (runsFromApi && taskRunItems.length === 0) {
+        const sortedRuns = [...runsFromApi].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+        setTaskRunItems(sortedRuns);
+    }
+}, [historyData, taskRunItems.length]); // Thêm taskRunItems.length vào dependency
 
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden">
@@ -698,10 +752,10 @@ const AgentChat = () => {
                   </div>
                 </div>
                 <div className="p-4 border-b hover:primary-gradient ">
-                  <button className="w-full flex items-center justify-center space-x-2 " onClick={() => handleNewChat(currentAgent?.id)} >
+                  <Button variant='primary' className="w-full flex items-center justify-center space-x-2 " onClick={() => handleNewChat(currentAgent?.id)} >
                     <Plus className="h-4 w-4" />
                     <span>New chat</span>
-                  </button>
+                  </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                   {threadsData?.data?.map((thread, index, arr) => (
@@ -755,7 +809,7 @@ const AgentChat = () => {
               </div>
             </div>
             <div className="p-4 border-b">
-              <Button variant="outline" className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)}
+              <Button variant="primary"  className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)}
                 disabled={isCreatingThread || isLoading} // Disable when creating or initial loading
               >
                 {isCreatingThread ? (
@@ -806,197 +860,215 @@ const AgentChat = () => {
         ) : (
           <>
             {/* Chat area */}
-            <div
-              ref={chatContainerRef}
-              className={cn(
-                "flex-1  min-h-0 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
-                aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
-              )}
-            >
-              {messages.slice(-50).map((msg) => (
-                <div
-                  key={msg.id}
-                  className={
-                    cn(
-                      "flex items-start",
-                      msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                    )
-                  }
-                >
-                  {msg.sender === 'agent' && (
-                    <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
-                       <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                         {currentAgent?.name?.charAt(0) || 'A'}
-                       </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className={cn(
-                    "max-w-[50%] p-3 rounded-lg shadow-md break-words",
-                    getMessageStyle(msg.sender)
-                  )}>
-                   <ChatMessageContent 
-                      content={msg.content} 
-                      isAgent={msg.sender === 'agent'}
-                  />
-                    <span className="text-xs mt-1 opacity-80 block text-right text-foreground/60">
-                      {/* Check if date is valid before formatting */}
-                      {new Date(msg.timestamp).toString() !== 'Invalid Date'
-                        ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : msg.timestamp}
-                    </span>
-                  </div>
-                  {msg.sender === 'user' && (
-                    <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
-                      
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                  
-                         U
-                       </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-
-              {/* Agent Thinking Indicator */}
-              {isAgentThinking && (
-                <AgentTypingIndicator
-                  agentName={currentAgent?.name}
-                  agentAvatar={currentAgent?.avatar}
-                />
-              )}
-
-              {/* Vùng hiển thị Task Logs */}
-              <div className="mt-4">
-                {taskLogs.length > 0 && (
-                  <button
-                    className="mb-2 px-3 py-1 rounded bg-muted text-xs hover:bg-muted/80 border border-border text-muted-foreground"
-                    onClick={() => setShowTaskLogs(v => !v)}
-                  >
-                    {showTaskLogs ? 'Ẩn log' : 'Hiện log'}
-                  </button>
+         {/* Chat area -- BẮT ĐẦU VÙNG THAY THẾ */}
+         <div
+            ref={chatContainerRef}
+            className={cn(
+              "flex-1 min-h-0 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
+              aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
+            )}
+          >
+            {/* 1. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
+            {messages.slice(-50).map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex items-start",
+                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}
-                {showTaskLogs && taskLogs.length > 0 && (
-                  <div className="p-3 border border-border rounded-lg bg-card text-card-foreground text-sm overflow-y-auto max-h-[200px]">
-                    <h4 className="font-semibold mb-2">Task Logs:</h4>
-                    <div className="space-y-2">
-                      {taskLogs.map((log, index) => {
-                        let parsed: unknown = null;
-                        try {
-                          parsed = typeof log === 'string' ? JSON.parse(log) : log;
-                        } catch {
-                          parsed = null;
-                        }
-                        if (parsed && typeof parsed === 'object' && parsed !== null) {
-                          // Explicitly cast parsed to a more specific type if possible, or handle properties carefully
-                          const taskLogData = parsed as { message?: string; status?: string; response?: unknown; task_id?: string }; // Explicitly define expected structure
-
-                          return (
-                            <div key={index} className="p-2 rounded bg-muted/50">
-                              <div className="font-medium">
-                                {taskLogData.message && <span>{taskLogData.message}</span>}
-                                {taskLogData.status && (
-                                  <span className={cn(
-                                    'ml-2',
-                                    taskLogData.status === 'completed' && 'text-green-600',
-                                    taskLogData.status === 'processing' && 'text-yellow-600',
-                                    taskLogData.status === 'error' && 'text-red-600'
-                                  )}>
-                                    [{taskLogData.status}]
-                                  </span>
-                                )}
-                              </div>
-                              {taskLogData.response && (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  <span>Response: </span>
-                                  {/* Xử lý hiển thị response tùy theo kiểu dữ liệu */}
-                                  <span>{typeof taskLogData.response === 'string' ? taskLogData.response : JSON.stringify(taskLogData.response)}</span>
-                                </div>
-                              )}
-                              {taskLogData.task_id && (
-                                <div className="text-xs text-muted-foreground">Task ID: {taskLogData.task_id}</div>
-                              )}
-                            </div>
-                          );
-                        } else {
-                          return <p key={index} className="text-muted-foreground">{log}</p>;
-                        }
-                      })}
-                    </div>
-                    {/* Nút Schedule Daily Task nằm trong card log */}
-                    {taskJustSubmitted && (
-                      <div className="flex justify-start mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2 text-sm text-primary"
-                    onClick={handleDailyTaskClick}
-                  >
-                    <ListPlus className="h-4 w-4" />
-                    Schedule Daily Task
-                  </Button>
+              >
+                {msg.sender === 'agent' && (
+                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
+                    <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                      {currentAgent?.name?.charAt(0) || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div className={cn(
+                  "max-w-[70%] min-w-0 p-3 rounded-lg shadow-md break-words", // Đảm bảo có min-w-0 và grid
+                  getMessageStyle(msg.sender)
+                )}>
+                  <ChatMessageContent
+                    content={msg.content}
+                    isAgent={msg.sender === 'agent'}
+                   
+                  />
                 </div>
-              )}
-                  </div>
+                {msg.sender === 'user' && (
+                  <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      U
+                    </AvatarFallback>
+                  </Avatar>
                 )}
               </div>
+            ))}
 
+            {/* 2. Hiển thị chỉ báo Agent đang suy nghĩ (giữ nguyên) */}
+            {isAgentThinking && (
+              <AgentTypingIndicator
+                agentName={currentAgent?.name}
+                agentAvatar={currentAgent?.avatar}
+              />
+            )}
+            
+            {/* --- 3. KHỐI HIỂN THỊ TASK LOGS MỚI ĐƯỢC THÊM VÀO ĐÂY --- */}
+            {taskLogs.length > 0 && (
+                <div className="space-y-2">
+                {taskLogs.map((log, index) => {
+                    let parsedLog: unknown;
+                    try {
+                        parsedLog = JSON.parse(log);
+                    } catch {
+                        return <p key={index} className="text-muted-foreground text-xs">{log}</p>;
+                    }
+            
+                    if (isTaskLogMessage(parsedLog)) {
+                        return (
+                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
+                                <div className="flex items-center">
+                                    <span className={cn(
+                                        'mr-2 font-bold',
+                                        parsedLog.status === 'success' && 'text-green-500',
+                                        parsedLog.status === 'completed' && 'text-green-500',
+                                        parsedLog.status === 'processing' && 'text-yellow-500',
+                                        parsedLog.status === 'error' && 'text-red-500'
+                                    )}>
+                                        [{parsedLog.status.toUpperCase()}]
+                                    </span>
+                                    <span className="text-foreground">{parsedLog.message}</span>
+                                </div>
+                            </div>
+                        );
+                    } else if (isTaskOutputData(parsedLog)) {
+                        return (
+                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
+                                <div className="mt-2 border border-border rounded-lg p-2 bg-background">
+                                    <p className="text-xs font-semibold mb-2 font-sans text-foreground">Kết quả Video:</p>
+                                    <video
+                                        src={parsedLog.url}
+                                        poster={parsedLog.snapshot_url}
+                                        controls
+                                        className="w-full rounded-md"
+                                        preload="metadata"
+                                    >
+                                        Trình duyệt của bạn không hỗ trợ thẻ video.
+                                    </video>
+                                    <div className="text-xs mt-2 space-y-1 font-sans">
+                                        <p>
+                                            <span className="font-medium text-foreground">Tải video:</span>{' '}
+                                            <a href={parsedLog.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
+                                                {parsedLog.id}.mp4
+                                            </a>
+                                        </p>
+                                        <p>
+                                            <span className="font-medium text-foreground">Xem ảnh thumbnail:</span>{' '}
+                                            <a href={parsedLog.snapshot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
+                                                snapshot.jpg
+                                            </a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    } else if (typeof parsedLog === 'object' && parsedLog !== null) {
+                        // C. Nếu là một đối tượng JSON khác không xác định được, hiển thị dạng thô
+                        return (
+                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
+                                <pre className="mt-1 text-muted-foreground whitespace-pre-wrap break-all bg-black/70 p-2 rounded-md">
+                                    {JSON.stringify(parsedLog, null, 2)}
+                                </pre>
+                            </div>
+                        );
+                    }
+                    return null; // Fallback for unexpected types
+                })}
+            </div>
+            )}
+            {/* --- KẾT THÚC KHỐI TASK LOGS --- */}
+
+          </div>
+         
+          
+
+          {showTaskHistory && (
+    // Lớp phủ màu đen mờ phía sau
+    <div 
+        className="absolute inset-0 z-30 bg-background/80 backdrop-blur-sm flex items-center justify-center"
+        onClick={() => setShowTaskHistory(false)} // Nhấn ra ngoài để đóng
+    >
+        {/* Panel Lịch sử */}
+        <div
+            className="relative flex flex-col h-[90%] max-h-[800px] w-[95%] max-w-4xl bg-card border rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()} // Ngăn việc nhấn vào panel làm đóng modal
+        >
+            {/* 1. Header của Panel */}
+            <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
+                <h2 className="text-xl font-bold">Lịch sử thực thi Task</h2>
+                {/* NÚT ĐÓNG MỚI */}
+                <Button variant="ghost" size="icon" onClick={() => setShowTaskHistory(false)} aria-label="Đóng">
+                    <X className="h-5 w-5" />
+                </Button>
             </div>
 
+            {/* 2. Khu vực nội dung có thể cuộn */}
+            <div className="flex-1 p-1 md:p-4 overflow-y-auto">
+                {isLoadingHistory && taskRunItems.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Đang tải lịch sử...</p>
+                ) : (
+                    <TaskHistory runs={taskRunItems} />
+                )}
+            </div>
+        </div>
+    </div>
+)}
             {/* Area above the main input for Tasks/Knowledge */}
             <div className="p-3 md:p-4 bg-background">
                {/* Task List or Task Inputs */}
-               {aboveInputContent === 'taskList' && (
-                 <div className="mb-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
-                   <h3 className="text-lg font-semibold mb-2 text-foreground">Tasks</h3>
-                   <div className="space-y-2">
-                     {tasks.map((task) => (
-                       <Button
-                         key={task.id}
-                         variant="outline"
-                         className="w-full justify-start border-border text-foreground"
-                         onClick={() => handleTaskSelect(task)}
-                       >
-                         {/* Chỉ báo trạng thái thực thi task */}
-                         {taskExecutionStatus[task.id] === 'loading' && (
-                            <span className="loading-spinner mr-2 w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin"></span>
-                         )}
-                         {taskExecutionStatus[task.id] === 'success' && (
-                            <span className="text-green-500 mr-2">✓</span> // Icon thành công
-                         )}
-                         {taskExecutionStatus[task.id] === 'error' && (
-                            <span className="text-red-500 mr-2">✗</span> // Icon thất bại
-                         )}
-                         {task.name}
-                       </Button>
-                     ))}
-                   </div>
-                   <Button variant="outline" className="w-full border-border mt-2" onClick={() => setAboveInputContent('none')}>Close Tasks</Button>
-                 </div>
-               )}
+
 
                {aboveInputContent === 'taskInputs' && selectedTask && (
-                 <div className="mb-3 space-y-3 p-2 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
-                   <h3 className="text-lg font-semibold text-foreground">{selectedTask.name} Inputs</h3> {/* Sử dụng task.name hoặc title */}
-                   {/* Render inputs dựa trên execution_config */}
-                   {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
-                     <div key={key} className="space-y-1">
-                       {/* Sử dụng key làm label và input id */}
-                       <label htmlFor={key} className="text-sm font-medium text-foreground">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label> {/* Tự động tạo label từ key */}
-                       {/* Hiện tại mặc định là text input, có thể cần logic để xác định type input (text, number, select) nếu execution_config cung cấp info này */}
-                         <Input
-                           id={key}
-                           type="text" // Mặc định là text, cần logic phức tạp hơn nếu có các type khác
-                           value={selectedTaskInputs[key] || ''} // Lấy giá trị từ state selectedTaskInputs
-                           onChange={(e) => handleInputChange(key, e.target.value)}
-                           placeholder={`Enter ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).toLowerCase()}`}
-                           className="bg-background text-foreground border-border placeholder:text-primary"
-                         />
-                     </div>
-                   ))}
-                   <Button onClick={handleSubmitTaskInputs} className="w-full" variant="default">Submit Task</Button>
-                   <Button variant="outline" className="w-full border-border hover:text-primary" onClick={() => setAboveInputContent('taskList')}>Back to Tasks</Button>
-                 </div>
-               )}
+    <Card className="mb-3 animate-in fade-in-50 duration-300">
+        <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle>
+                    Điền thông tin cho Task: <span className="text-primary">{selectedTask.name}</span>
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setAboveInputContent('none')}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Đóng</span>
+                </Button>
+            </div>
+            <CardDescription>
+                Vui lòng cung cấp các thông tin cần thiết để thực thi task này.
+            </CardDescription>  
+        </CardHeader>
+        <CardContent className="space-y-4 max-h-60 overflow-y-auto pr-3">
+            {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
+                <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="capitalize font-semibold">
+                        {key.replace(/_/g, ' ')}
+                    </Label>
+                    <Textarea
+                        id={key}
+                        value={selectedTaskInputs[key] || ''}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        placeholder={`Nhập ${key.replace(/_/g, ' ')}...`}
+                        className="font-mono text-sm bg-muted/50"
+                        rows={key.toLowerCase().includes('script') ? 4 : 2} // Nếu là script thì cho ô nhập liệu cao hơn
+                    />
+                </div>
+            ))}
+        </CardContent>
+        <CardFooter>
+            <Button className="w-full" onClick={handleSubmitTaskInputs}>
+                <Rocket className="mr-2 h-4 w-4" />
+                Bắt đầu thực thi
+            </Button>
+        </CardFooter>
+    </Card>
+)}
 
                {/* Knowledge File Selection (Placeholder) */}
                 {aboveInputContent === 'knowledge' && (
@@ -1045,10 +1117,20 @@ const AgentChat = () => {
                        {/* Knowledge Button with Description */}
                        <Button
                           variant="outline"
+                          size="icon"
+                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10"
+                          onClick={() => setShowTaskHistory(prev => !prev)}
+                          title="Xem lịch sử thực thi"
+                      >
+                          <History className="h-5 w-5" />
+                      </Button>
+                       <Button
+                          variant="outline"
                            size="icon"
                           className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
                           onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
+                          title="Chọn tệp kiến thức"
                        >
                           <Book className="h-5 w-5" />
                        </Button>
@@ -1058,15 +1140,16 @@ const AgentChat = () => {
                           variant="outline"
                            size="icon"
                           className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
-                          onClick={() => setAboveInputContent(aboveInputContent === 'taskList' ? 'none' : 'taskList')}
+                          onClick={() => setIsTaskModalOpen(true)}
                           disabled={isAgentThinking || isCreatingThread || isLoading}
+                          title="Kiến thức đã được đào tạo"
                        >
                           <ListPlus className="h-5 w-5" />
                        </Button>
 
                        {/* Nút clock lịch sử, chỉ hiện ở mobile */}
                        <Button
-                          variant="outline"
+                          variant="primary"
                            size="icon"
                           className="rounded-full border border-border h-10 w-10  hover:bg-muted text-black md:hidden"
                           onClick={() => setShowMobileSidebar(true)}
@@ -1088,6 +1171,7 @@ const AgentChat = () => {
                        </Button>
                     </div>
 
+                  
                     {/* Send Button (Moved to the second row) */}
                     <Button
                       type="submit"
@@ -1105,9 +1189,17 @@ const AgentChat = () => {
                  </div>
                </div>
             </div>
+
+           
           </>
         )}
       </div>
+      <TaskSelectionModal
+            isOpen={isTaskModalOpen}
+            onOpenChange={setIsTaskModalOpen}
+            tasks={tasks}
+            onTaskSelect={handleTaskSelect} // Dùng lại hàm cũ để mở ô nhập liệu
+        />
     </div>
   );
 };

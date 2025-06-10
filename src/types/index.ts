@@ -52,6 +52,23 @@ export interface ApiTaskType {
   status?: "todo" | "in-progress" | "completed";
   created_at?: string;
   updated_at?: string;
+  img_url?: string;
+}
+
+export interface TaskRun {
+  id: string;
+  task_id: string;
+  thread_id: string;
+  user_id: string;
+  status: string;
+  input_data: Record<string, string>;
+  output_data: Record<string, string>;
+  error?: string;
+  started_at: string;
+  start_time: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Thread {

@@ -9,6 +9,7 @@ import {
   ApiMessage,
   ApiTaskType,
   User,
+  TaskRun,
 } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
@@ -706,9 +707,18 @@ export const executeTask = async (
   taskId: string,
   inputData: { [key: string]: string },
   threadId: string
-): Promise<{ message: string; status: number; webhook_response?: any }> => {
+): Promise<{
+  message: string;
+  status: number;
+  task_run_id?: string;
+  webhook_response?: any;
+}> => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
+
+  const userStr = localStorage.getItem("user");
+  if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
+  const user = JSON.parse(userStr);
 
   const response = await fetch(API_ENDPOINTS.tasks.execute, {
     method: "POST",
@@ -720,6 +730,7 @@ export const executeTask = async (
       task_id: taskId,
       input_data: inputData,
       thread_id: threadId,
+      user_id: user.id,
     }),
   });
 
@@ -1008,6 +1019,32 @@ export const getThreadById = async (
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const getTaskRunsByThreadId = async (
+  user_id: string,
+  agent_id: string
+): Promise<{ data: TaskRun[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.tasks.excuteHistory, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      user_id: user_id,
+      agent_id: agent_id,
+    }),
   });
 
   if (!response.ok) {

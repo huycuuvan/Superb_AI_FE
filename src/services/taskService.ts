@@ -1,9 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { API_BASE_URL } from "@/config/api";
-import { Task } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
-export type TaskType = "prompt_template" | "pretrained_configurable";
+export interface Task {
+  id: string;
+  name: string;
+  description: string;
+  task_type: TaskType;
+  execution_config: Record<string, unknown>;
+  credit_cost: number;
+  category: string;
+  is_system_task: boolean;
+  agent_id: string;
+  img_url?: string;
+  webhook_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  assignedAgentId?: string;
+  status?: "todo" | "in-progress" | "completed";
+  title?: string;
+  createdAt?: string;
+}
+
+export type TaskType =
+  | "pretrained_configurable"
+  | "prompt_template"
+  | "external_webhook";
 
 export interface ExecutionConfig {
   form_fields?: Array<{
@@ -29,11 +51,13 @@ export interface CreateTaskRequest {
   name: string;
   description: string;
   task_type: TaskType;
-  execution_config: Record<string, any>;
+  execution_config: Record<string, unknown>;
   credit_cost: number;
   category: string;
   is_system_task: boolean;
   agent_id: string;
+  img_url?: string;
+  webhook_url?: string;
 }
 
 export interface UpdateTaskRequest extends CreateTaskRequest {
@@ -46,7 +70,7 @@ export const createTask = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch(`${API_BASE_URL}/tasks`, {
+  const response = await fetch(`${API_BASE_URL}/tasks/create`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

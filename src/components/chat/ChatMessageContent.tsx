@@ -87,7 +87,7 @@ const CodeBlockRenderer = ({ node, children, ...props }: any) => {
   const preRef = useRef<HTMLPreElement>(null);
   return (
     <div className="relative">
-      <pre ref={preRef} className="bg-black/80 rounded-md p-3 my-2 overflow-x-auto text-white" {...props}>
+      <pre ref={preRef} className="bg-black/80 rounded-md p-3 my-2 overflow-x-auto text-white break-all whitespace-pre-wrap" {...props}>
         {children}
       </pre>
       <CopyButton elementRef={preRef} />
@@ -136,7 +136,7 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
             p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
             pre: CodeBlockRenderer,
             code: ({ node, ...props }) => <code className="bg-black/20 text-red-400 rounded px-1 py-0.5 mx-0.5" {...props} />,
-            a: ({node, ...props}) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+            a: ({node, ...props}) => <a className="text-blue-500 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
             ul: ({ node, ...props }) => <ul className="list-disc list-outside pl-5 my-2 space-y-1" {...props} />,
             ol: ({ node, ...props }) => <ol className="list-decimal list-outside pl-5 my-2 space-y-1" {...props} />,
             li: ({ node, ...props }) => <li className="pl-1 [&>p:first-of-type]:inline" {...props} />,

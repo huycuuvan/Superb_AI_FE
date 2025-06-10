@@ -41,7 +41,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
   const [greetingMessage, setGreetingMessage] = useState('');
   const [model, setModel] = useState('gpt-4');
   const [temperature, setTemperature] = useState('0.8');
-  const [webhookUrl, setWebhookUrl] = useState('https://mvp2.xcel.bot/webhook/12122');
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [buildPromptWebhookUrl, setBuildPromptWebhookUrl] = useState('https://mvp2.xcel.bot/webhook/build-prompt');
   const [status, setStatus] = useState<AgentStatus>('private');
   const [loading, setLoading] = useState(false);
@@ -154,7 +154,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
       setLanguage('Tiếng Việt');
       setModel('gpt-4');
       setTemperature('0.8');
-      setWebhookUrl('https://mvp2.xcel.bot/webhook/12122');
+      setWebhookUrl('');
       setBuildPromptWebhookUrl('https://mvp2.xcel.bot/webhook/build-prompt');
       setStatus(user?.role === 'super_admin' ? 'system_public' : user?.role === 'admin' ? 'private' : 'workspace_shared');
       setGreetingMessage('');

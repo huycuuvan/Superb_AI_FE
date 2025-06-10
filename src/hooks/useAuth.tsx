@@ -69,6 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          // Token không hợp lệ hoặc đã hết hạn hoàn toàn, cần logout
+          logout(); // Gọi hàm logout
+          return false;
+        }
         throw new Error('Không thể refresh token');
       }
 
@@ -81,7 +86,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } catch (err) {
       console.error('Lỗi khi refresh token:', err);
+      logout(); // Tự động logout khi có lỗi refresh
       return false;
+    }
+  };
+
+  // Thêm hàm mới để kiểm tra và refresh token trước khi hết hạn
+  const checkAndRefreshToken = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const decoded = jwtDecode<DecodedToken>(token);
+      const currentTime = Date.now() / 1000;
+      const timeUntilExpiry = decoded.exp - currentTime;
+
+      // Nếu token còn ít hơn 5 phút nữa sẽ hết hạn, refresh ngay
+      if (timeUntilExpiry < 300) { // 300 giây = 5 phút
+        console.log('Token sắp hết hạn, đang cố gắng refresh...');
+        await refreshToken();
+      }
+    } catch (err) {
+      console.error('Lỗi khi kiểm tra token để refresh:', err);
+      logout(); // Logout nếu có lỗi khi giải mã token
     }
   };
 
@@ -94,9 +121,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsTokenExpired(isExpired);
       
       if (isExpired) {
-        // Thử refresh token trước khi logout
+        // Thử refresh token ngay lập tức nếu đã hết hạn
         refreshToken().then(success => {
           if (!success) {
+            // Nếu refresh thất bại, xóa token và user
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             setUser(null);
@@ -115,7 +143,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     setLoading(false);
-  }, []);
+
+    // Thiết lập interval để kiểm tra và refresh token định kỳ
+    const interval = setInterval(checkAndRefreshToken, 60000); // Kiểm tra mỗi 60 giây (1 phút)
+
+    // Xóa interval khi component unmount
+    return () => clearInterval(interval);
+  }, []); // [] đảm bảo useEffect chỉ chạy một lần khi component mount
 
   const login = async (email: string, password: string) => {
     setLoading(true);
