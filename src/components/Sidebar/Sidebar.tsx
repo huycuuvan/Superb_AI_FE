@@ -102,16 +102,16 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     try {
       await updateFolder(folderToRename.id, { name: newFolderName.trim() });
       toast({
-        title: "Thành công!",
-        description: `Đã đổi tên folder thành "${newFolderName.trim()}".`,
+        title: t('success'),
+        description: t('folderRenamed', { name: newFolderName.trim() }),
       });
       fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi đổi tên
       setShowRenameDialog(false);
     } catch (error: any) {
       console.error('Lỗi khi đổi tên folder:', error);
       toast({
-        title: "Lỗi!",
-        description: `Không thể đổi tên folder: ${error.message}`,
+        title: t('error'),
+        description: t('folderRenameFailed', { name: newFolderName.trim() }),
         variant: "destructive",
       });
     } finally {
@@ -132,8 +132,8 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     try {
       await deleteFolder(folderToDelete.id);
       toast({
-        title: "Thành công!",
-        description: `Đã xóa folder "${folderToDelete.name}".`,
+        title: t('success'),
+        description: t('folderDeleted', { name: folderToDelete.name }),
       });
       fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi xóa
       setShowConfirmDeleteDialog(false);
@@ -144,8 +144,8 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     } catch (error: any) {
       console.error('Lỗi khi xóa folder:', error);
       toast({
-        title: "Lỗi!",
-        description: `Không thể xóa folder: ${error.message}`,
+        title: t('error'),
+        description: t('folderDeleteFailed', { name: folderToDelete.name }),
         variant: "destructive",
       });
     } finally {
@@ -154,21 +154,21 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   };
 
   const menuItems = [
-    { icon: Home, label: t('home'), path: '/dashboard' },
-    { icon: Users, label: t('agents'), path: '/dashboard/agents' },
-    { icon: CheckCircle, label: t('tasks'), path: '/dashboard/tasks' },
-    { icon: Book, label: 'Knowledge', path: '/dashboard/knowledge' },
-    { icon: SettingsIcon, label: t('settings'), path: '/dashboard/settings' },
+    { icon: Home, label: t('common.home'), path: '/dashboard' },
+    { icon: Users, label: t('common.agents'), path: '/dashboard/agents' },
+    { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks' },
+    { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
+    { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
   ];
 
   // Lọc menuItems dựa trên quyền hạn
   const filteredMenuItems = menuItems.filter(item => {
     // Ẩn mục Agent nếu user có role là 'user'
-    if (item.label === t('agents') && user?.role === 'user') {
+    if (item.label === t('common.agents') && user?.role === 'user') {
       return false; 
     }
     // Ẩn mục Tasks nếu user có role là 'user'
-    if (item.label === t('tasks') && user?.role === 'user') {
+    if (item.label === t('common.tasks') && user?.role === 'user') {
       return false;
     }
     return true; // Hiển thị các mục khác hoặc user không có role là 'user'
@@ -252,7 +252,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                     : {
                         'text-muted-foreground': true,
                         [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
-                        [isDark ? 'hover:text-white' : 'hover:text-gray-900']: true,
+                        'hover:text-white': true,
                       }
                 )}
                 onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
@@ -272,16 +272,16 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
-                          <Edit className="sidebar-icon mr-2" /> Đổi tên
+                          <Edit className="sidebar-icon mr-2" /> {t('rename')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
-                          <Pin className="sidebar-icon mr-2" /> Ghim
+                          <Pin className="sidebar-icon mr-2" /> {t('pin')}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => handleDeleteClick(folder)}
                           className="text-red-500 focus:text-red-500"
                         >
-                          <Trash className="sidebar-icon mr-2" /> Xóa
+                          <Trash className="sidebar-icon mr-2" /> {t('delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -316,7 +316,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                       : {
                           'text-muted-foreground': true,
                           [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
-                          [isDark ? 'hover:text-white' : 'hover:text-gray-900']: true,
+                          'hover:text-white': true,
                         }
                   )}
                 >
@@ -343,9 +343,9 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-white">Đổi tên thư mục</DialogTitle>
+            <DialogTitle className="dark:text-white">{t('renameFolderTitle')}</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              Nhập tên mới cho thư mục "{folderToRename?.name}".
+              {t('renameFolderDescription', { name: folderToRename?.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -373,9 +373,9 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-white">Xác nhận xóa thư mục</DialogTitle>
+            <DialogTitle className="dark:text-white">{t('confirmDeleteFolderTitle')}</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              Bạn có chắc chắn muốn xóa thư mục "{folderToDelete?.name}" không? Thao tác này không thể hoàn tác.
+              {t('deleteFolderDescription', { name: folderToDelete?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -44,7 +44,8 @@ const Register = () => {
 
   useEffect(() => {
     if(registerCardRef.current){
-      gsap.from(registerCardRef.current, {opacity: 0, y: 20, duration: 0.7, ease: 'power2.out', delay: 0.2});
+      gsap.set(registerCardRef.current, { opacity: 0, y: 20 });
+      gsap.to(registerCardRef.current, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out', delay: 0.2 });
     }
   },[]);
 

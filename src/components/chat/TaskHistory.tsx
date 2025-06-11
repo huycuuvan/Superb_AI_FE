@@ -7,9 +7,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
-import { Code, FileVideo, Loader2, CheckCircle2, XCircle } from "lucide-react" // Thêm các icon mới
+import { Code, FileVideo, Loader2, CheckCircle2, XCircle, Settings } from "lucide-react" // Thêm các icon mới
 import { TaskRun } from "@/types"
-
+import { useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 // Component con hiển thị video (không đổi)
 const VideoResultDisplay = ({ output }: { output: TaskRun['output_data'] }) => {
     if (!output?.url) return <p className="text-sm text-muted-foreground">Không có kết quả đầu ra.</p>;
@@ -33,7 +34,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 
-export const TaskHistory = ({ runs }: { runs: TaskRun[] }) => {
+export const TaskHistory = ({ runs, agentId }: { runs: TaskRun[], agentId: string }) => {
+  const navigate = useNavigate();
   if (!runs || runs.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -66,7 +68,7 @@ export const TaskHistory = ({ runs }: { runs: TaskRun[] }) => {
                 </span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-4 space-y-4 bg-muted/30 max-h-[60vh] overflow-y-auto">
+            <AccordionContent className="p-4 space-y-4 bg-muted/30 max-h-[60vh] overflow-y-auto no-scrollbar">
               
               {/* Phần hiển thị dữ liệu đầu vào */}
               <div>
@@ -88,7 +90,17 @@ export const TaskHistory = ({ runs }: { runs: TaskRun[] }) => {
                 <h4 className="font-semibold mb-2 flex items-center gap-2"><FileVideo size={16} /> Kết quả (Output)</h4>
                   <VideoResultDisplay output={run.output_data} />
               </div>
- 
+              {run.status === 'completed' && (
+                <div className="pt-4 border-t border-border">
+                  <Button 
+                    onClick={() => navigate(`/dashboard/agents/${agentId}/task/${run.task_id}/config`)}
+                    className="w-full button-gradient-light dark:button-gradient-dark text-white"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Thiết lập tự động
+                  </Button>
+                </div>
+              )}
             </AccordionContent>
           </AccordionItem>
         ))}

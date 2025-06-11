@@ -80,7 +80,8 @@ const Login = () => {
   const loginCardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if(loginCardRef.current){
-      gsap.from(loginCardRef.current, {opacity: 0, y: 20, duration: 0.7, ease: 'power2.out', delay: 0.2});
+      gsap.set(loginCardRef.current, { opacity: 0, y: 20 });
+      gsap.to(loginCardRef.current, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out', delay: 0.2 });
     }
   },[]);
 

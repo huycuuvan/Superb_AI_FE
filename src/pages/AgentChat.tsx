@@ -116,7 +116,7 @@ const AgentChat = () => {
     if (currentThread) {
       const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
       if (!token) {
-        console.error("Authentication token not found.");
+    
         return;
       }
 
@@ -130,8 +130,6 @@ const AgentChat = () => {
       ws.current.onmessage = (event) => {
         try {
           const receivedData: Message = JSON.parse(event.data);
-          console.log("Parsed WebSocket Data:", receivedData);
-          console.log("Message Type:", receivedData.type);
       
           // Kiểm tra type của tin nhắn
           if (receivedData.type === "chat") {
@@ -139,35 +137,36 @@ const AgentChat = () => {
 
             // Xử lý tin nhắn từ Agent (dạng chunk)
             if (receivedData.sender_type === "agent") {
-              setIsAgentThinking(false); // Agent đã trả lời, mở lại input
-              setIsTimeoutOccurred(false); // Clear timeout status
-              if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
-              }
+              setIsAgentThinking(false); // Tắt trạng thái typing ngay khi nhận được tin nhắn chat từ agent
               setMessages(prevMessages => {
-                // Nếu message cuối cùng là agent, append chunk
+                // Kiểm tra xem tin nhắn cuối có phải của agent không
                 if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
-                  const updatedMessages = [...prevMessages];
-                  updatedMessages[updatedMessages.length - 1].content += receivedData.content;
-                  updatedMessages[updatedMessages.length - 1].timestamp = receivedData.timestamp;
-                  return updatedMessages;
+                    
+                    // LẤY RA TIN NHẮN CUỐI
+                    const lastMessage = prevMessages[prevMessages.length - 1];
+                    
+                    // TẠO RA MỘT OBJECT TIN NHẮN CUỐI HOÀN TOÀN MỚI VÀ ÉP KIỂU TƯỜNG MINH
+                    const updatedLastMessage: ChatMessage = {
+                        ...lastMessage, // Sao chép tất cả thuộc tính cũ
+                        content: lastMessage.content + receivedData.content, // Nối chuỗi để tạo content mới
+                        timestamp: receivedData.timestamp // Cập nhật timestamp mới
+                    };
+                    
+                    // TRẢ VỀ MỘT ARRAY MỚI: bao gồm tất cả tin nhắn cũ (trừ tin cuối) VÀ object tin nhắn mới của chúng ta
+                    return [...prevMessages.slice(0, -1), updatedLastMessage];
+
                 } else {
-                  // Nếu không, push message agent mới
-                  const newChatMessage: ChatMessage = {
-                    id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                    content: receivedData.content,
-                    sender: receivedData.sender_type,
-                    timestamp: receivedData.timestamp,
-                    agentId: receivedData.sender_user_id,
-                  };
-                  return [...prevMessages, newChatMessage];
+                    // Nếu không có tin nhắn agent nào trước đó, tạo một tin nhắn mới và ÉP KIỂU TƯỜNG MINH
+                    const newChatMessage: ChatMessage = {
+                        id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                        content: receivedData.content,
+                        sender: 'agent', // Thay receivedData.sender_type bằng literal 'agent'
+                        timestamp: receivedData.timestamp,
+                        agentId: receivedData.sender_user_id,
+                    };
+                    return [...prevMessages, newChatMessage];
                 }
-              });
-            }
-            // Xử lý tin nhắn từ User (đã được thêm vào state ngay khi gửi)
-            // Nếu backend echo lại tin nhắn user, chúng ta bỏ qua vì đã thêm vào UI ngay khi gửi
-            // Có thể thêm logic kiểm tra ID hoặc content để chắc chắn là echo và không phải tin nhắn từ user khác (nếu hỗ trợ multi-user)
+            })}
             else if (receivedData.sender_type === "user") {
               setMessages(prevMessages => {
                 const isEcho = prevMessages.some(msg =>
@@ -183,7 +182,7 @@ const AgentChat = () => {
                   const newChatMessage: ChatMessage = {
                     id: receivedData.thread_id + ":" + receivedData.timestamp + ":" + receivedData.sender_user_id + ":" + Math.random(),
                     content: receivedData.content,
-                    sender: receivedData.sender_type,
+                    sender: receivedData.sender_type, // Thay receivedData.sender_type bằng literal 'user'
                     timestamp: receivedData.timestamp,
                     agentId: receivedData.sender_user_id,
                   };
@@ -205,7 +204,7 @@ const AgentChat = () => {
                timeoutRef.current = null;
              }
           } else if (receivedData.type === "status") {
-            console.log("%c[STATUS RECEIVED]", "color: orange; font-weight: bold;", receivedData.content);
+           
             try {
                 const statusUpdate = JSON.parse(receivedData.content);
                 const runIdToUpdate = statusUpdate.task_run_id;
@@ -640,7 +639,7 @@ const handleSubmitTaskInputs = async () => {
       // Update the currentThread state
       setCurrentThread(threadId);
 
-      console.log('Thread clicked:', threadId, 'Messages loaded:', formattedMessages.length);
+      
 
       // Navigate to the thread-specific URL
       // This will also trigger the main useEffect if the URL changes
@@ -708,7 +707,7 @@ const handleSubmitTaskInputs = async () => {
   const isDark = theme === 'dark';
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
 
       {/* Sidebar overlay cho mobile */}
@@ -762,13 +761,13 @@ const handleSubmitTaskInputs = async () => {
                     <span>New chat</span>
                   </Button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 text-white">
                   {threadsData?.data?.map((thread, index, arr) => (
                     <div key={thread.id}>
                       <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                        <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
+                        <Button variant='primary' className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
                           {thread.title ? thread.title : 'New chat'}
-                        </button>
+                        </Button>
                       </div>
                       {index < arr.length - 1 && (
                         <div className="border-b border-muted-foreground/20 my-2"></div>
@@ -820,7 +819,7 @@ const handleSubmitTaskInputs = async () => {
                 {isCreatingThread ? (
                   <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span> // Spinner
                 ) : (
-                  <Plus className="h-4 w-4 text-black" />
+                  <Plus className="h-4 w-4 " />
                 )}
                 <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text and color */}
               </Button>
@@ -829,7 +828,7 @@ const handleSubmitTaskInputs = async () => {
               {threadsData?.data?.map((thread, index, arr) => (
                 <div key={thread.id}>
                   <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                    <button className="text-sm font-medium text-black" onClick={() => handleThreadClick(thread.id)}>
+                    <button className="text-sm font-medium " onClick={() => handleThreadClick(thread.id)}>
                       {thread.title ? thread.title : 'New chat'}
                     </button>
                   </div>
@@ -866,10 +865,11 @@ const handleSubmitTaskInputs = async () => {
           <>
             {/* Chat area */}
          {/* Chat area -- BẮT ĐẦU VÙNG THAY THẾ */}
+         
          <div
             ref={chatContainerRef}
             className={cn(
-              "flex-1 min-h-0 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background",
+              "flex-1 min-h-0 p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-5 bg-background  no-scrollbar ",
               aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
             )}
           >
@@ -878,12 +878,12 @@ const handleSubmitTaskInputs = async () => {
               <div
                 key={msg.id}
                 className={cn(
-                  "flex items-start",
+                  "flex items-end",
                   msg.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 {msg.sender === 'agent' && (
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mr-2">
+                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mx-2">
                     <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
                       {currentAgent?.name?.charAt(0) || 'A'}
@@ -891,9 +891,11 @@ const handleSubmitTaskInputs = async () => {
                   </Avatar>
                 )}
                 <div className={cn(
-                  "max-w-[70%] min-w-0 p-3 rounded-lg shadow-md break-words", // Đảm bảo có min-w-0 và grid
-                  getMessageStyle(msg.sender)
-                )}>
+                                "max-w-[75%] p-3 rounded-2xl shadow-sm break-words mr-2",
+                                msg.sender === 'user'
+                                    ? 'button-gradient-light dark:button-gradient-dark text-white rounded-br-lg'
+                                    : 'bg-muted text-foreground rounded-bl-lg'
+                            )}>
                   <ChatMessageContent
                     content={msg.content}
                     isAgent={msg.sender === 'agent'}
@@ -901,12 +903,10 @@ const handleSubmitTaskInputs = async () => {
                   />
                 </div>
                 {msg.sender === 'user' && (
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 ml-2">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      U
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+                                <Avatar className="h-9 w-9 flex-shrink-0">
+                                    <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
+                                </Avatar>
+                            )}
               </div>
             ))}
 
@@ -1022,7 +1022,7 @@ const handleSubmitTaskInputs = async () => {
                 {isLoadingHistory && taskRunItems.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">Đang tải lịch sử...</p>
                 ) : (
-                    <TaskHistory runs={taskRunItems} />
+                    <TaskHistory runs={taskRunItems} agentId={agentId}/>
                 )}
             </div>
         </div>
@@ -1102,97 +1102,40 @@ const handleSubmitTaskInputs = async () => {
                  </div>
                )}
 
-               <div className="flex flex-col space-y-2 p-4 border border-border rounded-lg bg-card text-card-foreground md:max-w-[800px] mx-auto">
-                 
-                 <div className="flex items-center space-x-2 md:space-x-3 flex-grow">
-                    <Textarea
-                      placeholder={t('askAI')}
-                      className="flex w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-black focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1 resize-none min-h-[48px] pr-10 bg-transparent text-foreground border-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      rows={1}
-                      style={{ overflowY: 'hidden', height: 'auto' }}
-                      disabled={isAgentThinking || isCreatingThread || isLoading} // Disable when agent thinking, creating thread, or initial loading
-                    />
-                 </div>
-
-                 <div className="flex items-center space-x-4 pt-2 justify-between">
-                    <div className="flex items-center space-x-2">
-                       {/* Knowledge Button with Description */}
-                       <Button
-                          variant="outline"
-                          size="icon"
-                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
-                          onClick={() => setShowTaskHistory(prev => !prev)}
-                          title="Xem lịch sử thực thi"
-                      >
-                          <History className="h-5 w-5" />
-                      </Button>
-                       <Button
-                          variant="outline"
-                           size="icon"
-                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
-                          onClick={() => setAboveInputContent(aboveInputContent === 'knowledge' ? 'none' : 'knowledge')}
-                          disabled={isAgentThinking || isCreatingThread || isLoading}
-                          title="Chọn tệp kiến thức"
-                       >
-                          <Book className="h-5 w-5" />
-                       </Button>
-
-                       {/* Task Button with Description */}
-                       <Button
-                          variant="outline"
-                           size="icon"
-                          className={`rounded-full border-border ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white hover:bg-muted h-10 w-10`}
-                          onClick={() => setIsTaskModalOpen(true)}
-                          disabled={isAgentThinking || isCreatingThread || isLoading}
-                          title="Kiến thức đã được đào tạo"
-                       >
-                          <ListPlus className="h-5 w-5" />
-                       </Button>
-
-                       {/* Nút clock lịch sử, chỉ hiện ở mobile */}
-                       <Button
-                          variant="primary"
-                           size="icon"
-                          className="rounded-full border border-border h-10 w-10  hover:bg-muted text-black md:hidden"
-                          onClick={() => setShowMobileSidebar(true)}
-                          aria-label="Lịch sử chat"
-                          type="button"
-                          disabled={isCreatingThread || isLoading}
-                       >
-                          <Clock className="h-5 w-5" />
-                       </Button>
-
-                       {/* Attach File Button with Description */}
-                       <Button
-                          variant="outline"
-                           size="icon"
-                          className="rounded-full border-border text-black hover:bg-muted h-10 w-10 "
-                          disabled={isAgentThinking || isCreatingThread || isLoading}
-                       >
-                          <Paperclip className="h-5 w-5" />
-                       </Button>
+              <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
+                    <div className="w-full max-w-4xl mx-auto">
+                        <div className="relative">
+                            <Textarea
+                                placeholder={t('common.askAI')}
+                                className="w-full rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
+                                rows={1}
+                                disabled={isSending || isAgentThinking || !currentThread}
+                            />
+                            <Button
+                                type="submit"
+                                size="icon"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full button-gradient-light dark:button-gradient-dark text-white"
+                                onClick={handleSendMessage}
+                                disabled={!message.trim() || isSending || isAgentThinking || !currentThread}
+                            >
+                                <Send className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" title="Đính kèm tệp"><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMobileSidebar(true)}><Clock className="h-5 w-5 text-muted-foreground"/></Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
+                        </div>
                     </div>
-
-                  
-                    {/* Send Button (Moved to the second row) */}
-                    <Button
-                      type="submit"
-                      size="icon"
-                      className="flex-shrink-0  text-black hover:bg-black"
-                      onClick={handleSendMessage}
-                      disabled={!message.trim() || isSending || !currentThread || isAgentThinking || isCreatingThread || isLoading} // Disable if message is empty, sending, no thread, agent thinking, creating thread, or initial loading
-                    >
-                      {(isSending || isAgentThinking || isCreatingThread || isLoading) ? (
-                        <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span> // Show spinner when sending, agent thinking, creating thread, or initial loading
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                 </div>
-               </div>
+                </div>
             </div>
 
            

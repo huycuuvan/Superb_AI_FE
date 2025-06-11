@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -9,20 +8,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const LanguageToggle = ({ className }: { className?: string }) => {
-  const { language, setLanguage, t } = useLanguage();
+  const { currentLanguage, changeLanguage, t } = useLanguage();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className={className}>
-          {language === 'en' ? 'EN' : 'VN'}
+          {currentLanguage === 'en' ? 'EN' : 'VN'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setLanguage('en')}>
+        <DropdownMenuItem onClick={() => changeLanguage('en')}>
           {t('english')}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLanguage('vn')}>
+        <DropdownMenuItem onClick={() => changeLanguage('vi')}>
           {t('vietnamese')}
         </DropdownMenuItem>
       </DropdownMenuContent>

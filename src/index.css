@@ -99,6 +99,18 @@
   .text-gradient-dark {
       @apply text-cyan-400;
   }
+  .no-scrollbar {
+    /* Cho Firefox */
+    scrollbar-width: none;
+    
+    /* Cho Internet Explorer, Edge */
+    -ms-overflow-style: none;
+  }
+  
+  /* Cho Chrome, Safari và các trình duyệt dựa trên WebKit */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* --- CSS cho bảng trong tin nhắn chat (giữ nguyên) --- */
