@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Agent } from "@/types";
+import { Agent, ModelConfig } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/useTheme';
@@ -25,6 +25,9 @@ import { updateAgent, deleteAgent } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
 export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,8 +43,8 @@ export const Agents = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { canCreateAgent } = useAuth();
-
   const queryClient = useQueryClient();
+  const [editedTemperature, setEditedTemperature] = useState('0.8');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['agents', workspace?.id],
@@ -74,7 +77,23 @@ export const Agents = () => {
 
   const handleEditClick = (agent: Agent) => {
     setAgentToEdit(agent);
-    setEditedAgentData({ name: agent.name, role_description: agent.role_description, instructions: agent.instructions, status: agent.status });
+    setEditedAgentData({
+      name: agent.name || '',
+      role_description: agent.role_description || '',
+      instructions: agent.instructions || '',
+      job_brief: agent.job_brief || '',
+      language: agent.language || 'Tiếng Việt',
+      position: agent.position || '',
+      greeting_message: agent.greeting_message || '',
+      status: agent.status || 'private',
+      model_config: {
+        model: agent.model_config?.model || 'gpt-4',
+        temperature: agent.model_config?.temperature ?? 0.8,
+        webhook_url: agent.model_config?.webhook_url || '',
+        build_prompt_webhook_url: agent.model_config?.build_prompt_webhook_url || 'https://mvp2.xcel.bot/webhook/build-prompt',
+      },
+    });
+    setEditedTemperature(String(agent.model_config?.temperature ?? 0.8));
     setShowEditAgentDialog(true);
   };
 
@@ -83,7 +102,19 @@ export const Agents = () => {
 
     setIsSavingEdit(true);
     try {
-      await updateAgent(agentToEdit.id, editedAgentData);
+      const modelConfigToSend: ModelConfig = {
+        model: editedAgentData.model_config?.model || 'gpt-4',
+        temperature: parseFloat(editedTemperature || '0.8'), // Chuyển đổi ngược lại thành số
+        webhook_url: editedAgentData.model_config?.webhook_url || '',
+        build_prompt_webhook_url: editedAgentData.model_config?.build_prompt_webhook_url || 'https://mvp2.xcel.bot/webhook/build-prompt',
+      };
+
+      const dataToSend: Partial<Agent> = {
+        ...editedAgentData,
+        model_config: modelConfigToSend,
+      };
+
+      await updateAgent(agentToEdit.id, dataToSend);
       toast({
         title: "Thành công!",
         description: `Đã cập nhật agent "${agentToEdit.name}".`,
@@ -226,14 +257,15 @@ export const Agents = () => {
 
       {/* Edit Agent Dialog */}
       <Dialog open={showEditAgentDialog} onOpenChange={setShowEditAgentDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa Agent</DialogTitle>
             <DialogDescription>
               Cập nhật thông tin cho agent "{agentToEdit?.name}".
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
+            <div className="grid gap-4 py-4">
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-agent-name" className="text-right">Tên</Label>
               <Input 
@@ -244,7 +276,7 @@ export const Agents = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-role" className="text-right">Role Description</Label>
+              <Label htmlFor="edit-agent-role" className="text-right">Mô tả vai trò</Label>
               <Input 
                 id="edit-agent-role"
                 className="col-span-3"
@@ -262,7 +294,135 @@ export const Agents = () => {
                 rows={4}
               />
             </div>
-             {/* Add other fields for editing if needed */}
+
+            {/* Thông tin cơ bản */} 
+            <div className="space-y-4">
+              <h3 className="font-medium">Thông tin cơ bản</h3>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-job-brief" className="text-right">
+                  Mô tả công việc
+                </Label>
+                <Textarea
+                  id="edit-agent-job-brief"
+                  className="col-span-3"
+                  value={editedAgentData.job_brief || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, job_brief: e.target.value })} rows={3} placeholder="Nhập mô tả công việc của agent" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-language" className="text-right">
+                  Ngôn ngữ
+                </Label>
+                <Input
+                  id="edit-agent-language"
+                  className="col-span-3"
+                  value={editedAgentData.language || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, language: e.target.value })} placeholder="Nhập ngôn ngữ" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-position" className="text-right">
+                  Vị trí phòng ban
+                </Label>
+                <Input
+                  id="edit-agent-position"
+                  className="col-span-3"
+                  value={editedAgentData.position || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, position: e.target.value })} placeholder="Ví dụ: Phòng Kinh doanh, Phòng Kỹ thuật, Phòng Marketing..." />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-greeting-message" className="text-right">
+                  Lời chào
+                </Label>
+                <Textarea
+                  id="edit-agent-greeting-message"
+                  className="col-span-3"
+                  value={editedAgentData.greeting_message || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, greeting_message: e.target.value })} placeholder="Nhập lời chào mở đầu khi người dùng bắt đầu chat với agent" rows={3} />
+              </div>
+            </div>
+
+            {/* Cấu hình Model */} 
+            <div className="space-y-4">
+              <h3 className="font-medium">Cấu hình Model</h3>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-model" className="text-right">
+                  Model
+                </Label>
+                <Select value={editedAgentData.model_config?.model || 'gpt-4'} onValueChange={(value) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, model: value } })}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Chọn model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4">GPT-4</SelectItem>
+                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-temperature" className="text-right">
+                  Temperature
+                </Label>
+                <Input
+                  id="edit-agent-temperature"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  className="col-span-3"
+                  value={editedTemperature}
+                  onChange={(e) => setEditedTemperature(e.target.value)} />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-webhook-url" className="text-right">
+                  Webhook URL
+                </Label>
+                <Input
+                  id="edit-agent-webhook-url"
+                  className="col-span-3"
+                  value={editedAgentData.model_config?.webhook_url || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, webhook_url: e.target.value } })} placeholder="Nhập webhook URL" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-build-prompt-webhook" className="text-right">
+                  Build Prompt Webhook
+                </Label>
+                <Input
+                  id="edit-agent-build-prompt-webhook"
+                  className="col-span-3"
+                  value={editedAgentData.model_config?.build_prompt_webhook_url || ''}
+                  onChange={(e) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, build_prompt_webhook_url: e.target.value } })} placeholder="Nhập build prompt webhook URL" />
+              </div>
+            </div>
+
+            {/* Cấu hình khác */} 
+            <div className="space-y-4">
+              <h3 className="font-medium">Cấu hình khác</h3>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-agent-status" className="text-right">
+                  Trạng thái
+                </Label>
+                <Select value={editedAgentData.status || 'private'} onValueChange={(value: AgentStatus) => setEditedAgentData({ ...editedAgentData, status: value })}> 
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Use availableStatuses from AddAgentDialog for consistency if needed, or define locally */} 
+                    {[{ value: 'private', label: 'Riêng tư' }, { value: 'workspace_shared', label: 'Chia sẻ workspace' }, { value: 'system_public', label: 'Công khai hệ thống' }].map((statusOption) => ( // Simplified for now, can be made dynamic based on user role
+                      <SelectItem key={statusOption.value} value={statusOption.value}>
+                        {statusOption.label}
+                      </SelectItem>
+                    ))} 
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+             {/* Add other fields for editing if needed */} 
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditAgentDialog(false)} disabled={isSavingEdit}>Hủy</Button>

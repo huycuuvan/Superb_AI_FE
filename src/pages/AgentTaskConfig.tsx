@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -46,15 +47,6 @@ const AgentTaskConfig = () => {
     );
   };
 
-  const handleSave = () => {
-    console.log('Saving configuration for Agent ID:', agentId);
-    console.log('Frequency:', frequency);
-    console.log('Time:', time);
-    console.log('Selected Days:', selectedDays);
-    console.log('Use Timezone:', useTimezone);
-    console.log('Time Limit (minutes):', timeLimit);
-    // Add save logic here
-  };
 
   const handleCancel = () => {
     console.log('Cancelling configuration');
@@ -210,12 +202,9 @@ const AgentTaskConfig = () => {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 mt-auto">
-              <Button variant="outline" onClick={handleCancel} className="border-border text-foreground hover:bg-muted">
-                Cancel
-              </Button>
-              <Button onClick={() => handleSave()} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
-                Save Settings
-              </Button>
+            <Button variant="outline">Cancel</Button>
+              {/* UPDATED: Sử dụng class gradient */}
+              <Button className="button-gradient-light dark:button-gradient-dark text-white">Save Settings</Button>
             </div>
           </>
         )}
@@ -388,7 +377,7 @@ const AgentTaskConfig = () => {
               <Button variant="outline" onClick={() => setCurrentStep(1)} className="border-border text-foreground hover:bg-muted">
                 Previous
               </Button>
-              <Button onClick={() => handleSave()} className="teampal-button">
+              <Button  className="teampal-button">
                 Save Task
               </Button>
             </div>

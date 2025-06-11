@@ -158,9 +158,9 @@ const Header = React.memo(() => {
             <div className="hidden md:flex">
               <Breadcrumb>
                 <BreadcrumbList>
-                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem>
+                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                   <BreadcrumbSeparator />
-                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">Agents</Link></BreadcrumbLink></BreadcrumbItem>
+                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
                   {isAgentChatPage && (
                     <>
                       <BreadcrumbSeparator />
@@ -171,7 +171,7 @@ const Header = React.memo(() => {
               </Breadcrumb>
             </div>
           ) : (
-            <div className="hidden md:block text-sm text-foreground">Dashboard</div>
+            <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>
           )}
         </div>
         
@@ -190,13 +190,13 @@ const Header = React.memo(() => {
               </Button>
             </SheetTrigger>
             <SheetContent className="w-[380px] sm:w-[450px] p-0 flex flex-col">
-                <SheetHeader className="p-4 border-b"><SheetTitle>Thông báo</SheetTitle></SheetHeader>
+                <SheetHeader className="p-4 border-b"><SheetTitle>{t('common.notifications')}</SheetTitle></SheetHeader>
                 <div className="flex-grow overflow-y-auto p-4 space-y-4">
-                    <h3 className="text-md font-semibold text-foreground">Lời mời tham gia Workspace</h3>
-                    {isLoadingInvitations && <div className="text-center py-6 text-muted-foreground">Đang tải...</div>}
+                    <h3 className="text-md font-semibold text-foreground">{t('common.invitations')}</h3>
+                    {isLoadingInvitations && <div className="text-center py-6 text-muted-foreground">{t('common.loading')}</div>}
                     {/* CLEANED: Using semantic destructive color for error message */}
-                    {errorInvitations && <div className="text-center py-6 text-destructive bg-destructive/10 p-3 rounded-md">Không thể tải lời mời.</div>}
-                    {!isLoadingInvitations && pendingInvitations.length === 0 && <div className="text-sm text-muted-foreground py-6 text-center">Không có lời mời nào.</div>}
+                    {errorInvitations && <div className="text-center py-6 text-destructive bg-destructive/10 p-3 rounded-md">{t('common.errorLoadingInvitations')}</div>}
+                    {!isLoadingInvitations && pendingInvitations.length === 0 && <div className="text-sm text-muted-foreground py-6 text-center">{t('common.noInvitations')}</div>}
                     
                     <div className="space-y-3">
                         {pendingInvitations.map(invitation => (
@@ -204,10 +204,10 @@ const Header = React.memo(() => {
                                 <p className="text-sm font-medium text-foreground">
                                     Mời tham gia <span className="font-semibold text-primary">{invitation.WorkspaceName}</span>
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-1">Từ: {invitation.InviterEmail} - Vai trò: {invitation.Role}</p>
+                                <p className="text-xs text-muted-foreground mt-1">Từ: {invitation.InviterEmail} - {t('common.role')}: {invitation.Role}</p>
                                 <div className="flex gap-2 justify-end mt-3">
-                                    <Button variant="outline" size="sm" onClick={() => handleRejectInvitation(invitation.ID)}>Từ chối</Button>
-                                    <Button variant="default" size="sm" onClick={() => handleAcceptInvitation(invitation.ID)}>Chấp nhận</Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleRejectInvitation(invitation.ID)}>{t('common.reject')}</Button>
+                                    <Button variant="default" size="sm" onClick={() => handleAcceptInvitation(invitation.ID)}>{t('common.accept')}</Button>
                                 </div>
                             </div>
                         ))}
@@ -220,14 +220,14 @@ const Header = React.memo(() => {
           
           {/* FIXED: Applied gradient classes as requested */}
           <Button className="hidden md:inline-flex button-gradient-light dark:button-gradient-dark text-white font-semibold" size="sm">
-            {t('editBrand')}
+            {t('common.editBrand')}
           </Button>
 
           {workspace && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 {/* CLEANED: Simplified hover state */}
-                <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded ">
                   {/* CLEANED: Using primary color for avatar */}
                   <Avatar className="bg-primary text-primary-foreground w-8 h-8 flex items-center justify-center border">
                     <span className="font-bold text-sm">{workspace.name?.charAt(0).toUpperCase() || 'W'}</span>
@@ -247,22 +247,22 @@ const Header = React.memo(() => {
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={() => setIsMembersModalOpen(true)} className="cursor-pointer">
-                  <Users className="mr-2 h-4 w-4" /> Xem thành viên
+                <DropdownMenuItem onClick={() => setIsMembersModalOpen(true)} className="cursor-pointer   hover:button-gradient-light p-2 dark:hover:button-gradient-dark ">
+                  <Users className="mr-2 h-4 w-4" /> {t('common.viewMembers')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer">
-                  Chọn workspace khác
+                <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer  hover:button-gradient-light dark:hover:button-gradient-dark p-2">
+                  {t('common.selectWorkspace')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Logout">
+          <Button className="hidden md:inline-flex button-gradient-light dark:button-gradient-dark text-white font-semibold" size="sm"  onClick={handleLogout} aria-label="Logout">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
-      {/* REFACTORED: Mobile Menu now uses clean classes from Header.css */}
+   
       <div className={cn("md:hidden border-t border-border bg-background", mobileMenuOpen ? "block" : "hidden")}>
         <nav className="px-2 py-2 space-y-1">
           {['home', 'agents', 'tasks', 'settings'].map((item) => {
@@ -288,7 +288,7 @@ const Header = React.memo(() => {
             <DialogHeader><DialogTitle>Thành viên Workspace</DialogTitle></DialogHeader>
             <div className="py-4 max-h-[400px] overflow-y-auto">
               {isLoadingMembers && <div className="text-center"><Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" /></div>}
-              {membersError && <div className="text-center text-destructive">Không thể tải danh sách.</div>}
+              {membersError && <div className="text-center text-destructive">{t('common.errorLoadingMembers')}</div>}
               {membersData?.data && (
                 <div className="space-y-3">
                   {membersData.data.map(member => (
@@ -314,12 +314,12 @@ const Header = React.memo(() => {
        <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa thành viên</DialogTitle>
-            <DialogDescription>Bạn có chắc muốn xóa {memberToConfirmRemoval?.user_name} khỏi workspace không?</DialogDescription>
+            <DialogTitle>{t('common.confirmRemoveMember')}</DialogTitle>
+            <DialogDescription>{t('common.confirmRemoveMemberDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>Hủy</Button>
-            <Button variant="destructive" onClick={handleRemoveMember}>Xóa</Button>
+            <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>{t('common.cancel')}</Button>
+            <Button variant="destructive" onClick={handleRemoveMember}>{t('common.remove')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

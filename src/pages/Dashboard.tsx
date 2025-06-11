@@ -26,6 +26,8 @@ import { useFolders } from '@/contexts/FolderContext';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import React from 'react';
+import { useLanguage } from "@/hooks/useLanguage";
+import { useTranslation } from "react-i18next";
 
 interface FolderType {
   id: string;
@@ -69,6 +71,7 @@ const Dashboard = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (workspace?.id) {
@@ -98,8 +101,8 @@ const Dashboard = () => {
     try {
       await updateFolder(folderToRename.id, { name: newFolderName.trim() });
       toast({
-        title: "Thành công!",
-        description: `Đã đổi tên folder thành "${newFolderName.trim()}".`,
+        title: t('common.success'),
+        description: t('common.folderRenameSuccess', { name: newFolderName.trim() }),
       });
       if (workspace?.id) {
         fetchFolders(workspace.id);
@@ -108,8 +111,8 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error('Lỗi khi đổi tên folder:', error);
       toast({
-        title: "Lỗi!",
-        description: `Không thể đổi tên folder: ${error.message}`,
+        title: t('common.error'),
+        description: t('common.folderRenameFailed', { name: folderToRename.name }),
         variant: "destructive",
       });
     } finally {
@@ -129,8 +132,8 @@ const Dashboard = () => {
     try {
       await deleteFolder(folderToDelete.id);
       toast({
-        title: "Thành công!",
-        description: `Đã xóa folder "${folderToDelete.name}".`,
+        title: t('common.success'),
+        description: t('common.folderDeleteSuccess', { name: folderToDelete.name }),
       });
       if (workspace?.id) {
         fetchFolders(workspace.id);
@@ -142,8 +145,8 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error('Lỗi khi xóa folder:', error);
       toast({
-        title: "Lỗi!",
-        description: `Không thể xóa folder: ${error.message}`,
+        title: t('common.error'),
+        description: t('common.folderDeleteFailed', { name: folderToDelete.name }),
         variant: "destructive",
       });
     } finally {
@@ -167,15 +170,15 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Welcome to your Superb AI dashboard. Manage your AI agents and tasks.
+            {t('common.dashboardDescription')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
           <Button className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddAgentDialog(true)}>
-            <span className="text-lg">+</span> Create agent
+            <span className="text-lg">+</span> {t('agent.createAgent')}
           </Button>
           <Button variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-gray">
-            <span className="text-lg">+</span> Create folder
+            <span className="text-lg">+</span> {t('folder.createFolder')}
           </Button>
         </div>
       </div>
@@ -220,13 +223,13 @@ const Dashboard = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
-                      <Edit className="h-4 w-4 mr-2" /> Đổi tên
+                      <Edit className="h-4 w-4 mr-2" /> {t('common.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handlePin(folder.name)}>
-                      <Pin className="h-4 w-4 mr-2" /> Ghim
+                      <Pin className="h-4 w-4 mr-2" /> {t('common.pin')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-destructive focus:text-destructive">
-                      <Trash className="h-4 w-4 mr-2" /> Xoá
+                      <Trash className="h-4 w-4 mr-2" /> {t('common.delete')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -242,8 +245,8 @@ const Dashboard = () => {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
                     <Plus className="h-6 w-6 text-primary " />
                   </div>
-                  <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
-                  <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này</p>
+                  <p className="text-sm font-medium text-foreground">{t('agent.createAgent')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('agent.noAgents')}</p>
                 </Card>
                 {/* Render AgentsForFolder component for this folder */}
                 <AgentsForFolder folderId={folder.id} navigate={navigate} />
@@ -251,22 +254,22 @@ const Dashboard = () => {
             </div>
           ))
         ) : (
-          <div className="text-sm text-muted-foreground text-center py-10">Chưa có thư mục nào. Tạo thư mục đầu tiên của bạn!</div>
+          <div className="text-sm text-muted-foreground text-center py-10">{t('folder.noFolders')}</div>
         )}
       </div>
 
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Đổi tên Folder</DialogTitle>
+            <DialogTitle>{t('folder.renameFolder')}</DialogTitle>
             <DialogDescription>
-              Nhập tên mới cho folder "{folderToRename?.name}".
+              {t('folder.renameFolderDescription', { name: folderToRename?.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-folder-name" className="text-right">
-                Tên mới
+                {t('folder.newFolderName')}
               </Label>
               <Input
                 id="new-folder-name"
@@ -278,9 +281,9 @@ const Dashboard = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRenameDialog(false)} disabled={isRenaming}>Hủy</Button>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)} disabled={isRenaming}>{t('common.cancel')}</Button>
             <Button onClick={handleRenameFolder} disabled={!newFolderName.trim() || isRenaming}>
-              {isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {isRenaming ? t('common.saving') : t('common.saveChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -290,15 +293,15 @@ const Dashboard = () => {
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa Folder</DialogTitle>
+            <DialogTitle>{t('folder.deleteFolder')}</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa folder "{folderToDelete?.name}"? Hành động này không thể hoàn tác.
+              {t('folder.deleteFolderDescription', { name: folderToDelete?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>Hủy</Button>
+            <Button variant="outline" onClick={() => setShowConfirmDeleteDialog(false)} disabled={isDeleting}>{t('common.cancel')}</Button>
             <Button variant="destructive" onClick={handleDeleteFolder} disabled={isDeleting}>
-               {isDeleting ? 'Đang xóa...' : 'Xóa'}
+               {isDeleting ? t('common.deleting') : t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -315,6 +318,7 @@ interface SearchInputProps {
 
 const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) => {
   const [query, setQuery] = useState('');
+  const { t } = useTranslation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
@@ -340,7 +344,7 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
         </svg>
         <Input
           type="search"
-          placeholder="Search agents..."
+          placeholder={t('agent.searchAgents')}
           className="pl-9"
           value={query}
           onChange={handleChange}
@@ -354,6 +358,7 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
 const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.memo(({ folderId, navigate }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { t } = useTranslation();
   const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
     queryKey: ['agentsByFolder', folderId],
     queryFn: () => {
@@ -370,14 +375,14 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
 
   if (agentsError) {
     console.error('Lỗi khi tải agents cho folder', folderId, ':', agentsError);
-    return <div className="text-sm text-red-500">Lỗi tải agents.</div>;
+    return <div className="text-sm text-red-500">{t('agent.errorLoadingAgents')}</div>;
   }
 
   const agents = agentsData?.data || [];
 
   // Hiển thị thông báo nếu không có agent nào trong thư mục
   if (agents.length === 0) {
-    return <div className="text-muted-foreground text-center w-full">Chưa có agent nào trong thư mục này.</div>;
+    return <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>;
   }
 
   return (

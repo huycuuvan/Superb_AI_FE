@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
-import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getTasks, createTask, updateTask, deleteTask, CreateTaskRequest, UpdateTaskRequest, Task } from '@/services/taskService';
@@ -25,8 +24,7 @@ import {
 export const Tasks = () => {
   const { t } = useLanguage();
   const { workspace } = useSelectedWorkspace();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
@@ -42,36 +40,40 @@ export const Tasks = () => {
 
   const tasks = tasksData?.data || [];
 
-  const handleCreateTask = async (taskData: CreateTaskRequest) => {
+  const handleSubmitTask = async (taskData: CreateTaskRequest) => {
     try {
-      await createTask(taskData);
-      toast.success("Tạo task thành công", {
-        description: "Task đã được tạo và sẵn sàng sử dụng"
-      });
+      if (selectedTask) {
+        // Edit mode
+        await updateTask(selectedTask.id, taskData as UpdateTaskRequest);
+        toast.success("Cập nhật task thành công", {
+          description: "Task đã được cập nhật thành công"
+        });
+      } else {
+        // Create mode
+        await createTask(taskData);
+        toast.success("Tạo task thành công", {
+          description: "Task đã được tạo và sẵn sàng sử dụng"
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       fetchTasks();
+      handleCloseDialog();
     } catch (error) {
-      console.error('Lỗi khi tạo task:', error);
-      toast.error("Lỗi khi tạo task", {
+      console.error('Lỗi khi xử lý task:', error);
+      toast.error(selectedTask ? "Lỗi khi cập nhật task" : "Lỗi khi tạo task", {
         description: "Vui lòng kiểm tra lại thông tin và thử lại"
       });
     }
   };
 
-  const handleUpdateTask = async (taskData: UpdateTaskRequest) => {
-    try {
-      await updateTask(taskData.id, taskData);
-      toast.success("Cập nhật task thành công", {
-        description: "Task đã được cập nhật thành công"
-      });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      fetchTasks();
-    } catch (error) {
-      console.error('Lỗi khi cập nhật task:', error);
-      toast.error("Lỗi khi cập nhật task", {
-        description: "Vui lòng kiểm tra lại thông tin và thử lại"
-      });
-    }
+  const handleOpenDialog = (task?: Task) => {
+    setSelectedTask(task || null);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedTask(null);
+    setIsDialogOpen(false);
   };
 
   const confirmDeleteTask = (task: Task) => {
@@ -111,7 +113,7 @@ export const Tasks = () => {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('tasks')}</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
+        <Button onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
           {t('addTask')}
         </Button>
@@ -160,10 +162,7 @@ export const Tasks = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
-                      setSelectedTask(task);
-                      setIsEditDialogOpen(true);
-                    }}
+                    onClick={() => handleOpenDialog(task)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -181,21 +180,11 @@ export const Tasks = () => {
         </div>
       )}
 
-      {isAddDialogOpen && (
+      {isDialogOpen && (
         <AddTaskDialog
-          onClose={() => setIsAddDialogOpen(false)}
-          onSubmit={handleCreateTask}
-        />
-      )}
-
-      {isEditDialogOpen && selectedTask && (
-        <EditTaskDialog
-          task={selectedTask}
-          onClose={() => {
-            setIsEditDialogOpen(false);
-            setSelectedTask(null);
-          }}
-          onSubmit={handleUpdateTask}
+          onClose={handleCloseDialog}
+          onSubmit={handleSubmitTask}
+          initialData={selectedTask}
         />
       )}
 
@@ -216,7 +205,6 @@ export const Tasks = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };

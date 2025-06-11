@@ -198,7 +198,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
             {t('create_agent_description')}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
           <div className="grid gap-4 py-4">
             {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
             

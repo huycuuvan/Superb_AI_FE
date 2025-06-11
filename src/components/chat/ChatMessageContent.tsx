@@ -126,38 +126,42 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
     setIsExpanded(!isExpanded);
   };
 
-  const FullContentRenderer = useMemo(() => {
-    if (isAgent) {
-      return (
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={{
-            p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-            pre: CodeBlockRenderer,
-            code: ({ node, ...props }) => <code className="bg-black/20 text-red-400 rounded px-1 py-0.5 mx-0.5" {...props} />,
-            a: ({node, ...props}) => <a className="text-blue-500 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-            ul: ({ node, ...props }) => <ul className="list-disc list-outside pl-5 my-2 space-y-1" {...props} />,
-            ol: ({ node, ...props }) => <ol className="list-decimal list-outside pl-5 my-2 space-y-1" {...props} />,
-            li: ({ node, ...props }) => <li className="pl-1 [&>p:first-of-type]:inline" {...props} />,
-            table: TableRenderer,
-            thead: ({ node, ...props }) => <thead className="bg-slate-100 dark:bg-slate-800" {...props} />,
-            th: ({ node, ...props }) => <th className="border border-slate-300 dark:border-slate-600 font-semibold p-2 text-left" {...props} />,
-            td: ({ node, ...props }) => <td className="border border-slate-300 dark:border-slate-700 p-2" {...props} />,
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      );
-    } else {
-      // Tin nhắn của User
-      return <p className="whitespace-pre-wrap break-words">{content}</p>;
+  const commonMarkdownProps = {
+    remarkPlugins: [remarkGfm],
+    rehypePlugins: [rehypeRaw],
+    components: {
+      p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0" {...props} />,
+      pre: CodeBlockRenderer,
+      code: ({ node, ...props }: any) => <code className="bg-black/20 text-red-400 rounded px-1 py-0.5 mx-0.5" {...props} />,
+      a: ({node, ...props}: any) => <a className="text-blue-500 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+      ul: ({ node, ...props }: any) => <ul className="list-disc list-outside pl-5 my-2 space-y-1" {...props} />,
+      ol: ({ node, ...props }: any) => <ol className="list-decimal list-outside pl-5 my-2 space-y-1" {...props} />,
+      li: ({ node, ...props }: any) => <li className="pl-1 [&>p:first-of-type]:inline" {...props} />,
+      table: TableRenderer,
+      thead: ({ node, ...props }: any) => <thead className="bg-slate-100 dark:bg-slate-800" {...props} />,
+      th: ({ node, ...props }: any) => <th className="border border-slate-300 dark:border-slate-600 font-semibold p-2 text-left" {...props} />,
+      td: ({ node, ...props }: any) => <td className="border border-slate-300 dark:border-slate-700 p-2" {...props} />,
     }
-  }, [isAgent, content]);
+  };
+
+  const renderContent = () => {
+    if (isAgent) {
+      return <ReactMarkdown {...commonMarkdownProps}>{content}</ReactMarkdown>;
+    } else {
+      // User message
+      const displayedContent = (isLongMessage && !isExpanded)
+        ? content.split('\n').slice(0, MAX_LINES_BEFORE_COLLAPSE).join('\n') + "\n..."
+        : content;
+
+      return <p className="whitespace-pre-wrap break-all">{displayedContent}</p>;
+    }
+  };
   
   const containerClassName = cn(
-    'break-words w-full overflow-x-auto',
-    isAgent ? 'text-card-foreground' : 'text-primary-foreground'
+    'w-full',
+    isAgent ? 'text-card-foreground' : 'text-primary-foreground',
+    // Apply max-height and overflow-y only to non-agent long messages when not expanded
+    isLongMessage && !isExpanded && !isAgent && 'max-h-[60vh] overflow-y-auto'
   );
 
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
@@ -178,29 +182,15 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
     </div>
   );
 
-  // Vì isLongMessage sẽ luôn là `false` với tin nhắn của Agent,
-  // nên code sẽ luôn chạy vào khối `return` ở dưới cùng cho Agent,
-  // đảm bảo hiển thị đầy đủ và không có nút ToggleButton.
-  if (isLongMessage && !isExpanded) {
-    const truncatedContent = content.split('\n').slice(0, MAX_LINES_BEFORE_COLLAPSE).join('\n') + "\n...";
-    return (
-      <div className="relative pr-2">
-        <div className={containerClassName}>
-            <p className="whitespace-pre-wrap break-words">{truncatedContent}</p>
-        </div>
-        <ToggleButton isExpanded={false} />
-      </div>
-    );
-  }
-
-  // Agent sẽ luôn hiển thị bằng khối này
   return (
     <div className="relative pt-2 pr-2">
-        <div className={containerClassName}>{FullContentRenderer}</div>
+        <div className={containerClassName}>
+            {renderContent()}
+        </div>
         
-        {/* Nút bấm chỉ hiển thị nếu isLongMessage là true (chỉ có thể xảy ra với User) */}
+        {/* Nút bấm chỉ hiển thị nếu isLongMessage là true */}
         {isLongMessage && (
-            <ToggleButton isExpanded={true} />
+            <ToggleButton isExpanded={isExpanded} />
         )}
     </div>
   );

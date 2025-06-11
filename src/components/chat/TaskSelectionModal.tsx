@@ -23,7 +23,6 @@ import {
   }
   
   export const TaskSelectionModal = ({ isOpen, onOpenChange, tasks, onTaskSelect }: TaskSelectionModalProps) => {
-    
     // Hàm này sẽ được gọi khi người dùng nhấn vào một thẻ task
     const handleSelectTask = (task: ApiTaskType) => {
       onTaskSelect(task); // Gọi lại hàm xử lý cũ để mở ô nhập liệu
@@ -42,6 +41,7 @@ import {
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {tasks.map((task) => (
+                
                 <Card 
                   key={task.id} 
                   className="cursor-pointer hover:border-primary transition-all group flex flex-col"

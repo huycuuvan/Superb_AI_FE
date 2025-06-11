@@ -94,7 +94,7 @@ const routes: RouteObject[] = [
         element: <AgentChat />,
       },
       {
-        path: 'agents/:agentId/task/config',
+        path: 'agents/:agentId/task/:taskId/config',
         element: <AgentTaskConfig />,
       },
       {

@@ -57,36 +57,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return false;
+      const storedRefreshToken = localStorage.getItem('refresh_token');
+      if (!storedRefreshToken) return false;
 
       const res = await fetch(API_ENDPOINTS.auth.refresh, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          refresh_token: storedRefreshToken
+        })
       });
 
-      if (!res.ok) {
-        if (res.status === 401) {
-          // Token không hợp lệ hoặc đã hết hạn hoàn toàn, cần logout
-          logout(); // Gọi hàm logout
-          return false;
-        }
-        throw new Error('Không thể refresh token');
-      }
-
       const data = await res.json();
-      if (data.token) {
+
+      if (data.tag === 'REFRESH_SUCCESS') {
+        // Lưu token mới
         localStorage.setItem('token', data.token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        
+        // Cập nhật user data nếu có
+        if (data.user_data) {
+          const existingUserStr = localStorage.getItem('user');
+          let existingUserData: Partial<User> = {};
+          if (existingUserStr) {
+            try {
+              existingUserData = JSON.parse(existingUserStr);
+            } catch (e) {
+              console.error("Failed to parse existing user data from localStorage:", e);
+            }
+          }
+
+          // Merge new user_data with existing user data
+          const mergedUserData: User = { ...existingUserData, ...data.user_data };
+          
+          try {
+            const decodedToken = jwtDecode<DecodedToken>(data.token);
+            mergedUserData.role = decodedToken.role; // Cập nhật role từ token mới
+          } catch (e) {
+            console.error("Failed to decode token for role:", e);
+            mergedUserData.role = null;
+          }
+          localStorage.setItem('user', JSON.stringify(mergedUserData));
+          setUser(mergedUserData);
+        }
+        
         setIsTokenExpired(false);
         return true;
+      } else {
+        // Xử lý các trường hợp lỗi
+        switch (data.tag) {
+          case 'REFRESH_INVALID_TOKEN':
+          case 'REFRESH_USER_NOT_FOUND':
+          case 'REFRESH_TOKEN_ERROR':
+          case 'REFRESH_DB_ERROR':
+          case 'REFRESH_RATE_LIMIT_EXCEEDED':
+            console.error('Refresh token error:', data.tag);
+            logout();
+            return false;
+          default:
+            console.error('Unknown refresh error:', data);
+            logout();
+            return false;
+        }
       }
-      return false;
     } catch (err) {
       console.error('Lỗi khi refresh token:', err);
-      logout(); // Tự động logout khi có lỗi refresh
+      logout();
       return false;
     }
   };
@@ -108,48 +146,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       console.error('Lỗi khi kiểm tra token để refresh:', err);
-      logout(); // Logout nếu có lỗi khi giải mã token
+      logout();
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (token && userStr) {
-      const isExpired = checkTokenExpiration(token);
-      setIsTokenExpired(isExpired);
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      const storedRefreshToken = localStorage.getItem('refresh_token');
+      const userStr = localStorage.getItem('user');
       
-      if (isExpired) {
-        // Thử refresh token ngay lập tức nếu đã hết hạn
-        refreshToken().then(success => {
+      if (token && userStr) {
+        const isExpired = checkTokenExpiration(token);
+        setIsTokenExpired(isExpired);
+        
+        if (isExpired) {
+          // Thử refresh token ngay lập tức nếu đã hết hạn
+          const success = await refreshToken();
           if (!success) {
             // Nếu refresh thất bại, xóa token và user
             localStorage.removeItem('token');
+            localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
             setUser(null);
           }
-        });
-      } else {
-        const userData = JSON.parse(userStr);
-        try {
-          const decodedToken = jwtDecode<DecodedToken>(token);
-          userData.role = decodedToken.role;
-        } catch (e) {
-          console.error("Failed to decode token for role:", e);
-          userData.role = null;
+        } else {
+          const userData = JSON.parse(userStr);
+          try {
+            const decodedToken = jwtDecode<DecodedToken>(token);
+            userData.role = decodedToken.role;
+          } catch (e) {
+            console.error("Failed to decode token for role:", e);
+            userData.role = null;
+          }
+          setUser(userData);
         }
-        setUser(userData);
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initializeAuth();
 
     // Thiết lập interval để kiểm tra và refresh token định kỳ
-    const interval = setInterval(checkAndRefreshToken, 60000); // Kiểm tra mỗi 60 giây (1 phút)
+    const interval = setInterval(checkAndRefreshToken, 60000); // Kiểm tra mỗi 60 giây
 
-    // Xóa interval khi component unmount
     return () => clearInterval(interval);
-  }, []); // [] đảm bảo useEffect chỉ chạy một lần khi component mount
+  }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -163,8 +205,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Đăng nhập thất bại');
       
-      if (data.token && data.user) {
+      if (data.token && data.refresh_token && data.user) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         
         try {
           const decodedToken = jwtDecode<DecodedToken>(data.token);
@@ -178,7 +221,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(data.user);
         setIsTokenExpired(false);
         
-        // Invalidate all queries after successful login
         queryClient.invalidateQueries();
       } else {
         throw new Error('Không nhận được token hoặc user từ server');
@@ -192,18 +234,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
-    // Xóa tất cả cache của React Query
-    queryClient.clear();
-    
-    // Xóa dữ liệu local storage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('selectedWorkspace');
-    
-    // Reset state
-    setUser(null);
-    setIsTokenExpired(false);
+  const logout = async () => {
+    try {
+      // Gọi API logout để thu hồi refresh token
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(API_ENDPOINTS.auth.logout, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Lỗi khi logout:', err);
+    } finally {
+      // Xóa tất cả cache của React Query
+      queryClient.clear();
+      
+      // Xóa dữ liệu local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('selectedWorkspace');
+      
+      // Reset state
+      setUser(null);
+      setIsTokenExpired(false);
+    }
   };
 
   const updateUser = (newUser: User) => {
@@ -239,5 +297,5 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context as AuthContextType;
+  return context;
 }; 
