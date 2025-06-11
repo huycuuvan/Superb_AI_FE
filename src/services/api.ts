@@ -345,8 +345,7 @@ export const getAgentById = async (
     await handleApiError(response);
   }
 
-  const responseData = await response.json();
-  return { data: responseData.data.agent };
+  return response.json();
 };
 
 export interface UpdateAgentRequest {
