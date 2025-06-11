@@ -262,7 +262,7 @@ const Header = React.memo(() => {
         </div>
       </div>
 
-      {/* REFACTORED: Mobile Menu now uses clean classes from Header.css */}
+   
       <div className={cn("md:hidden border-t border-border bg-background", mobileMenuOpen ? "block" : "hidden")}>
         <nav className="px-2 py-2 space-y-1">
           {['home', 'agents', 'tasks', 'settings'].map((item) => {
