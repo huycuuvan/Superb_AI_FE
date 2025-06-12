@@ -107,8 +107,9 @@ const AgentChat = () => {
   const lastAgentMessageIdRef = useRef<string | null>(null);
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
-  const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
+  // const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [timeoutStage, setTimeoutStage] = useState<number>(0);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
   const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
   // Clean up interval on component unmount (now handled by WS cleanup)
@@ -138,6 +139,7 @@ const AgentChat = () => {
             // Xử lý tin nhắn từ Agent (dạng chunk)
             if (receivedData.sender_type === "agent") {
               setIsAgentThinking(false); // Tắt trạng thái typing ngay khi nhận được tin nhắn chat từ agent
+              setTimeoutStage(0);
               setMessages(prevMessages => {
                 // Kiểm tra xem tin nhắn cuối có phải của agent không
                 if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
@@ -196,13 +198,10 @@ const AgentChat = () => {
                 setIsAgentThinking(true);
              }
           } else if (receivedData.type === "done") {
-             lastAgentMessageIdRef.current = null; // Kết thúc chuỗi chunking
-             setIsAgentThinking(false); // Tắt trạng thái typing khi nhận done (nếu backend gửi sau typing)
-             setIsTimeoutOccurred(false); // Clear timeout status
-             if (timeoutRef.current) {
-               clearTimeout(timeoutRef.current);
-               timeoutRef.current = null;
-             }
+            lastAgentMessageIdRef.current = null;
+            setIsAgentThinking(false); // Dừng các chỉ báo chờ
+            setTimeoutStage(0);      // Reset stage
+           
           } else if (receivedData.type === "status") {
            
             try {
@@ -242,20 +241,13 @@ const AgentChat = () => {
   
       ws.current.onclose = (event) => {
         console.log("WebSocket Disconnected. Code:", event.code, "Reason:", event.reason, "Was Clean:", event.wasClean);
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
+   
       };
   
       ws.current.onerror = (error) => {
         console.error("WebSocket Error:", error);
         setIsAgentThinking(false); // Stop typing indicator
-        setIsTimeoutOccurred(true); // Indicate timeout/error
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
+  
       };
   
       return () => {
@@ -263,7 +255,43 @@ const AgentChat = () => {
       };
     }
   }, [currentThread]); // Reconnect when currentThread changes
+  useEffect(() => {
+    // Nếu agent không suy nghĩ, không làm gì cả
+    if (!isAgentThinking) {
+      setTimeoutStage(0); // Reset stage khi có kết quả
+      return;
+    }
 
+    // Mảng để lưu các ID của timer, giúp chúng ta dọn dẹp sau
+    const timers: NodeJS.Timeout[] = [];
+
+    // Định nghĩa các mốc thời gian và thông điệp
+    const stages = [
+      { delay: 15000, stage: 1 }, // 15 giây -> Giai đoạn 1
+      { delay: 30000, stage: 2 }, // 30 giây -> Giai đoạn 2
+      { delay: 60000, stage: 3 }, // 60 giây -> Giai đoạn 3 (thay cho báo lỗi)
+    ];
+
+    stages.forEach(({ delay, stage }) => {
+      const timer = setTimeout(() => {
+        console.log(`Timeout Stage ${stage} reached`);
+        setTimeoutStage(stage);
+        if (stage === 3) { // Tại giai đoạn cuối, có thể hiển thị một toast thân thiện
+             toast({
+                title: "Agent đang xử lý tác vụ phức tạp",
+                description: "Vui lòng chờ thêm một chút. Tác vụ này mất nhiều thời gian hơn dự kiến.",
+             });
+        }
+      }, delay);
+      timers.push(timer);
+    });
+
+    // Hàm dọn dẹp: Sẽ được gọi khi isAgentThinking chuyển thành false
+    return () => {
+      console.log("Cleaning up timeouts...");
+      timers.forEach(clearTimeout);
+    };
+  }, [isAgentThinking]);
   useEffect(() => {
     if (agentId) {
       const initializeChat = async () => {
@@ -412,18 +440,9 @@ const AgentChat = () => {
     if (message.trim() && currentThread) { // Check if threadId exists
       setIsSending(true); // Start loading
       setIsAgentThinking(true); // Khóa input, chờ agent trả lời
-      setIsTimeoutOccurred(false); // Reset timeout status for new message
+      setTimeoutStage(0);
 
       // Set a timeout for the agent's response (e.g., 30 seconds)
-      timeoutRef.current = setTimeout(() => {
-        setIsAgentThinking(false); // Stop typing indicator
-        setIsTimeoutOccurred(true); // Set timeout status
-        toast({
-          title: "Lỗi!",
-          description: "Agent không phản hồi. Vui lòng thử lại.",
-          variant: "destructive",
-        });
-      }, 30000); // 30 seconds
 
       const userMessage: ChatMessage = {
         id: Date.now().toString(), // Temporary ID
@@ -452,11 +471,7 @@ const AgentChat = () => {
         console.error('Error sending message via WebSocket:', error);
         setIsSending(false);
         setIsAgentThinking(false); // Stop typing indicator
-        setIsTimeoutOccurred(true); // Indicate error
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
+
         toast({
           title: "Lỗi!",
           description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
@@ -878,12 +893,12 @@ const handleSubmitTaskInputs = async () => {
               <div
                 key={msg.id}
                 className={cn(
-                  "flex items-end",
+                  "flex items-end gap-2",
                   msg.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 {msg.sender === 'agent' && (
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 mx-2">
+                  <Avatar className="h-8 w-8 md:h-9 md:w-9 ">
                     <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
                       {currentAgent?.name?.charAt(0) || 'A'}
@@ -891,7 +906,7 @@ const handleSubmitTaskInputs = async () => {
                   </Avatar>
                 )}
                 <div className={cn(
-                                "max-w-[75%] p-3 rounded-2xl shadow-sm break-words mr-2",
+                                "max-w-[75%] p-3 rounded-2xl shadow-sm break-words relative overflow-hidden mr-2",
                                 msg.sender === 'user'
                                     ? 'button-gradient-light dark:button-gradient-dark text-white rounded-br-lg'
                                     : 'bg-muted text-foreground rounded-bl-lg'
@@ -910,13 +925,7 @@ const handleSubmitTaskInputs = async () => {
               </div>
             ))}
 
-            {/* 2. Hiển thị chỉ báo Agent đang suy nghĩ (giữ nguyên) */}
-            {isAgentThinking && (
-              <AgentTypingIndicator
-                agentName={currentAgent?.name}
-                agentAvatar={currentAgent?.avatar}
-              />
-            )}
+          
             
             {/* --- 3. KHỐI HIỂN THỊ TASK LOGS MỚI ĐƯỢC THÊM VÀO ĐÂY --- */}
             {taskLogs.length > 0 && (
@@ -1096,11 +1105,13 @@ const handleSubmitTaskInputs = async () => {
                   </div>
                 )}
 
-               {isTimeoutOccurred && (
-                 <div className="p-3 text-red-500 bg-red-100 border border-red-200 rounded-lg mb-3">
-                   <p>Agent không phản hồi trong thời gian quy định. Vui lòng thử lại hoặc kiểm tra kết nối.</p>
-                 </div>
-               )}
+{isAgentThinking && (
+                  <AgentTypingIndicator
+                    agentName={currentAgent?.name}
+                    agentAvatar={currentAgent?.avatar}
+                    stage={timeoutStage} 
+                  />
+                )}
 
               <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
                     <div className="w-full max-w-4xl mx-auto">

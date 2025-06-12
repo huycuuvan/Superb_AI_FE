@@ -165,7 +165,7 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
   );
 
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
-    <div className="absolute -top-3 -right-3">
+    <div className="absolute -top-3 right-12">
         <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -174,7 +174,7 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
                         <span className="sr-only">{isExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent side="left">
                     <p>{isExpanded ? 'Thu gọn văn bản' : 'Mở rộng văn bản'}</p>
                 </TooltipContent>
             </Tooltip>
@@ -183,7 +183,7 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
   );
 
   return (
-    <div className="relative pt-2 pr-2">
+    <div className="relative pt-2">
         <div className={containerClassName}>
             {renderContent()}
         </div>
