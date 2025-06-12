@@ -1,5 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
+import Lottie from 'lottie-react';
+
+// Lottie URL Loader Component
+const LottieFromURL = ({ src, className, loop = true, autoplay = true }: {
+    src: string;
+    className: string;
+    loop?: boolean;
+    autoplay?: boolean;
+}) => {
+    const [animationData, setAnimationData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadAnimation = async () => {
+            try {
+                const response = await fetch(src);
+                const data = await response.json();
+                setAnimationData(data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Failed to load Lottie animation:', error);
+                setLoading(false);
+            }
+        };
+
+        loadAnimation();
+    }, [src]);
+
+    if (loading) {
+        return <div className={`${className} bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg animate-pulse`}></div>;
+    }
+
+    if (!animationData) {
+        return <div className={`${className} bg-gradient-to-br from-red-200 to-red-300 rounded-lg flex items-center justify-center text-red-600 text-xs`}>❌</div>;
+    }
+
+    return (
+        <Lottie
+            animationData={animationData}
+            className={className}
+            loop={loop}
+            autoplay={autoplay}
+        />
+    );
+}; 
 
 // --- ICONS ---
 
@@ -297,6 +342,250 @@ const Hero = ({ isDark }: { isDark: boolean }) => {
 
 // Features Component
 const Features = ({ isDark }: { isDark: boolean }) => {
+    // Step 1 state
+    const [activeStep1Tab, setActiveStep1Tab] = useState('Sales');
+    
+    // Step 2 state  
+    const [activeStep2Action, setActiveStep2Action] = useState('default');
+
+    // Step 3 state
+    const [activeStep3Action, setActiveStep3Action] = useState('default');
+
+    // Step 1 content data
+    const step1Content = {
+        Sales: [
+            'Lead qualification automation with AI scoring system.',
+            'Automated follow-up email sequences for prospects.',
+            'Sales pipeline management and opportunity tracking.',
+            'Customer engagement analysis and optimization.',
+            'Quote generation and proposal automation.'
+        ],
+        Marketing: [
+            'Social media content scheduling and posting automation.',
+            'Email marketing campaigns with personalization.',
+            'SEO content optimization and keyword analysis.',
+            'Marketing performance analytics and reporting.',
+            'Lead nurturing workflows and segmentation.'
+        ],
+        Support: [
+            'AI-powered customer service chatbot deployment.',
+            'Ticket routing and priority assignment automation.',
+            'Knowledge base management and updates.',
+            'Customer satisfaction surveys and feedback analysis.',
+            'Live chat integration with AI assistance.'
+        ]
+    };
+
+    // Step 2 content components
+    const renderStep2Content = () => {
+        switch(activeStep2Action) {
+            case 'create':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Create New Schedule</h4>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Daily Execution</span>
+                                <div className={`${isDark ? 'bg-cyan-500' : 'bg-purple-600'} w-10 h-5 rounded-full relative cursor-pointer`}>
+                                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform translate-x-5"></div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Weekly Reports</span>
+                                <div className={`${isDark ? 'bg-slate-600' : 'bg-gray-400'} w-10 h-5 rounded-full relative cursor-pointer`}>
+                                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200"></div>
+                                </div>
+                            </div>
+                            <div className="mt-4">
+                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Execution Time:</label>
+                                <input 
+                                    type="time" 
+                                    defaultValue="09:00"
+                                    className={`w-full px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-gray-300 text-slate-900'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                );
+            
+            case 'input':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>💬 Chat with Agent</h4>
+                        <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} rounded-lg p-3 mb-3 max-h-32 overflow-y-auto`}>
+                            <div className="space-y-2">
+                                <div className={`${isDark ? 'bg-slate-600' : 'bg-gray-100'} rounded-lg p-2 text-sm`}>
+                                    <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-semibold`}>Agent:</span>
+                                    <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} ml-2`}>Hello! I'm ready to help you set up your automation. What specific requirements do you have?</span>
+                                </div>
+                                <div className={`${isDark ? 'bg-cyan-500/20' : 'bg-purple-100'} rounded-lg p-2 text-sm ml-4`}>
+                                    <span className={`${isDark ? 'text-white' : 'text-slate-800'} font-semibold`}>You:</span>
+                                    <span className={`${isDark ? 'text-slate-200' : 'text-slate-700'} ml-2`}>I need to automate my sales pipeline...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex space-x-2">
+                            <input 
+                                type="text" 
+                                placeholder="Type your requirements here..."
+                                className={`flex-1 px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-slate-900 placeholder-slate-500'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}
+                            />
+                            <button className={`${isDark ? 'bg-cyan-500 hover:bg-cyan-600' : 'bg-purple-600 hover:bg-purple-700'} text-white px-4 py-2 rounded-md text-sm transition-colors`}>
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                );
+            
+            case 'knowledge':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>📚 Upload Knowledge Base</h4>
+                        <div className="space-y-3">
+                            <div className={`border-2 border-dashed ${isDark ? 'border-slate-600 bg-slate-800/30' : 'border-gray-300 bg-gray-50'} rounded-lg p-4 text-center`}>
+                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>
+                                    📄 Drag & drop files here or click to browse
+                                </div>
+                                <button className={`${isDark ? 'bg-slate-600 hover:bg-slate-500 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} px-4 py-2 rounded-md text-sm transition-colors`}>
+                                    Choose Files
+                                </button>
+                            </div>
+                            <div className="text-xs space-y-1">
+                                <div className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>✅ company_policies.pdf (2.3 MB)</div>
+                                <div className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>✅ sales_guidelines.docx (1.1 MB)</div>
+                                <div className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>⏳ training_manual.pdf (Processing...)</div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            
+            default:
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-lg mb-6 transition-all duration-300 hover:shadow-lg cursor-pointer`}>
+                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Agent Configuration</h3>
+                        <div className="space-y-3">
+                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Requirements Input</span>
+                                <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Complete</span>
+                            </div>
+                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Knowledge Base</span>
+                                <span className={`${isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-100 text-purple-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Adding...</span>
+                            </div>
+                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
+                                <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} text-sm`}>Schedule Setup</span>
+                                <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'} text-xs`}>Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+        }
+    };
+
+    // Step 3 content components
+    const renderStep3Content = () => {
+        switch(activeStep3Action) {
+            case 'analytics':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>📊 Performance Analytics</h4>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg text-center`}>
+                                <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-2xl font-bold`}>98.5%</div>
+                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Success Rate</div>
+                            </div>
+                            <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg text-center`}>
+                                <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-2xl font-bold`}>2.4s</div>
+                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Avg Response</div>
+                            </div>
+                        </div>
+                        <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg`}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Tasks Completed</span>
+                                <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold`}>1,247/1,250</span>
+                            </div>
+                            <div className={`w-full ${isDark ? 'bg-slate-600' : 'bg-gray-200'} rounded-full h-2`}>
+                                <div className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} h-2 rounded-full`} style={{width: '99.8%'}}></div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            
+            case 'optimize':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>⚡ Optimization Suggestions</h4>
+                        <div className="space-y-3">
+                            <div className={`${isDark ? 'bg-green-500/20 border-green-500/30' : 'bg-green-50 border-green-200'} border rounded-lg p-3`}>
+                                <div className={`${isDark ? 'text-green-400' : 'text-green-700'} text-sm font-semibold mb-1`}>✨ Recommended</div>
+                                <div className={`${isDark ? 'text-green-300' : 'text-green-600'} text-xs`}>Increase batch processing by 25% for better efficiency</div>
+                            </div>
+                            <div className={`${isDark ? 'bg-yellow-500/20 border-yellow-500/30' : 'bg-yellow-50 border-yellow-200'} border rounded-lg p-3`}>
+                                <div className={`${isDark ? 'text-yellow-400' : 'text-yellow-700'} text-sm font-semibold mb-1`}>⚠️ Attention</div>
+                                <div className={`${isDark ? 'text-yellow-300' : 'text-yellow-600'} text-xs`}>Memory usage at 78%, consider scaling up</div>
+                            </div>
+                            <div className={`${isDark ? 'bg-blue-500/20 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-lg p-3`}>
+                                <div className={`${isDark ? 'text-blue-400' : 'text-blue-700'} text-sm font-semibold mb-1`}>💡 Tip</div>
+                                <div className={`${isDark ? 'text-blue-300' : 'text-blue-600'} text-xs`}>Enable auto-scaling for peak hours</div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            
+            case 'scale':
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
+                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>🚀 Scale Configuration</h4>
+                        <div className="space-y-4">
+                            <div>
+                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Auto-scaling Threshold:</label>
+                                <div className="flex items-center space-x-3">
+                                    <input 
+                                        type="range" 
+                                        min="50" 
+                                        max="100" 
+                                        defaultValue="75"
+                                        className={`flex-1 ${isDark ? 'accent-cyan-500' : 'accent-purple-600'}`}
+                                    />
+                                    <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold min-w-[3rem]`}>75%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Max Instances:</label>
+                                <select className={`w-full px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-gray-300 text-slate-900'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}>
+                                    <option>5 instances</option>
+                                    <option>10 instances</option>
+                                    <option>20 instances</option>
+                                    <option>Unlimited</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                );
+            
+            default:
+                return (
+                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-lg mb-6 transition-all duration-300 hover:shadow-lg cursor-pointer`}>
+                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Execution Dashboard</h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Agent Status</span>
+                                <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Running</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Tasks Processed</span>
+                                <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold`}>1,247</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Success Rate</span>
+                                <span className={`${isDark ? 'text-green-400' : 'text-green-600'} text-sm font-semibold`}>98.5%</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+        }
+    };
+
     return (
         <section id="features" className={`${isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
             <div className="container mx-auto px-6">
@@ -325,19 +614,38 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                             </button>
       </div>
                         <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-800/50 border-slate-700 shadow-black/20 hover:bg-slate-800/70 hover:border-slate-600' : 'bg-white/50 border-gray-200 shadow-gray-200/50 hover:bg-white/80 hover:border-gray-300'} backdrop-blur-sm p-6 rounded-xl border shadow-2xl transition-all duration-300 hover:shadow-3xl hover:-translate-y-2`}>
-                                <div className={`flex justify-between items-center ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} p-3 rounded-lg mb-8 flex-wrap gap-2`}>
+                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 shadow-black/20 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 shadow-gray-200/50 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border shadow-2xl transition-all duration-500 hover:shadow-3xl hover:-translate-y-3`}>
+                                                                    <div className={`flex justify-between items-center ${isDark ? 'bg-slate-600/30 backdrop-blur-lg border border-slate-500/20' : 'bg-white/50 backdrop-blur-lg border border-gray-300/30'} p-3 rounded-lg mb-8 flex-wrap gap-2`}>
                                     <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Business Automation Ideas</h3>
                                     <div className="flex space-x-2">
-                                        <span className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} text-white px-3 py-1 text-sm rounded-md font-semibold`}>Sales</span>
-                                        <span className={`${isDark ? 'bg-slate-600 text-slate-300' : 'bg-gray-200 text-slate-700'} px-3 py-1 text-sm rounded-md`}>Marketing</span>
-                                        <span className={`${isDark ? 'bg-slate-600 text-slate-300' : 'bg-gray-200 text-slate-700'} px-3 py-1 text-sm rounded-md`}>Support</span>
+                                        {['Sales', 'Marketing', 'Support'].map((tab) => (
+                                            <button
+                                                key={tab}
+                                                onClick={() => setActiveStep1Tab(tab)}
+                                                className={`px-3 py-1 text-sm rounded-md font-semibold transition-all duration-300 ${
+                                                    activeStep1Tab === tab
+                                                        ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                                        : (isDark ? 'bg-slate-600 text-slate-300 hover:bg-slate-500 hover:text-white' : 'bg-gray-200 text-slate-700 hover:bg-gray-300 hover:text-slate-800')
+                                                }`}
+                                            >
+                                                {tab}
+                                            </button>
+                                        ))}
       </div>
     </div>
                                 <div className="space-y-3">
-                                     <div className={`p-3 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/10 hover:shadow-cyan-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-purple-500/20 hover:shadow-purple-500/30'} text-white rounded-lg font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-pointer`}>Automated customer service with 24/7 AI chatbot support.</div>
-                                     <div className={`p-3 ${isDark ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/60 hover:text-white' : 'bg-gray-100/70 text-slate-700 hover:bg-gray-200/80 hover:text-slate-800'} rounded-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-pointer`}>Sales pipeline automation with lead scoring and follow-ups.</div>
-                                     <div className={`p-3 ${isDark ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/60 hover:text-white' : 'bg-gray-100/70 text-slate-700 hover:bg-gray-200/80 hover:text-slate-800'} rounded-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-pointer`}>Social media content scheduling and performance tracking.</div>
+                                    {step1Content[activeStep1Tab].map((item, index) => (
+                                        <div 
+                                            key={index}
+                                            className={`p-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-pointer ${
+                                                index === 0
+                                                    ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/10 hover:shadow-cyan-500/20 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-purple-500/20 hover:shadow-purple-500/30 text-white')
+                                                    : (isDark ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/60 hover:text-white hover:shadow-lg' : 'bg-gray-100/70 text-slate-700 hover:bg-gray-200/80 hover:text-slate-800 hover:shadow-lg')
+                                            }`}
+                                        >
+                                            {item}
+                                        </div>
+                                    ))}
           </div>
         </div>
       </div>
@@ -358,39 +666,46 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                 Input your complete requirements, add knowledge bases, create schedules, and configure your AI agent to match your exact business needs.
                             </p>
                             <div className="flex flex-wrap gap-3 mt-8">
-                                <button className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button 
+                                    onClick={() => setActiveStep2Action('knowledge')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep2Action === 'knowledge'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
                                     Add Knowledge
                                 </button>
-                                <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button 
+                                    onClick={() => setActiveStep2Action('create')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep2Action === 'create'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
                                     Create Schedule
                                 </button>
-                                <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button 
+                                    onClick={() => setActiveStep2Action('input')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep2Action === 'input'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
                                     Input Requirements
                                 </button>
                             </div>
                         </div>
                         <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 hover:border-slate-600' : 'bg-white/50 border-gray-200 hover:bg-white/80 hover:border-gray-300'} backdrop-blur-sm p-6 rounded-xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-2`}>
+                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
                                 {/* Configuration Interface */}
-                                <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-lg mb-6 transition-all duration-300 hover:shadow-lg cursor-pointer`}>
-                                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Agent Configuration</h3>
-                                    <div className="space-y-3">
-                                        <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                            <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Requirements Input</span>
-                                            <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Complete</span>
-                                        </div>
-                                        <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                            <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Knowledge Base</span>
-                                            <span className={`${isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-100 text-purple-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Adding...</span>
-                                        </div>
-                                        <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                            <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} text-sm`}>Schedule Setup</span>
-                                            <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'} text-xs`}>Pending</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                {renderStep2Content()}
                                 
-                                <div className={`${isDark ? 'bg-slate-900/30 hover:bg-slate-900/50' : 'bg-gray-100/50 hover:bg-gray-200/60'} p-4 rounded-lg mb-4 transition-all duration-300 hover:shadow-lg cursor-pointer hover:-translate-y-1`}>
+                                {activeStep2Action === 'default' && (
+                                    <>
+                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20 hover:bg-slate-500/25 hover:border-slate-400/30 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30 hover:bg-white/60 hover:border-purple-300/40 hover:shadow-[0_0_20px_rgba(147,51,234,0.2)]'} p-4 rounded-lg mb-4 transition-all duration-300 hover:shadow-lg cursor-pointer hover:-translate-y-1`}>
                                     <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
                                         Current Task: Sales Pipeline Automation
                                     </p>
@@ -409,6 +724,8 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                         Set Schedule
                                     </button>
       </div>
+                                    </>
+                                )}
       </div>
     </div>
                     </div>
@@ -427,40 +744,47 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                             <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
                                 Monitor your agent's performance in real-time. Review execution status, track results, and optimize workflows as your business grows.
                             </p>
-                            <div className="flex space-x-3 mt-8">
-                                <button className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
-                                    Deploy
+                            <div className="flex flex-wrap gap-3 mt-8">
+                                <button 
+                                    onClick={() => setActiveStep3Action('analytics')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep3Action === 'analytics'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
+                                    View Analytics
                                 </button>
-                                <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
-                                    Monitor
+                                <button 
+                                    onClick={() => setActiveStep3Action('optimize')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep3Action === 'optimize'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
+                                    Optimize
                                 </button>
-                                <button className={`${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} font-semibold px-4 py-2 rounded-lg transition-all text-sm`}>
+                                <button 
+                                    onClick={() => setActiveStep3Action('scale')}
+                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
+                                        activeStep3Action === 'scale'
+                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
+                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
+                                    }`}
+                                >
                                     Scale
                                 </button>
                             </div>
                         </div>
                         <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 hover:border-slate-600' : 'bg-white/50 border-gray-200 hover:bg-white/80 hover:border-gray-300'} backdrop-blur-sm p-6 rounded-xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-2`}>
+                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
                                 {/* Monitoring Dashboard */}
-                                <div className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} p-3 rounded-lg mb-6`}>
-                                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Execution Dashboard</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Agent Status</span>
-                                            <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Running</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Tasks Processed</span>
-                                            <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold`}>1,247</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Success Rate</span>
-                                            <span className={`${isDark ? 'text-green-400' : 'text-green-600'} text-sm font-semibold`}>98.5%</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                {renderStep3Content()}
                                 
-                                <div className={`${isDark ? 'bg-slate-900/30' : 'bg-gray-100/50'} p-4 rounded-lg mb-4`}>
+                                {activeStep3Action === 'default' && (
+                                    <>
+                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30'} p-4 rounded-lg mb-4`}>
                                     <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
                                         Recent Activity
                                     </p>
@@ -479,6 +803,8 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                                         Export Report
                                     </button>
     </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -502,7 +828,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
                             </Link>
           </div>
                         <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 hover:border-slate-600' : 'bg-white/50 border-gray-200 hover:bg-white/80 hover:border-gray-300'} backdrop-blur-sm p-6 rounded-xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-2`}>
+                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
                                 {/* Success Dashboard */}
                                 <div className={`${isDark ? 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/20' : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'} p-4 rounded-lg mb-6 border`}>
                                     <h3 className={`font-bold ${isDark ? 'text-green-400' : 'text-green-700'} mb-3`}>🎉 Automation Complete!</h3>
@@ -513,7 +839,7 @@ const Features = ({ isDark }: { isDark: boolean }) => {
       </div>
     </div>
                                 
-                                <div className={`${isDark ? 'bg-slate-900/30' : 'bg-gray-100/50'} p-4 rounded-lg mb-4`}>
+                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30'} p-4 rounded-lg mb-4`}>
                                     <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
                                         Impact Summary
                                     </p>
@@ -551,65 +877,323 @@ const Features = ({ isDark }: { isDark: boolean }) => {
     );
 };
 
-import Lottie from 'lottie-react';
+// Simple 3D Cards Carousel Component (fallback without Swiper)
+const SwiperCoverflow = ({ agents, isDark, isLoaded }: { 
+    agents: Array<{
+        title: string;
+        description: string;
+        bgColor: string;
+        icon: React.ReactNode;
+    }>;
+    isDark: boolean;
+    isLoaded: boolean;
+}) => {
+    const [currentIndex, setCurrentIndex] = useState(2); // Start with middle card active
+    const [isAutoplay, setIsAutoplay] = useState(true);
 
-// AI Agents Component
+    useEffect(() => {
+        if (!isAutoplay) return;
+        
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % agents.length);
+        }, 3000);
+        
+        return () => clearInterval(interval);
+    }, [agents.length, isAutoplay]);
+
+    const nextSlide = () => {
+        setIsAutoplay(false);
+        setCurrentIndex((prev) => (prev + 1) % agents.length);
+        setTimeout(() => setIsAutoplay(true), 5000);
+    };
+
+    const prevSlide = () => {
+        setIsAutoplay(false);
+        setCurrentIndex((prev) => (prev - 1 + agents.length) % agents.length);
+        setTimeout(() => setIsAutoplay(true), 5000);
+    };
+
+    const goToSlide = (index: number) => {
+        setIsAutoplay(false);
+        setCurrentIndex(index);
+        setTimeout(() => setIsAutoplay(true), 5000);
+    };
+
+        return (
+        <div className="w-full h-[500px] relative overflow-hidden">
+            {/* 3D Carousel Container */}
+            <div 
+                className="relative w-full h-full flex items-center justify-center"
+                style={{
+                    perspective: '1200px',
+                    transformStyle: 'preserve-3d'
+                }}
+            >
+                {agents.map((agent, index) => {
+                    const offset = index - currentIndex;
+                    const absOffset = Math.abs(offset);
+                    const isActive = index === currentIndex;
+                    
+                    // Calculate position and transformations
+                    const translateX = offset * 200; // Spacing between cards
+                    const translateZ = isActive ? 0 : -100 - (absOffset * 50); // Depth
+                    const rotateY = offset * 25; // Rotation angle
+                    const scale = isActive ? 1.1 : Math.max(0.7, 1 - absOffset * 0.2); // Scale
+                    const opacity = absOffset > 2 ? 0 : Math.max(0.3, 1 - absOffset * 0.3); // Opacity
+                    
+                    return (
+                        <div
+                            key={index}
+                            className={`absolute w-80 h-96 transition-all duration-700 ease-out cursor-pointer ${isActive ? 'z-20' : 'z-10'}`}
+                            style={{
+                                transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+                                opacity: opacity,
+                                transformStyle: 'preserve-3d',
+                            }}
+                            onClick={() => goToSlide(index)}
+                        >
+                            <div className={`agent-card w-full h-full ${isDark ? 'bg-slate-800/80 border-slate-600/50' : 'bg-white/80 border-gray-300/50'} backdrop-blur-xl backdrop-saturate-150 rounded-2xl border p-6 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isActive ? 'shadow-[0_0_20px_rgba(34,211,238,0.5)]' : 'hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] hover:-translate-y-2 hover:scale-105'}`}>
+                                {/* Base animated background gradient */}
+                                <div className={`absolute inset-0 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-30' : 'opacity-5 group-hover:opacity-25'} transition-opacity duration-500 rounded-2xl`}></div>
+                                
+                                {/* Bright glow overlay - Multiple layers for intense effect - REDUCED */}
+                                <div className={`absolute -inset-1 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-40' : 'opacity-0 group-hover:opacity-40'} transition-all duration-500 rounded-xl blur-md`}></div>
+                                <div className={`absolute -inset-0.5 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-60' : 'opacity-0 group-hover:opacity-60'} transition-all duration-500 rounded-lg blur-sm`}></div>
+                                
+                                {/* Content */}
+                                <div className="h-full flex flex-col text-center relative z-20">
+                                    {/* Large Animation Icon - Takes most of the card */}
+                                    <div className="flex-1 flex items-center justify-center">
+                                        <div className={`transform transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                                            {agent.icon}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Text Content at Bottom */}
+                                    <div className="mt-auto">
+                                        <h3 className={`text-lg font-bold mb-2 transition-all duration-500 ${
+                                            isDark 
+                                                ? (isActive ? 'text-cyan-200 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]' : 'text-white group-hover:text-cyan-200 group-hover:drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]')
+                                                : (isActive ? 'text-purple-700 drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]' : 'text-slate-800 group-hover:text-purple-700 group-hover:drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]')
+                                        }`}>
+                                            {agent.title}
+                                        </h3>
+                                        
+                                        <p className={`text-xs leading-relaxed mb-3 transition-all duration-500 ${
+                                            isDark 
+                                                ? (isActive ? 'text-slate-100' : 'text-slate-300 group-hover:text-slate-100')
+                                                : (isActive ? 'text-slate-700' : 'text-slate-600 group-hover:text-slate-700')
+                                        }`}>
+                                            {agent.description}
+                                        </p>
+                                        
+                                        {/* Enhanced status indicator */}
+                                        <div className="flex items-center justify-center">
+                                            <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-green-400' : 'bg-green-500'} animate-pulse mr-2 ${isActive ? 'shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'group-hover:shadow-[0_0_5px_rgba(34,197,94,0.8)]'} transition-all duration-500`}></div>
+                                            <span className={`text-xs ${
+                                                isDark 
+                                                    ? (isActive ? 'text-green-300' : 'text-green-400 group-hover:text-green-300')
+                                                    : (isActive ? 'text-green-700' : 'text-green-600 group-hover:text-green-700')
+                                            } font-semibold transition-all duration-500`}>Ready to Deploy</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Ultra bright outer glow - REMOVED the distant outer glow */}
+                                
+                                {/* Shimmer effect - Kept but contained */}
+                                <div className={`absolute inset-0 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-1000`}>
+                                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 ${isActive ? '-translate-x-full' : 'translate-x-full group-hover:-translate-x-full'} transition-transform duration-1000 ease-in-out`}></div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Navigation Buttons */}
+            <button
+                onClick={prevSlide}
+                className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/80 hover:bg-slate-700/90 text-cyan-400 border-slate-600' : 'bg-white/80 hover:bg-white/90 text-purple-600 border-gray-300'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
+            >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+
+            <button
+                onClick={nextSlide}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/80 hover:bg-slate-700/90 text-cyan-400 border-slate-600' : 'bg-white/80 hover:bg-white/90 text-purple-600 border-gray-300'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
+            >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+
+            {/* Pagination Dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex space-x-2">
+                {agents.map((_, index) => (
+                    <button
+                        key={index}
+                        onClick={() => goToSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                            index === currentIndex
+                                ? (isDark ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50' : 'bg-purple-600 shadow-lg shadow-purple-600/50')
+                                : (isDark ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-300 hover:bg-gray-400')
+                        }`}
+                    />
+                ))}
+            </div>
+
+            {/* Autoplay indicator */}
+            <div className={`absolute top-4 right-4 z-30 ${isAutoplay ? 'opacity-100' : 'opacity-50'} transition-opacity duration-300`}>
+                <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-cyan-400' : 'bg-purple-600'} animate-pulse`}></div>
+            </div>
+        </div>
+    );
+};
+
+// 3D Coverflow AI Agents Component with Swiper
+const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        setIsLoaded(true);
+    }, []);
+
+    const agents = [
+        {
+            title: "AI Sales Agent",
+            description: "Automate your sales pipeline with intelligent lead scoring",
+            bgColor: isDark ? 'from-blue-500 to-cyan-600' : 'from-blue-400 to-cyan-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets9.lottiefiles.com/packages/lf20_ydo1amjm.json"
+                    className="w-40 h-40"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+        {
+            title: "AI Marketing Agent", 
+            description: "Create compelling campaigns across all channels",
+            bgColor: isDark ? 'from-green-500 to-teal-600' : 'from-green-400 to-teal-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets3.lottiefiles.com/packages/lf20_UgZWvP.json"
+                    className="w-40 h-40"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+        {
+            title: "AI Support Agent",
+            description: "Provide 24/7 customer support with AI precision", 
+            bgColor: isDark ? 'from-emerald-500 to-green-600' : 'from-emerald-400 to-green-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets2.lottiefiles.com/packages/lf20_1pxqjqps.json"
+                    className="w-44 h-44"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+        {
+            title: "AI Data Analyst",
+            description: "Transform raw data into actionable insights",
+            bgColor: isDark ? 'from-yellow-500 to-orange-600' : 'from-yellow-400 to-orange-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json"
+                    className="w-40 h-40"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+        {
+            title: "AI Content Creator",
+            description: "Generate engaging content for all your platforms",
+            bgColor: isDark ? 'from-violet-500 to-purple-600' : 'from-violet-400 to-purple-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets9.lottiefiles.com/packages/lf20_khzniaya.json"
+                    className="w-44 h-44"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+        {
+            title: "AI HR Manager",
+            description: "Streamline recruitment and employee management",
+            bgColor: isDark ? 'from-pink-500 to-rose-600' : 'from-pink-400 to-rose-500',
+            icon: (
+                <LottieFromURL 
+                    src="https://assets3.lottiefiles.com/private_files/lf30_GjhcdO.json"
+                    className="w-40 h-40"
+                    loop={true}
+                    autoplay={true}
+                />
+            )
+        },
+    ];
+
+    return (
+        <section className={`${isDark ? 'bg-slate-800 text-white' : 'bg-gray-50 text-slate-800'} py-24 relative overflow-hidden`}>
+            <div className="container mx-auto px-6 text-center mb-16">
+                <AnimatedSection>
+                    <div className={`inline-flex items-center ${isDark ? 'bg-slate-700/50 text-cyan-300 border-slate-600' : 'bg-purple-100/70 text-purple-700 border-purple-200'} px-4 py-2 rounded-full text-sm font-semibold mb-6 border backdrop-blur-sm`}>
+                        <span className={`w-2 h-2 ${isDark ? 'bg-cyan-400' : 'bg-purple-500'} rounded-full mr-2 animate-pulse`}></span>
+                        EXPLORE OUR AI AGENTS
+                    </div>
+                    <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                        AI Built for Every Scenario
+                    </h2>
+                    <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-lg max-w-3xl mx-auto mb-8`}>
+                        Delegate tasks to specialized AI agents and watch your productivity soar.
+                    </p>
+                    <p className={`${isDark ? 'text-slate-500' : 'text-slate-500'} text-sm`}>
+                        🖱️ Swipe to explore • 👆 Click to interact
+                    </p>
+                </AnimatedSection>
+            </div>
+
+            {/* Swiper Coverflow */}
+            <div className="w-full max-w-6xl mx-auto">
+                <SwiperCoverflow agents={agents} isDark={isDark} isLoaded={isLoaded} />
+            </div>
+
+            {/* Navigation hint */}
+            <div className="text-center mt-12">
+                <div className={`inline-flex items-center ${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm`}>
+                    <svg className="w-4 h-4 mr-2 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                    </svg>
+                    Swipe to see more agents
+                    <svg className="w-4 h-4 ml-2 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// AI Agents Component (fallback)
 const AIAgents = ({ isDark }: { isDark: boolean }) => {
     const agents = [
         {
             title: "AI IT Agent",
             description: "Provides technical support, troubleshoots issues, and manages IT systems.",
-            lottieUrl: "https://lottie.host/f1b3b8f5-6e7a-4f8e-9c2d-3a4b5c6d7e8f/KNfAR5dXvA.json",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-orange-500 to-red-600' : 'bg-gradient-to-br from-orange-400 to-red-500'} flex items-center justify-center shadow-lg`}>
-                    <Lottie 
-                        animationData={{
-                            "v": "5.7.4",
-                            "fr": 30,
-                            "ip": 0,
-                            "op": 60,
-                            "w": 100,
-                            "h": 100,
-                            "nm": "IT Support",
-                            "ddd": 0,
-                            "assets": [],
-                            "layers": [{
-                                "ddd": 0,
-                                "ind": 1,
-                                "ty": 4,
-                                "nm": "computer",
-                                "sr": 1,
-                                "ks": {
-                                    "o": {"a": 0, "k": 100},
-                                    "r": {"a": 1, "k": [{"i": {"x": [0.833], "y": [0.833]}, "o": {"x": [0.167], "y": [0.167]}, "t": 0, "s": [0]}, {"t": 59, "s": [360]}]},
-                                    "p": {"a": 0, "k": [50, 50, 0]},
-                                    "a": {"a": 0, "k": [0, 0, 0]},
-                                    "s": {"a": 0, "k": [100, 100, 100]}
-                                },
-                                "ao": 0,
-                                "shapes": [{
-                                    "ty": "gr",
-                                    "it": [{
-                                        "ty": "rc",
-                                        "d": 1,
-                                        "s": {"a": 0, "k": [40, 30]},
-                                        "p": {"a": 0, "k": [0, 0]},
-                                        "r": {"a": 0, "k": 4}
-                                    }, {
-                                        "ty": "fl",
-                                        "c": {"a": 0, "k": [1, 1, 1, 1]},
-                                        "o": {"a": 0, "k": 100}
-                                    }]
-                                }],
-                                "ip": 0,
-                                "op": 60,
-                                "st": 0
-                            }]
-                        }}
-                        className="w-8 h-8"
-                        loop={true}
-                        autoplay={true}
-                    />
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-orange-500 to-red-600 group-hover:shadow-orange-500/30' : 'bg-gradient-to-br from-orange-400 to-red-500 group-hover:shadow-orange-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
                 </div>
             )
         },
@@ -617,8 +1201,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
       title: "AI Sales Agent",
             description: "Optimizes sales processes, interacts with potential customers, and closes deals effectively.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-blue-500 to-cyan-600' : 'bg-gradient-to-br from-blue-400 to-cyan-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-blue-500 to-cyan-600 group-hover:shadow-blue-500/30' : 'bg-gradient-to-br from-blue-400 to-cyan-500 group-hover:shadow-blue-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                 </div>
@@ -628,8 +1212,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
       title: "AI Marketing Agent",
             description: "Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-green-500 to-teal-600' : 'bg-gradient-to-br from-green-400 to-teal-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-green-500 to-teal-600 group-hover:shadow-green-500/30' : 'bg-gradient-to-br from-green-400 to-teal-500 group-hover:shadow-green-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
                     </svg>
@@ -640,8 +1224,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
       title: "AI Accountant Agent",
             description: "Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-purple-400 to-indigo-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-purple-500 to-indigo-600 group-hover:shadow-purple-500/30' : 'bg-gradient-to-br from-purple-400 to-indigo-500 group-hover:shadow-purple-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
@@ -651,8 +1235,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
             title: "AI HR Agent",
             description: "Streamlines recruitment processes, manages employee data, and handles HR workflows.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-pink-500 to-rose-600' : 'bg-gradient-to-br from-pink-400 to-rose-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-pink-500 to-rose-600 group-hover:shadow-pink-500/30' : 'bg-gradient-to-br from-pink-400 to-rose-500 group-hover:shadow-pink-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
@@ -662,8 +1246,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
             title: "AI Support Agent",
             description: "Provides 24/7 customer support with intelligent responses and issue resolution.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-emerald-500 to-green-600' : 'bg-gradient-to-br from-emerald-400 to-green-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-emerald-500 to-green-600 group-hover:shadow-emerald-500/30' : 'bg-gradient-to-br from-emerald-400 to-green-500 group-hover:shadow-emerald-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.458V5m0 14v2.542M21.542 12H19m-14 0H2.458M16.95 7.05L15.536 8.464M8.464 15.536L7.05 16.95" />
                     </svg>
                 </div>
@@ -673,8 +1257,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
             title: "AI Data Analyst",
             description: "Analyzes complex datasets, generates insights, and creates comprehensive reports.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-yellow-500 to-orange-600' : 'bg-gradient-to-br from-yellow-400 to-orange-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-yellow-500 to-orange-600 group-hover:shadow-yellow-500/30' : 'bg-gradient-to-br from-yellow-400 to-orange-500 group-hover:shadow-yellow-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                 </div>
@@ -684,8 +1268,8 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
             title: "AI Content Creator",
             description: "Generates engaging content, writes copy, and creates multimedia materials for marketing.",
             icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-violet-500 to-purple-600' : 'bg-gradient-to-br from-violet-400 to-purple-500'} flex items-center justify-center shadow-lg`}>
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-violet-500 to-purple-600 group-hover:shadow-violet-500/30' : 'bg-gradient-to-br from-violet-400 to-purple-500 group-hover:shadow-violet-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                 </div>
@@ -721,24 +1305,31 @@ const AIAgents = ({ isDark }: { isDark: boolean }) => {
                             <div 
                                 key={index}
                                 className={`${isDark 
-                                    ? 'bg-slate-900/50 border-slate-700 hover:bg-slate-900/70 hover:border-slate-600' 
-                                    : 'bg-white/90 border-gray-200/60 hover:bg-white hover:border-purple-300/50 shadow-lg hover:shadow-purple-200/20'
-                                } backdrop-blur-sm p-6 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer group relative overflow-hidden`}
+                                    ? 'bg-slate-900/50 border-slate-700 hover:bg-slate-900/80 hover:border-slate-600 hover:shadow-2xl hover:shadow-cyan-500/20' 
+                                    : 'bg-white/90 border-gray-200/60 hover:bg-white hover:border-purple-300/50 shadow-lg hover:shadow-2xl hover:shadow-purple-500/20'
+                                } backdrop-blur-sm p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-3 cursor-pointer group relative overflow-hidden`}
                             >
-                                <div className="text-center">
-                                    <div className="transform transition-transform duration-300 group-hover:scale-110">
+                                <div className="text-center relative z-10">
                                         {agent.icon}
-        </div>
-                                    <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${isDark ? 'text-white group-hover:text-cyan-400' : 'text-slate-800 group-hover:text-purple-600'}`}>
+                                    <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-800 group-hover:text-purple-700'}`}>
                                         {agent.title}
                                     </h3>
-                                    <p className={`text-sm leading-relaxed transition-colors duration-300 ${isDark ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-600 group-hover:text-slate-700'}`}>
+                                    <p className={`text-sm leading-relaxed transition-colors duration-300 ${isDark ? 'text-slate-400 group-hover:text-slate-200' : 'text-slate-600 group-hover:text-slate-800'}`}>
                                         {agent.description}
                                     </p>
                                 </div>
                                 
-                                {/* Hover overlay effect */}
-                                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-cyan-500/5 to-blue-500/5' : 'bg-gradient-to-br from-purple-500/8 to-indigo-500/8'} rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}></div>
+                                {/* Enhanced hover overlay effect */}
+                                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-cyan-400/20 via-blue-500/15 to-teal-400/20' : 'bg-gradient-to-br from-purple-400/25 via-indigo-500/20 to-pink-400/25'} rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none`}></div>
+                                
+                                {/* Intense glow effect on hover */}
+                                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-cyan-300/15 to-blue-300/15' : 'bg-gradient-to-br from-purple-300/20 to-indigo-300/20'} rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-700 blur-xl pointer-events-none`}></div>
+                                
+                                {/* Strong border glow */}
+                                <div className={`absolute inset-0 rounded-2xl ${isDark ? 'group-hover:shadow-[0_0_30px_rgba(34,211,238,0.4)]' : 'group-hover:shadow-[0_0_30px_rgba(147,51,234,0.4)]'} transition-all duration-500 pointer-events-none`}></div>
+                                
+                                {/* Extra bright center glow */}
+                                <div className={`absolute inset-4 rounded-xl ${isDark ? 'bg-gradient-to-br from-cyan-400/10 to-blue-400/10' : 'bg-gradient-to-br from-purple-400/15 to-indigo-400/15'} opacity-0 group-hover:opacity-100 transition-all duration-500 blur-lg pointer-events-none`}></div>
                             </div>
                         ))}
                     </div>
@@ -1124,12 +1715,40 @@ const LandingPage: React.FC = () => {
                 .bg-gradient-radial {
                     background-image: radial-gradient(circle, var(--tw-gradient-stops));
                 }
+
+                /* GSAP 3D Scroll Styles */
+                .boxes {
+                    touch-action: none;
+                    user-select: none;
+                }
+
+                .agent-box {
+                    transform-style: preserve-3d;
+                    will-change: transform;
+                }
+
+                .agent-box:nth-child(odd) .agent-card {
+                    background: ${isDark ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))'};
+                }
+
+                .agent-box:nth-child(even) .agent-card {
+                    background: ${isDark ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))' : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.95))'};
+                }
+
+                /* Enhanced glow effects */
+                .agent-card:hover {
+                    transform: scale(1.05) rotateY(5deg);
+                    box-shadow: ${isDark 
+                        ? '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 211, 238, 0.3)' 
+                        : '0 25px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(147, 51, 234, 0.3)'
+                    };
+                }
             `}</style>
             <Header isDark={isDark} toggleTheme={toggleTheme} />
             <main>
                 <Hero isDark={isDark} />
                 <Features isDark={isDark} />
-                <AIAgents isDark={isDark} />
+                <ScrollableAIAgents isDark={isDark} />
                 <Pricing isDark={isDark} />
       </main>
             <Footer isDark={isDark} />
