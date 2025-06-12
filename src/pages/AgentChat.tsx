@@ -213,12 +213,13 @@ const AgentChat = () => {
                         prevRuns.map(run => {
                             // Tìm đúng item trong danh sách bằng run_id
                             if (run.id === runIdToUpdate) {
-                                // Cập nhật lại trạng thái và kết quả của nó
-                                return { 
-                                    ...run, 
+                                // Cập nhật lại trạng thái, kết quả và thông báo lỗi (nếu có)
+                                return {
+                                    ...run,
                                     status: statusUpdate.status,
                                     output_data: statusUpdate.response || run.output_data,
                                     updated_at: new Date().toISOString(),
+                                    error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') : undefined,
                                 };
                             }
                             return run;
@@ -313,7 +314,7 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
-          console.log('Agent loaded:', agentData.data.greeting_message
+          console.log('Agent loaded:', agentData.data
           );
 
           // TODO: Fetch tasks for the agent

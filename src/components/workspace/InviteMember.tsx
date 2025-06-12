@@ -58,7 +58,7 @@ export function InviteMember({ workspaceId, iconOnly }: InviteMemberProps) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Failed to send invitation. Please check details and try again." }));
         // Ví dụ: API có thể trả về { message: "User already invited", details: "..." }
-        throw new Error(errorData.message || "Failed to send invitation");
+        throw new Error(errorData.error || errorData.message || "Failed to send invitation");
       }
 
       // const data = await response.json(); // data có thể không cần dùng trực tiếp ở đây
