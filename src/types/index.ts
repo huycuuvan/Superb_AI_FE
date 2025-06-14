@@ -55,6 +55,23 @@ export interface ApiTaskType {
   img_url?: string;
 }
 
+// Định nghĩa kiểu dữ liệu cho output video
+export interface VideoOutputItem {
+  url: string;
+  filename?: string;
+  snapshot_url?: string;
+  [key: string]: unknown;
+}
+
+// Định nghĩa kiểu dữ liệu cho output_data dạng object
+export interface TaskOutputData {
+  video_url?: string;
+  format?: string;
+  error?: string | Record<string, unknown>;
+  error_message?: string;
+  [key: string]: unknown;
+}
+
 export interface TaskRun {
   id: string;
   task_id: string;
@@ -62,8 +79,9 @@ export interface TaskRun {
   user_id: string;
   status: string;
   input_data: Record<string, string>;
-  output_data: Record<string, string>;
+  output_data: TaskOutputData | VideoOutputItem[] | Record<string, unknown>;
   error?: string;
+  error_message?: string;
   started_at: string;
   start_time: string;
   completed_at?: string;

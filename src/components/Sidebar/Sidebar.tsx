@@ -161,7 +161,6 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
   ];
 
-  // Lọc menuItems dựa trên quyền hạn
   const filteredMenuItems = menuItems.filter(item => {
     // Ẩn mục Agent nếu user có role là 'user'
     if (item.label === t('common.agents') && user?.role === 'user') {
@@ -299,7 +298,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         
         <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">
           <div className="border-b border-border p-2 space-y-1">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link

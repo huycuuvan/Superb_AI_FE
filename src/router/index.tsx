@@ -15,7 +15,6 @@ import FolderDetail from '@/pages/FolderDetail';
 import AgentTaskConfig from '@/pages/AgentTaskConfig';
 import { Tasks } from '@/pages/Tasks';
 import WorkspaceProfilePage from '@/pages/WorkspaceProfilePage';
-import ForgotPassword from '@/pages/ForgotPassword';
 import WhatsNews from '@/pages/WhatsNews';
 import Roadmap from '@/pages/Roadmap';
 import TermsOfUse from '@/pages/TermsOfUse';
@@ -69,10 +68,7 @@ const routes: RouteObject[] = [
     path: '/register',
     element: <Register />,
   },
-  {
-    path: '/forgot-password',
-    element: <ForgotPassword />,
-  },
+
   {
     path: '/dashboard',
     element: (

@@ -159,8 +159,12 @@ const Header = React.memo(() => {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
+                  {user?.role !== 'user' && (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
+                    </>
+                  )}
                   {isAgentChatPage && (
                     <>
                       <BreadcrumbSeparator />

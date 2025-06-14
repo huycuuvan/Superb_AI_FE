@@ -89,8 +89,6 @@ const AgentChat = () => {
     // Initial message, will be added after agent data is fetched
   ]);
 
-  // State mới để lưu trữ các log trạng thái từ WebSocket
-  const [taskLogs, setTaskLogs] = useState<string[]>([]);
   const queryClient = useQueryClient();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
@@ -225,7 +223,7 @@ const AgentChat = () => {
                             return run;
                         })
                     );
-                    if (statusUpdate.status === 'completed' || statusUpdate.status === 'error') {
+                                        if (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
                       // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
                       queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
                   }
@@ -489,12 +487,7 @@ const AgentChat = () => {
     }
   };
   
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+
   
   const handleTaskSelect = (task: ApiTaskType) => {
     setSelectedTaskId(task.id);
@@ -577,6 +570,53 @@ const AgentChat = () => {
       variant: "destructive",
     });
     setIsCreatingThread(false); // End loading on error
+  }
+};
+const handleRetryTask = async (runToRetry: TaskRun) => {
+  if (!currentThread) {
+      toast({ title: "Lỗi", description: "Không tìm thấy Thread ID hiện tại.", variant: "destructive" });
+      return;
+  }
+
+  console.log(`Retrying task: ${runToRetry.task_id} with input:`, runToRetry.input_data);
+
+  // Hiển thị toast cho người dùng biết
+  toast({
+      title: "Đang thử lại Task...",
+      description: `Đang gửi lại yêu cầu cho task ID: ${runToRetry.task_id}`,
+  });
+
+  try {
+      // Gọi lại API executeTask với dữ liệu của lần chạy lỗi
+      const response = await executeTask(runToRetry.task_id, runToRetry.input_data, currentThread);
+      const newRunId = response.task_run_id;
+
+      if (newRunId) {
+          // Tạo một TaskRun mới cho lần thử lại này
+          const newTaskRun: TaskRun = {
+              id: newRunId,
+              task_id: runToRetry.task_id,
+              status: 'initiated', // Bắt đầu với trạng thái initiated
+              start_time: new Date().toISOString(),
+              input_data: runToRetry.input_data, // Dùng lại input cũ
+              output_data: {},
+              started_at: new Date().toISOString(),
+              thread_id: currentThread,
+              user_id: '', // Lấy từ context hoặc localStorage nếu cần
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+          };
+
+          // Thêm task mới vào đầu danh sách để người dùng thấy ngay
+          setTaskRunItems(prevRuns => [newTaskRun, ...prevRuns]);
+
+          // Đảm bảo bảng lịch sử vẫn đang mở để xem kết quả
+          setShowTaskHistory(true); 
+      } else {
+          toast({ title: "Lỗi Phản Hồi", description: "Phản hồi từ server không chứa run ID.", variant: "destructive" });
+      }
+  } catch (error) {
+      toast({ title: "Lỗi Thực Thi", description: "Không thể bắt đầu lại task.", variant: "destructive" });
   }
 };
 const handleSubmitTaskInputs = async () => {
@@ -675,14 +715,6 @@ const handleSubmitTaskInputs = async () => {
     }
   };
 
-  const getMessageStyle = (sender: string) => {
-    if (sender === 'user') {
-      return 'bg-primary color-black';
-    } else {
-      return 'bg-card text-card-foreground';
-    }
-  };
-
 
   // Initialize useNavigate
   const navigate = useNavigate();
@@ -712,12 +744,25 @@ const handleSubmitTaskInputs = async () => {
   });
   useEffect(() => {
     const runsFromApi = historyData?.data;
-    // Chỉ cập nhật từ API nếu state hiện tại đang rỗng (tức là người dùng mới mở bảng)
+
+    // Chỉ cập nhật từ API nếu có dữ liệu mới và state đang rỗng
     if (runsFromApi && taskRunItems.length === 0) {
-        const sortedRuns = [...runsFromApi].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+        // Ánh xạ lại dữ liệu để chuẩn hóa thuộc tính lỗi
+        const mappedRuns = runsFromApi.map(run => ({
+            ...run,
+            // Logic này sẽ tìm tuần tự để đảm bảo luôn lấy được lỗi
+            // Ưu tiên `run.error` -> rồi đến error trong output_data nếu có
+            error: run.error || 
+                  (run.output_data && typeof run.output_data === 'object' && 
+                   'error_message' in run.output_data ? String(run.output_data.error_message) : undefined),
+        }));
+
+        // Sắp xếp dữ liệu đã được chuẩn hóa
+        const sortedRuns = [...mappedRuns].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+        
         setTaskRunItems(sortedRuns);
     }
-}, [historyData, taskRunItems.length]); // Thêm taskRunItems.length vào dependency
+}, [historyData, taskRunItems.length]);
 
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -927,81 +972,7 @@ const handleSubmitTaskInputs = async () => {
             ))}
 
           
-            
-            {/* --- 3. KHỐI HIỂN THỊ TASK LOGS MỚI ĐƯỢC THÊM VÀO ĐÂY --- */}
-            {taskLogs.length > 0 && (
-                <div className="space-y-2">
-                {taskLogs.map((log, index) => {
-                    let parsedLog: unknown;
-                    try {
-                        parsedLog = JSON.parse(log);
-                    } catch {
-                        return <p key={index} className="text-muted-foreground text-xs">{log}</p>;
-                    }
-            
-                    if (isTaskLogMessage(parsedLog)) {
-                        return (
-                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
-                                <div className="flex items-center">
-                                    <span className={cn(
-                                        'mr-2 font-bold',
-                                        parsedLog.status === 'success' && 'text-green-500',
-                                        parsedLog.status === 'completed' && 'text-green-500',
-                                        parsedLog.status === 'processing' && 'text-yellow-500',
-                                        parsedLog.status === 'error' && 'text-red-500'
-                                    )}>
-                                        [{parsedLog.status.toUpperCase()}]
-                                    </span>
-                                    <span className="text-foreground">{parsedLog.message}</span>
-                                </div>
-                            </div>
-                        );
-                    } else if (isTaskOutputData(parsedLog)) {
-                        return (
-                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
-                                <div className="mt-2 border border-border rounded-lg p-2 bg-background">
-                                    <p className="text-xs font-semibold mb-2 font-sans text-foreground">Kết quả Video:</p>
-                                    <video
-                                        src={parsedLog.url}
-                                        poster={parsedLog.snapshot_url}
-                                        controls
-                                        className="w-full rounded-md"
-                                        preload="metadata"
-                                    >
-                                        Trình duyệt của bạn không hỗ trợ thẻ video.
-                                    </video>
-                                    <div className="text-xs mt-2 space-y-1 font-sans">
-                                        <p>
-                                            <span className="font-medium text-foreground">Tải video:</span>{' '}
-                                            <a href={parsedLog.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
-                                                {parsedLog.id}.mp4
-                                            </a>
-                                        </p>
-                                        <p>
-                                            <span className="font-medium text-foreground">Xem ảnh thumbnail:</span>{' '}
-                                            <a href={parsedLog.snapshot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
-                                                snapshot.jpg
-                                            </a>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    } else if (typeof parsedLog === 'object' && parsedLog !== null) {
-                        // C. Nếu là một đối tượng JSON khác không xác định được, hiển thị dạng thô
-                        return (
-                            <div key={index} className="p-2 rounded bg-muted/50 text-xs font-mono">
-                                <pre className="mt-1 text-muted-foreground whitespace-pre-wrap break-all bg-black/70 p-2 rounded-md">
-                                    {JSON.stringify(parsedLog, null, 2)}
-                                </pre>
-                            </div>
-                        );
-                    }
-                    return null; // Fallback for unexpected types
-                })}
-            </div>
-            )}
-            {/* --- KẾT THÚC KHỐI TASK LOGS --- */}
+
 
           </div>
          
@@ -1032,7 +1003,7 @@ const handleSubmitTaskInputs = async () => {
                 {isLoadingHistory && taskRunItems.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">Đang tải lịch sử...</p>
                 ) : (
-                    <TaskHistory runs={taskRunItems} agentId={agentId}/>
+                    <TaskHistory runs={taskRunItems} agentId={agentId} onRetry={handleRetryTask}/>
                 )}
             </div>
         </div>

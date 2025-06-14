@@ -42,32 +42,23 @@ const Dashboard = () => {
   const { workspace } = useSelectedWorkspace();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { canCreateAgent } = useAuth();
-
+  const { user } = useAuth();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
-
+  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
+  const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const agentsByCategory = agents.reduce((acc, agent) => {
-    const category = agent.category || 'Other';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(agent);
-    return acc;
-  }, {} as Record<string, Agent[]>);
+
 
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,10 +165,12 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
+          {user?.role !== 'user' && (
           <Button className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddAgentDialog(true)}>
             <span className="text-lg">+</span> {t('agent.createAgent')}
           </Button>
-          <Button variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-gray">
+          )}
+          <Button variant="outline" className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddFolderDialog(true)}>
             <span className="text-lg">+</span> {t('folder.createFolder')}
           </Button>
         </div>
@@ -235,6 +228,7 @@ const Dashboard = () => {
                 </DropdownMenu>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {user?.role !== 'user' && (
                 <Card
                   className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
                   onClick={() => {
@@ -248,6 +242,7 @@ const Dashboard = () => {
                   <p className="text-sm font-medium text-foreground">{t('agent.createAgent')}</p>
                   <p className="text-xs text-muted-foreground mt-1">{t('agent.noAgents')}</p>
                 </Card>
+                )}
                 {/* Render AgentsForFolder component for this folder */}
                 <AgentsForFolder folderId={folder.id} navigate={navigate} />
               </div>
