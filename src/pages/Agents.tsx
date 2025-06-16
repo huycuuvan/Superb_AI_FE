@@ -473,7 +473,7 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+                onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
                 className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:from-cyan-500 dark:hover:to-blue-600 hover:text-white"
               >
                 Chat

@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
     byFolder: `${API_BASE_URL}/agents/by-folder`,
     delete: (id: string) => `${API_BASE_URL}/agents/${id}`,
     getById: (id: string) => `${API_BASE_URL}/agents/${id}`,
+    assignToFolder: (id: string) => `${API_BASE_URL}/agents/${id}/folders`,
   },
   tasks: {
     base: `${API_BASE_URL}/tasks`,

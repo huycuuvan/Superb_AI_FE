@@ -24,6 +24,7 @@ import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter }
 import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TaskInput {
   id: string;
@@ -71,32 +72,36 @@ interface TaskLog {
 }
 
 const AgentChat = () => {
-  const { agentId, threadId: paramThreadId } = useParams<{ agentId: string, threadId?: string }>();
+  const { agentId, threadId: threadFromUrl } = useParams<{ agentId: string; threadId?: string }>();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
-  const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
+  const [isAgentThinking, setIsAgentThinking] = useState(false);
+  const { user } = useAuth();
+
+  // Loading states
   const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false); // New state for sending message loading
-  const [currentThread, setCurrentThread] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
+
+  // Agent and workspace info
+  const [currentThread, setCurrentThread] = useState<string | null>(threadFromUrl || null);
+  const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
-  const [isCreatingThread, setIsCreatingThread] = useState(false); // State for new thread creation loading
+
+  // Mobile sidebar state
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
+  // Ref to prevent duplicate thread creation
+  const isInitializingRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  
+  // Chat display states
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // State mới để lưu tasks được fetch từ API
   const [tasks, setTasks] = useState<ApiTaskType[]>([]); // Khởi tạo rỗng, sẽ fetch data
   
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    // Initial message, will be added after agent data is fetched
-  ]);
-
-  const queryClient = useQueryClient();
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = tasks.find(t => t.id === selectedTaskId);
-  const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
-
-  const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
   const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
@@ -104,12 +109,36 @@ const AgentChat = () => {
   // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
   const lastAgentMessageIdRef = useRef<string | null>(null);
 
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
-  // const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
-  // const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [timeoutStage, setTimeoutStage] = useState<number>(0);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
   const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
+
+  const queryClient = useQueryClient();
+  const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = tasks.find(t => t.id === selectedTaskId);
+  const [aboveInputContent, setAboveInputContent] = useState<'none' | 'taskList' | 'taskInputs' | 'knowledge' >('none');
+
+  const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
+
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  // Thêm hàm để lấy lịch sử task
+  const { 
+    data: historyData, 
+    isLoading: isLoadingHistory 
+  } = useQuery({
+    queryKey: ['taskRuns', currentThread, currentAgent?.id],
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
+      const user = JSON.parse(userStr);
+      return getTaskRunsByThreadId(user.id, currentAgent?.id || "");
+    },
+    enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
+  });
+
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
     if (currentThread) {
@@ -292,8 +321,12 @@ const AgentChat = () => {
     };
   }, [isAgentThinking]);
   useEffect(() => {
-    if (agentId) {
+    if (agentId && !hasInitializedRef.current && !isInitializingRef.current) {
       const initializeChat = async () => {
+        // Prevent duplicate initializations
+        if (isInitializingRef.current) return;
+        isInitializingRef.current = true;
+        
         try {
           setIsLoading(true);
           
@@ -312,28 +345,25 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
-          console.log('Agent loaded:', agentData.data
-          );
+          console.log('Agent loaded:', agentData.data);
 
           // TODO: Fetch tasks for the agent
           if (agentId) {
             try {
-              const agentTasksResponse = await getAgentTasks(agentId); // Gọi API mới
+              const agentTasksResponse = await getAgentTasks(agentId);
               if (agentTasksResponse.data) {
-                // Mapping dữ liệu từ API nếu cần, đảm bảo khớp với TaskWithInputs[]
-                // Hiện tại giả định cấu trúc trả về từ API khớp
                 setTasks(agentTasksResponse.data);
                 console.log("Fetched tasks:", agentTasksResponse.data);
               }
             } catch (taskError) {
               console.error('Error fetching agent tasks:', taskError);
-              // Xử lý lỗi fetch tasks
             }
           }
 
-          let threadId: string | null = null;
+          let threadId: string | null = currentThread;
           let initialMessages: ChatMessage[] = [];
 
+          // Check if we already have a thread ID from URL or state
           if (!threadId) {
             let threadCheck = null;
             if (currentWorkspaceId) {
@@ -370,6 +400,10 @@ const AgentChat = () => {
                 console.error('Error fetching initial messages:', fetchError);
               }
             } else {
+              // Tạo thread mới khi không tồn tại thread nào, bất kể fromProfile là gì
+              console.log("No existing thread found, creating a new one");
+                
+              // Tạo thread mới
               const threadData = {
                 agent_id: agentId,
                 workspace_id: currentWorkspaceId,
@@ -388,6 +422,7 @@ const AgentChat = () => {
               initialMessages = [welcomeMessage];
             }
           } else {
+            // If threadId was already available, fetch its messages
             try {
               const messagesResponse = await getThreadMessages(threadId);
               initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
@@ -414,20 +449,25 @@ const AgentChat = () => {
             }
           }
 
+          // Only update state if component is still mounted
           setCurrentThread(threadId);
           setMessages(initialMessages);
           console.log("Thread ID set to:", threadId);
+          
+          // Mark as initialized to prevent duplicate initialization
+          hasInitializedRef.current = true;
 
         } catch (error) {
           console.error('Error initializing chat:', error);
         } finally {
           setIsLoading(false);
+          isInitializingRef.current = false;
         }
       };
 
       initializeChat();
     }
-  }, [agentId]);
+  }, [agentId, currentThread]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -461,7 +501,7 @@ const AgentChat = () => {
           thread_id: currentThread, // ID của thread
           content: userMessage.content, // Nội dung tin nhắn
           sender_type: userMessage.sender, // Loại người gửi (user)
-          sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
+          sender_user_id: user?.id, // Placeholder cho UserID
         };
 
         ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
@@ -557,15 +597,40 @@ const AgentChat = () => {
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setMessages(initialMessages); // Sử dụng messages từ backend
+      
+      // Thêm tin nhắn chào mừng nếu không có tin nhắn ban đầu
+      if (initialMessages.length === 0 && currentAgent?.greeting_message) {
+        const welcomeMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: currentAgent.greeting_message || 'Hello! How can I help you?',
+          sender: 'agent',
+          timestamp: new Date().toISOString(),
+          agentId: currentAgent.id
+        };
+        setMessages([welcomeMessage]);
+      }
 
-      navigateToAgentChat(agentId); // Giữ lại navigate helper
+      // Không cần navigateToAgentChat vì đã ở đúng trang
+      // navigateToAgentChat(agentId);
+      
+      // Cập nhật URL không reload trang
+      window.history.replaceState(null, '', `/dashboard/agents/${agentId}`);
+      
+      // Cập nhật danh sách threads trong sidebar
+      queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
+      
       setIsCreatingThread(false); // End loading on success
 
+      // Hiển thị thông báo thành công
+      toast({
+        title: "Thành công!",
+        description: "Đã tạo cuộc hội thoại mới.",
+      });
     }
   } catch (error) {
     console.error('Lỗi khi tạo thread mới:', error);
-            toast({
-              title: "Lỗi!",
+    toast({
+      title: "Lỗi!",
       description: `Không thể tạo cuộc hội thoại mới: ${error instanceof Error ? error.message : String(error)}`,
       variant: "destructive",
     });
@@ -722,26 +787,12 @@ const handleSubmitTaskInputs = async () => {
   // Helper function for navigation
   const navigateToAgentChat = (agentId: string) => {
     if (agentId) {
-      navigate(`/dashboard/agents/${agentId}`);
+      navigate(`/dashboard/agents/${agentId}?fromProfile=true`);
     }
   };
 
   const { t } = useLanguage();
 
-  // Thêm hàm để lấy lịch sử task
-  const { 
-    data: historyData, 
-    isLoading: isLoadingHistory 
-  } = useQuery({
-    queryKey: ['taskRuns', currentThread, currentAgent?.id],
-    queryFn: () => {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
-      const user = JSON.parse(userStr);
-      return getTaskRunsByThreadId(user.id, currentAgent?.id || "");
-    },
-    enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
-  });
   useEffect(() => {
     const runsFromApi = historyData?.data;
 
@@ -763,9 +814,6 @@ const handleSubmitTaskInputs = async () => {
         setTaskRunItems(sortedRuns);
     }
 }, [historyData, taskRunItems.length]);
-
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -823,7 +871,7 @@ const handleSubmitTaskInputs = async () => {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 text-white">
-                  {threadsData?.data?.map((thread, index, arr) => (
+                  {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
                     <div key={thread.id}>
                       <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
                         <Button variant='primary' className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
@@ -834,7 +882,7 @@ const handleSubmitTaskInputs = async () => {
                         <div className="border-b border-muted-foreground/20 my-2"></div>
                       )}
                     </div>
-                  ))}
+                  )) : <div className="text-center p-2">Không có cuộc hội thoại nào</div>}
                 </div>
               </>
             )}
@@ -886,7 +934,7 @@ const handleSubmitTaskInputs = async () => {
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {threadsData?.data?.map((thread, index, arr) => (
+              {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
                 <div key={thread.id}>
                   <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
                     <button className="text-sm font-medium " onClick={() => handleThreadClick(thread.id)}>
@@ -897,7 +945,7 @@ const handleSubmitTaskInputs = async () => {
                     <div className="border-b border-muted-foreground/20 my-2"></div>
                   )}
                 </div>
-              ))}
+              )) : <div className="text-center text-muted-foreground p-2">Không có cuộc hội thoại nào</div>}
             </div>
           </>
         )}

@@ -1052,3 +1052,26 @@ export const getTaskRunsByThreadId = async (
 
   return response.json();
 };
+
+export const assignAgentToFolder = async (
+  agentId: string,
+  folderId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.agents.assignToFolder(agentId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};

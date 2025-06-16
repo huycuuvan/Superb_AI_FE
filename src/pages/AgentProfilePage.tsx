@@ -1,13 +1,13 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAgentById, getTasksByAgentId, updateAgent, deleteAgent, UpdateAgentRequest, createTask, updateTask, deleteTask, UpdateTaskRequest } from '@/services/api';
+import { getAgentById, getTasksByAgentId, updateAgent, deleteAgent, UpdateAgentRequest, createTask, updateTask, deleteTask, UpdateTaskRequest, assignAgentToFolder } from '@/services/api';
 import { Agent, ApiTaskType, ModelConfig } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ListPlus, Edit, Trash2, PlusCircle, X } from 'lucide-react';
+import { ListPlus, Edit, Trash2, PlusCircle, X, FolderPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { useFolders } from '@/contexts/FolderContext';
 
 const AgentProfilePage = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -24,6 +26,8 @@ const AgentProfilePage = () => {
   const [tasks, setTasks] = useState<ApiTaskType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { workspace } = useSelectedWorkspace();
+  const { folders, fetchFolders, loadingFolders } = useFolders();
 
   const [isEditAgentDialogOpen, setIsEditAgentDialogOpen] = useState(false);
   const [editedAgentData, setEditedAgentData] = useState<Partial<Agent>>({});
@@ -46,6 +50,11 @@ const AgentProfilePage = () => {
   const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   const [isDark, setIsDark] = useState(false);
+
+  // New state for folder assignment
+  const [isAssignToFolderDialogOpen, setIsAssignToFolderDialogOpen] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [isAssigningToFolder, setIsAssigningToFolder] = useState(false);
 
   const fetchAgentData = async () => {
     if (!agentId) {
@@ -100,7 +109,10 @@ const AgentProfilePage = () => {
 
   useEffect(() => {
     fetchAgentData();
-  }, [agentId]);
+    if(workspace?.id) {
+      fetchFolders(workspace.id);
+    }
+  }, [agentId, workspace?.id, fetchFolders]);
 
   // Agent CRUD Handlers
   const handleEditAgentClick = () => {
@@ -224,6 +236,30 @@ const AgentProfilePage = () => {
     }
   };
 
+  // Add new handler for folder assignment
+  const handleAssignToFolderClick = () => {
+    setIsAssignToFolderDialogOpen(true);
+  };
+
+  const handleConfirmAssignToFolder = async () => {
+    if (!agentId || !selectedFolderId) {
+      toast.error('Please select a folder');
+      return;
+    }
+
+    setIsAssigningToFolder(true);
+    try {
+      await assignAgentToFolder(agentId, selectedFolderId);
+      toast.success('Agent successfully assigned to folder');
+      setIsAssignToFolderDialogOpen(false);
+      await fetchAgentData(); // Refresh agent data
+    } catch (err) {
+      console.error('Error assigning agent to folder:', err);
+      toast.error('Failed to assign agent to folder');
+    } finally {
+      setIsAssigningToFolder(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -290,6 +326,9 @@ const AgentProfilePage = () => {
               </CardTitle>
               <Button variant="ghost" size="icon" onClick={handleEditAgentClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
                 <Edit className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleAssignToFolderClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
+                <FolderPlus className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </Button>
               <Button variant="ghost" size="icon" onClick={handleDeleteAgentClick} className="hover:bg-destructive/10 hover:text-destructive rounded-full p-2">
                 <Trash2 className="h-5 w-5 text-destructive hover:opacity-80" />
@@ -391,6 +430,35 @@ const AgentProfilePage = () => {
             ) : (
               <p className="text-muted-foreground">No tasks associated with this agent.</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className={`p-4 ${isDark ? 'bg-card-dark' : 'bg-card-light'} rounded-lg`}>
+              <CardTitle className="text-lg mb-2">Agent Info</CardTitle>
+              <div className="space-y-2">
+                {agent.model_config && (
+                  <p><span className="font-semibold">Model:</span> {agent.model_config.model}</p>
+                )}
+                {agent.job_brief && (
+                  <p><span className="font-semibold">Job Brief:</span> {agent.job_brief}</p>
+                )}
+                {agent.language && (
+                  <p><span className="font-semibold">Language:</span> {agent.language}</p>
+                )}
+                {agent.position && (
+                  <p><span className="font-semibold">Position:</span> {agent.position}</p>
+                )}
+              </div>
+              <div className="mt-4">
+                <Button 
+                  variant="default" 
+                  className={`w-full ${isDark ? 'bg-primary hover:bg-primary/80' : 'bg-primary hover:bg-primary/80'}`}
+                  onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
+                >
+                  Chat with {agent.name}
+                </Button>
+              </div>
+            </Card>
           </div>
         </CardContent>
       </Card>
@@ -709,6 +777,52 @@ const AgentProfilePage = () => {
             <Button variant="outline" onClick={() => setIsDeleteTaskDialogOpen(false)} disabled={isDeletingTask}>Cancel</Button>
             <Button variant="destructive" onClick={handleConfirmDeleteTask} disabled={isDeletingTask}>
               {isDeletingTask ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign to Folder Dialog */}
+      <Dialog open={isAssignToFolderDialogOpen} onOpenChange={setIsAssignToFolderDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign to Folder</DialogTitle>
+            <DialogDescription>
+              Select a folder to assign this agent to. This will allow the agent to appear in the selected folder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              <Label htmlFor="folder">Select Folder</Label>
+              {loadingFolders ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select
+                  value={selectedFolderId}
+                  onValueChange={setSelectedFolderId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {folders.map(folder => (
+                      <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignToFolderDialogOpen(false)} disabled={isAssigningToFolder}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmAssignToFolder} 
+              disabled={isAssigningToFolder || !selectedFolderId}
+              className={isDark ? 'button-gradient-dark' : 'button-gradient-light'}
+            >
+              {isAssigningToFolder ? 'Assigning...' : 'Assign'}
             </Button>
           </DialogFooter>
         </DialogContent>
