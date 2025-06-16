@@ -34,11 +34,13 @@ const StatusBadge = ({ status }: { status: string }) => {
 export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agentId: string, onRetry: (run: TaskRun) => void }) => {
   const navigate = useNavigate();
 
-  // Debug output_data
+  // Debug output_data và force render khi runs thay đổi
   useEffect(() => {
     if (runs && runs.length > 0) {
+      console.log(`[TaskHistory] Nhận được ${runs.length} task runs, xử lý hiển thị...`);
       runs.forEach(run => {
         console.log(`Run ID ${run.id} output_data:`, JSON.stringify(run.output_data));
+        console.log(`Run status: ${run.status}, updated_at: ${run.updated_at}`);
         
         // Kiểm tra MIME types và định dạng
         if (run.output_data && typeof run.output_data === 'object') {
@@ -220,35 +222,51 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
           ))
       )) {
         const fullImageUrl = getFullUrl(imageUrl);
+        // Thêm timestamp để tránh cache
+        const imageUrlWithTimestamp = `${fullImageUrl}${fullImageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+        
         return (
           <div className="mt-2 flex flex-col items-center space-y-2">
-            <img 
-              src={fullImageUrl} 
-              alt={output.file_name || "Generated image"} 
-              className="max-w-full rounded-lg shadow-lg"
-              onError={(e) => {
-                console.error('Image failed to load:', fullImageUrl);
-                (e.target as HTMLImageElement).style.display = 'none';
-                // Hiển thị URL đã thử tải nhưng lỗi
-                const errorMsgElem = document.createElement('div');
-                errorMsgElem.className = 'text-red-500 text-xs mt-2';
-                errorMsgElem.textContent = `Không thể tải ảnh: ${fullImageUrl}`;
-                e.currentTarget.parentNode?.appendChild(errorMsgElem);
-              }}
-            />
+            <div className="relative w-full">
+              <img 
+                src={imageUrlWithTimestamp} 
+                alt={output.file_name || "Generated image"} 
+                className="max-w-full rounded-lg shadow-lg mx-auto"
+                onError={(e) => {
+                  console.error('Image failed to load:', fullImageUrl);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  // Hiển thị URL đã thử tải nhưng lỗi
+                  const errorMsgElem = document.createElement('div');
+                  errorMsgElem.className = 'text-red-500 text-xs mt-2';
+                  errorMsgElem.textContent = `Không thể tải ảnh: ${fullImageUrl}`;
+                  e.currentTarget.parentNode?.appendChild(errorMsgElem);
+                }}
+                loading="eager"
+              />
+              <div className="absolute top-0 right-0 p-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 rounded-full bg-background/80 hover:bg-background"
+                  onClick={() => window.open(imageUrlWithTimestamp, '_blank')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </Button>
+              </div>
+            </div>
             <div className="text-xs text-muted-foreground">
               {output.file_name && <span className="block">Tên file: {output.file_name}</span>}
               {imageFormat && <span className="block">Định dạng: {imageFormat.toUpperCase()}</span>}
               {output.size_bytes && <span className="block">Kích thước: {(output.size_bytes / 1024 / 1024).toFixed(2)} MB</span>}
             </div>
-            <a 
-              href={fullImageUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-500 hover:text-blue-700 flex items-center gap-1.5"
+            <Button 
+              variant="outline"
+              size="sm"
+              className="text-blue-500 hover:text-blue-700 flex items-center gap-1.5 mt-2"
+              onClick={() => window.open(imageUrlWithTimestamp, '_blank')}
             >
               <FileImage className="h-4 w-4" /> Mở ảnh trong tab mới
-            </a>
+            </Button>
             
             {/* Hiển thị URL ảnh để debug */}
             <div className="w-full mt-1">
@@ -385,7 +403,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
       {/* Phần tiêu đề và Accordion giữ nguyên */}
       <Accordion type="single" collapsible className="w-full">
         {runs.map((run) => (
-          <AccordionItem key={run.id} value={run.id}>
+          <AccordionItem key={`${run.id}-${run.updated_at}-${run.status}`} value={run.id}>
             <AccordionTrigger className="hover:no-underline">
               {/* AccordionTrigger layout giữ nguyên */}
               <div className="flex justify-between items-center w-full pr-4 gap-4">
@@ -440,7 +458,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                     const valueStr = String(value);
                     const isUrl = valueStr.startsWith('http://') || valueStr.startsWith('https://');
                     return (
-                      <div key={key} className="grid grid-cols-[120px_1fr] gap-2 items-start">
+                      <div key={`${run.id}-input-${key}`} className="grid grid-cols-[120px_1fr] gap-2 items-start">
                         <span className="text-muted-foreground truncate font-semibold">{key}:</span>
                         {isUrl ? (
                            <a href={valueStr} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
@@ -456,7 +474,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
               </div>
 
               {/* --- CẬP NHẬT: Phần hiển thị kết quả đầu ra --- */}
-              <div>
+              <div key={`output-${run.id}-${run.status}-${run.updated_at}`}>
                 <h4 className="font-semibold mb-2 flex items-center gap-2"><FileVideo size={16} /> Kết quả (Output)</h4>
                 {(!run.output_data || Object.keys(run.output_data).length === 0) ? (
                   <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
@@ -481,7 +499,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                     {Array.isArray(run.output_data) ? (
                       <div className="space-y-4">
                         {run.output_data.map((item, index) => (
-                          <div key={index} className="border border-border rounded-md p-3">
+                          <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
                             <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
                             {renderOutput(item)}
                           </div>
@@ -489,7 +507,9 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                       </div>
                     ) : (
                       /* Xử lý trường hợp output_data là đối tượng đơn */
-                      renderOutput(run.output_data)
+                      <div key={`${run.id}-output-object-${run.updated_at}`}>
+                        {renderOutput(run.output_data)}
+                      </div>
                     )}
                   </div>
                 )}

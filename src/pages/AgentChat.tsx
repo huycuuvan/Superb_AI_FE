@@ -236,26 +236,123 @@ const AgentChat = () => {
                 const runIdToUpdate = statusUpdate.task_run_id;
         
                 if (runIdToUpdate) {
-                    setTaskRunItems(prevRuns =>
-                        prevRuns.map(run => {
+                    setTaskRunItems(prevRuns => {
+                        // Tạo bản sao cập nhật của task run
+                        const updatedRuns = prevRuns.map(run => {
                             // Tìm đúng item trong danh sách bằng run_id
                             if (run.id === runIdToUpdate) {
-                                // Cập nhật lại trạng thái, kết quả và thông báo lỗi (nếu có)
+                                console.log('Đang cập nhật task từ websocket:', statusUpdate);
+                                // Force re-render bằng cách tạo một đối tượng mới hoàn toàn
                                 return {
                                     ...run,
                                     status: statusUpdate.status,
                                     output_data: statusUpdate.response || run.output_data,
                                     updated_at: new Date().toISOString(),
                                     error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') : undefined,
+                                    // Thêm trường ngẫu nhiên để đảm bảo React nhận diện là object mới
+                                    _lastUpdate: Date.now()
                                 };
                             }
                             return run;
-                        })
-                    );
-                                        if (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
-                      // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
-                      queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
-                  }
+                        });
+
+                        // Log để debug
+                        console.log('TaskRun cập nhật từ websocket:', updatedRuns.find(run => run.id === runIdToUpdate));
+                        
+                        // Nếu trạng thái đã hoàn thành hoặc lỗi, hiển thị thông báo
+                        if (statusUpdate.status === 'completed') {
+                            toast({
+                                title: "Task hoàn thành",
+                                description: "Task đã thực thi xong.",
+                                variant: "default",
+                            });
+                        } else if (statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
+                            toast({
+                                title: "Task thất bại",
+                                description: statusUpdate.message || statusUpdate.error_message || "Đã xảy ra lỗi.",
+                                variant: "destructive",
+                            });
+                        }
+
+                        // Đẩy task đã cập nhật lên đầu danh sách để dễ nhìn thấy
+                        const taskToUpdate = updatedRuns.find(run => run.id === runIdToUpdate);
+                        const otherTasks = updatedRuns.filter(run => run.id !== runIdToUpdate);
+                        return taskToUpdate ? [taskToUpdate, ...otherTasks] : updatedRuns;
+                    });
+                    
+                    // Luôn mở panel Task History khi nhận được cập nhật trạng thái task
+                    if (!showTaskHistory && (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed')) {
+                        setShowTaskHistory(true);
+                    }
+
+                    // Thực hiện thêm xử lý khi task hoàn thành hoặc lỗi
+                    if (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
+                        // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
+                        queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
+                        queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread, currentAgent?.id] });
+                        
+                        // Thêm một chút trễ trước khi hiển thị task để đảm bảo quá trình tải ảnh hoặc nội dung được hoàn tất
+                        setTimeout(() => {
+                            // Tạo biến cờ để theo dõi nếu đã cập nhật dữ liệu từ cache
+                            let hasUpdatedFromCache = false;
+                            
+                            // Cập nhật cache của React Query
+                            queryClient.setQueryData(['taskRuns', currentThread, currentAgent?.id], (oldData: { data?: TaskRun[] } | undefined) => {
+                                if (!oldData || !oldData.data) return oldData;
+                                
+                                // Tìm và cập nhật task run trong cache 
+                                const updatedData = {
+                                    ...oldData,
+                                    data: oldData.data.map((item: TaskRun) => {
+                                        if (item.id === runIdToUpdate) {
+                                            hasUpdatedFromCache = true;
+                                            console.log('Cập nhật task trong cache React Query:', runIdToUpdate);
+                                            return {
+                                                ...item,
+                                                status: statusUpdate.status,
+                                                output_data: statusUpdate.response || item.output_data,
+                                                updated_at: new Date().toISOString(),
+                                                error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') 
+                                                    ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') 
+                                                    : undefined,
+                                                // Force re-render khi data thay đổi
+                                                _lastUpdate: Date.now()
+                                            };
+                                        }
+                                        return item;
+                                    })
+                                };
+                                
+                                return updatedData;
+                            });
+                            
+                            // Nếu không tìm thấy task trong cache, thêm vào
+                            if (!hasUpdatedFromCache) {
+                                // Lấy thông tin task hiện tại từ taskRunItems
+                                const currentTask = taskRunItems.find(run => run.id === runIdToUpdate);
+                                if (currentTask) {
+                                    const updatedTask = {
+                                        ...currentTask,
+                                        status: statusUpdate.status,
+                                        output_data: statusUpdate.response || currentTask.output_data,
+                                        updated_at: new Date().toISOString(),
+                                        error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') 
+                                            ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') 
+                                            : undefined,
+                                        _lastUpdate: Date.now()
+                                    };
+                                    
+                                    queryClient.setQueryData(['taskRuns', currentThread, currentAgent?.id], (oldData: { data?: TaskRun[] } | undefined) => {
+                                        if (!oldData) return { data: [updatedTask] };
+                                        return {
+                                            ...oldData,
+                                            data: oldData.data ? [updatedTask, ...oldData.data] : [updatedTask]
+                                        };
+                                    });
+                                }
+                            }
+                        }, 200); // Đợi 200ms để đảm bảo xử lý hoàn tất
+                    }
                 }
             } catch (e) {
                 console.error("Error parsing status update: ", e);
@@ -796,8 +893,9 @@ const handleSubmitTaskInputs = async () => {
   useEffect(() => {
     const runsFromApi = historyData?.data;
 
-    // Chỉ cập nhật từ API nếu có dữ liệu mới và state đang rỗng
-    if (runsFromApi && taskRunItems.length === 0) {
+    // Chỉ cập nhật từ API nếu có dữ liệu mới và state đang rỗng hoặc khi có cập nhật từ API
+    if (runsFromApi && Array.isArray(runsFromApi)) {
+        console.log(`[AgentChat] Nhận được ${runsFromApi.length} task runs từ API`);
         // Ánh xạ lại dữ liệu để chuẩn hóa thuộc tính lỗi
         const mappedRuns = runsFromApi.map(run => ({
             ...run,
@@ -806,14 +904,41 @@ const handleSubmitTaskInputs = async () => {
             error: run.error || 
                   (run.output_data && typeof run.output_data === 'object' && 
                    'error_message' in run.output_data ? String(run.output_data.error_message) : undefined),
+            // Thêm trường để force re-render
+            _lastUpdate: Date.now()
         }));
 
         // Sắp xếp dữ liệu đã được chuẩn hóa
         const sortedRuns = [...mappedRuns].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
         
-        setTaskRunItems(sortedRuns);
+        // Hợp nhất dữ liệu mới và dữ liệu hiện tại dựa vào ID
+        // Ưu tiên dữ liệu từ taskRunItems vì có thể được cập nhật từ websocket
+        const mergedRuns = sortedRuns.map(apiRun => {
+            const localRun = taskRunItems.find(item => item.id === apiRun.id);
+            if (localRun) {
+                // Nếu dữ liệu local mới hơn, thì ưu tiên sử dụng local
+                if (new Date(localRun.updated_at).getTime() > new Date(apiRun.updated_at).getTime()) {
+                    console.log(`Sử dụng dữ liệu local cho Task ID ${apiRun.id} vì mới hơn`);
+                    return localRun;
+                }
+            }
+            return apiRun;
+        });
+        
+        // Kiểm tra xem có run mới trong taskRunItems nhưng chưa có trong API
+        const additionalRuns = taskRunItems.filter(
+            localRun => !sortedRuns.some(apiRun => apiRun.id === localRun.id)
+        );
+        
+        // Kết hợp và sắp xếp lại tất cả 
+        const combinedRuns = [...additionalRuns, ...mergedRuns].sort(
+            (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+        );
+        
+        console.log(`[AgentChat] Cập nhật taskRunItems với ${combinedRuns.length} task runs sau khi merge`);
+        setTaskRunItems(combinedRuns);
     }
-}, [historyData, taskRunItems.length]);
+}, [historyData]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
