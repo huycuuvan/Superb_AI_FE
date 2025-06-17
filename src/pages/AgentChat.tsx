@@ -973,6 +973,16 @@ const handleSubmitTaskInputs = async () => {
   // Helper: kiểm tra thread hiện tại đã có tin nhắn user chưa
   const hasUserMessage = messages.some(msg => msg.sender === 'user');
 
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const handleInputAutoGrow = (e?: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1115,7 +1125,7 @@ const handleSubmitTaskInputs = async () => {
       {/* Button nổi xóa lịch sử trò chuyện và AlertDialog đặt ngoài sidebar */}
       <Button
         variant="primary"
-        className="fixed md:absolute left-0 md:left-auto bottom-4 md:bottom-6 w-[90vw] md:w-56 mx-4 md:mx-4 z-[999] pointer-events-auto flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 animate-bounce"
+        className="fixed md:absolute left-0 md:left-auto bottom-4 md:bottom-6 w-[90vw] md:w-56 mx-4 md:mx-4 z-1 pointer-events-auto flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 animate-bounce"
         onClick={() => setShowClearHistoryModal(true)}
         disabled={isClearingHistory || isLoading}
       >
@@ -1325,13 +1335,16 @@ const handleSubmitTaskInputs = async () => {
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
                             <Textarea
+                                ref={textareaRef}
                                 placeholder={t('common.askAI')}
-                                className="w-full rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
+                                className="w-full no-scrollbar  rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
                                 value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                onChange={(e) => { setMessage(e.target.value); handleInputAutoGrow(e); }}
+                                onInput={handleInputAutoGrow}
                                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
                                 rows={1}
                                 disabled={isSending || isAgentThinking || !currentThread}
+                                style={{ overflow: 'auto', maxHeight: '300px' }}
                             />
                             <Button
                                 type="submit"

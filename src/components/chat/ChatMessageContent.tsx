@@ -165,7 +165,7 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
   );
 
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
-    <div className="absolute -top-3 right-12">
+    <div className="absolute -top-3 right-1">
         <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
