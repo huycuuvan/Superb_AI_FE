@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
   ListPlus, Book, Clock,
-  Rocket
+  Rocket, Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { AgentTypingIndicator } from '@/components/ui/agent-typing-indicator';
 import { ChatMessageContent } from '@/components/chat/ChatMessageContent';
 import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
 import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
+import { PromptTemplatesModal } from '@/components/chat/PromptTemplatesModal';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
@@ -940,6 +941,13 @@ const handleSubmitTaskInputs = async () => {
     }
 }, [historyData]);
 
+  const [showPromptTemplatesModal, setShowPromptTemplatesModal] = useState(false);
+
+  // Handle selecting a prompt template
+  const handleSelectPrompt = (renderedPrompt: string) => {
+    setMessage(renderedPrompt);
+  };
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1286,6 +1294,15 @@ const handleSubmitTaskInputs = async () => {
                                 <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Gợi ý prompt" 
+                                  onClick={() => setShowPromptTemplatesModal(true)}
+                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+                                >
+                                  <Lightbulb className="h-5 w-5" />
+                                </Button>
                                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMobileSidebar(true)}><Clock className="h-5 w-5 text-muted-foreground"/></Button>
                             </div>
                             <p className="text-xs text-muted-foreground">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
@@ -1304,6 +1321,12 @@ const handleSubmitTaskInputs = async () => {
             tasks={tasks}
             onTaskSelect={handleTaskSelect} // Dùng lại hàm cũ để mở ô nhập liệu
         />
+      <PromptTemplatesModal
+        open={showPromptTemplatesModal}
+        onOpenChange={setShowPromptTemplatesModal}
+        agent={currentAgent}
+        onSelectPrompt={handleSelectPrompt}
+      />
     </div>
   );
 };

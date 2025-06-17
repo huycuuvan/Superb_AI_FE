@@ -1075,3 +1075,103 @@ export const assignAgentToFolder = async (
 
   return response.json();
 };
+
+// Create system prompt template for an agent
+export const createSystemPrompt = async (promptData: {
+  agent_id: string;
+  name: string;
+  description: string;
+  template_content: string;
+  category: string;
+  template_type: string;
+  is_featured: boolean;
+  order_index: number;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.promptTemplates.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(promptData),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+// Get prompt templates by agent
+export interface PromptTemplate {
+  id: string;
+  agent_id: string;
+  name: string;
+  description: string;
+  template_content: string;
+  category: string;
+  template_type: string;
+  is_featured: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PromptTemplatesResponse {
+  data: PromptTemplate[];
+  total: number;
+  limit: number;
+  offset: number;
+  total_pages: number;
+}
+
+export const getPromptTemplatesByAgent = async (
+  agentId: string,
+  limit = 10,
+  offset = 0
+): Promise<PromptTemplatesResponse> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    API_ENDPOINTS.promptTemplates.byAgent(agentId, limit, offset),
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+// Render a prompt template
+export const renderPromptTemplate = async (
+  templateId: string,
+  data: {
+    agent_id: string;
+    workspace_id: string;
+  }
+): Promise<{ rendered_content: string }> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.promptTemplates.render(templateId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};

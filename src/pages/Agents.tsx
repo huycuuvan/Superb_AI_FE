@@ -90,7 +90,7 @@ export const Agents = () => {
         model: agent.model_config?.model || 'gpt-4',
         temperature: agent.model_config?.temperature ?? 0.8,
         webhook_url: agent.model_config?.webhook_url || '',
-        build_prompt_webhook_url: agent.model_config?.build_prompt_webhook_url || 'https://mvp2.xcel.bot/webhook/build-prompt',
+        build_prompt_webhook_url: '',
       },
     });
     setEditedTemperature(String(agent.model_config?.temperature ?? 0.8));
@@ -106,7 +106,7 @@ export const Agents = () => {
         model: editedAgentData.model_config?.model || 'gpt-4',
         temperature: parseFloat(editedTemperature || '0.8'), // Chuyển đổi ngược lại thành số
         webhook_url: editedAgentData.model_config?.webhook_url || '',
-        build_prompt_webhook_url: editedAgentData.model_config?.build_prompt_webhook_url || 'https://mvp2.xcel.bot/webhook/build-prompt',
+        build_prompt_webhook_url: '',
       };
 
       const dataToSend: Partial<Agent> = {
@@ -385,17 +385,6 @@ export const Agents = () => {
                   className="col-span-3"
                   value={editedAgentData.model_config?.webhook_url || ''}
                   onChange={(e) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, webhook_url: e.target.value } })} placeholder="Nhập webhook URL" />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-build-prompt-webhook" className="text-right">
-                  Build Prompt Webhook
-                </Label>
-                <Input
-                  id="edit-agent-build-prompt-webhook"
-                  className="col-span-3"
-                  value={editedAgentData.model_config?.build_prompt_webhook_url || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, build_prompt_webhook_url: e.target.value } })} placeholder="Nhập build prompt webhook URL" />
               </div>
             </div>
 
