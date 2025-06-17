@@ -14,7 +14,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -26,6 +26,7 @@ import { PromptTemplatesModal } from '@/components/chat/PromptTemplatesModal';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 interface TaskInput {
   id: string;
@@ -948,6 +949,30 @@ const handleSubmitTaskInputs = async () => {
     setMessage(renderedPrompt);
   };
 
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
+
+  const handleClearHistory = async () => {
+    if (!currentAgent?.id || !workspace?.id) return;
+    setIsClearingHistory(true);
+    try {
+      await clearAgentThreadHistory(currentAgent.id, workspace.id);
+      toast({ title: 'Đã xóa lịch sử trò chuyện', variant: 'default' });
+      // Refetch threads list (đúng queryKey)
+      queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
+      setCurrentThread(null);
+      setMessages([]);
+      setShowClearHistoryModal(false);
+    } catch (err) {
+      toast({ title: 'Xóa lịch sử thất bại', description: String(err), variant: 'destructive' });
+    } finally {
+      setIsClearingHistory(false);
+    }
+  };
+
+  // Helper: kiểm tra thread hiện tại đã có tin nhắn user chưa
+  const hasUserMessage = messages.some(msg => msg.sender === 'user');
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1055,15 +1080,18 @@ const handleSubmitTaskInputs = async () => {
               </div>
             </div>
             <div className="p-4 border-b">
-              <Button variant="primary"  className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)}
-                disabled={isCreatingThread || isLoading} // Disable when creating or initial loading
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 rounded-xl group transition-all duration-200 "
+                onClick={() => handleNewChat(currentAgent?.id)}
+                disabled={isCreatingThread || isLoading || (!!currentThread && !hasUserMessage)}
               >
                 {isCreatingThread ? (
-                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span> // Spinner
+                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
                 ) : (
                   <Plus className="h-4 w-4 " />
                 )}
-                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text and color */}
+                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span>
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -1083,6 +1111,33 @@ const handleSubmitTaskInputs = async () => {
           </>
         )}
       </aside>
+
+      {/* Button nổi xóa lịch sử trò chuyện và AlertDialog đặt ngoài sidebar */}
+      <Button
+        variant="primary"
+        className="fixed md:absolute left-0 md:left-auto bottom-4 md:bottom-6 w-[90vw] md:w-56 mx-4 md:mx-4 z-[999] pointer-events-auto flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 animate-bounce"
+        onClick={() => setShowClearHistoryModal(true)}
+        disabled={isClearingHistory || isLoading}
+      >
+        <X className="h-4 w-4" />
+        <span>Xóa lịch sử trò chuyện</span>
+      </Button>
+      <AlertDialog open={showClearHistoryModal} onOpenChange={setShowClearHistoryModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn với agent này trong workspace hiện tại và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingHistory}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearHistory} disabled={isClearingHistory} className="bg-destructive text-white">
+              {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background">

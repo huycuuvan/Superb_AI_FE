@@ -1175,3 +1175,81 @@ export const renderPromptTemplate = async (
 
   return res.json();
 };
+
+export const getAllPromptTemplates = async (limit = 100, offset = 0) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/prompt-templates/all?limit=${limit}&offset=${offset}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const updatePromptTemplate = async (
+  id: string,
+  data: Partial<PromptTemplate>
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/prompt-templates/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const deletePromptTemplate = async (id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/prompt-templates/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  // Nếu là 204 No Content thì không cần parse json
+  if (res.status === 204) return;
+  return res.json();
+};
+
+export const clearAgentThreadHistory = async (
+  agent_id: string,
+  workspace_id: string
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/threads/clear?agent_id=${encodeURIComponent(
+      agent_id
+    )}&workspace_id=${encodeURIComponent(workspace_id)}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  if (res.status === 204) return;
+  return res.json();
+};

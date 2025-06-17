@@ -38,6 +38,7 @@ import AboutPage from '@/pages/About';
 import DocsPage from '@/pages/Docs';
 import BlogPage from '@/pages/Blog';
 import AgentProfilePage from '@/pages/AgentProfilePage';
+import PromptTemplatesPage from '@/pages/PromptTemplates';
 
 const routes: RouteObject[] = [
   {
@@ -112,6 +113,10 @@ const routes: RouteObject[] = [
       {
         path: 'folder/:folderId',
         element: <FolderDetail />,
+      },
+      {
+        path: 'prompts',
+        element: <PromptTemplatesPage />,
       },
     ],
   },
