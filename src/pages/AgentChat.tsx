@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -14,7 +15,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -50,6 +51,7 @@ interface Message {
   timestamp: string;
   sender_type: "user" | "agent";
   sender_user_id: string;
+  chat_message?: ApiMessage;
 }
 
 // Định nghĩa một kiểu dữ liệu cho output video
@@ -79,7 +81,7 @@ const AgentChat = () => {
   const [message, setMessage] = useState('');
   const [isAgentThinking, setIsAgentThinking] = useState(false);
   const { user } = useAuth();
-
+const [agentTargetContent, setAgentTargetContent] = useState('');
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -110,7 +112,7 @@ const AgentChat = () => {
 
   // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
   const lastAgentMessageIdRef = useRef<string | null>(null);
-
+  const agentDoneTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [timeoutStage, setTimeoutStage] = useState<number>(0);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
   const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
@@ -159,210 +161,136 @@ const AgentChat = () => {
 
       ws.current.onmessage = (event) => {
         try {
-          const receivedData: Message = JSON.parse(event.data);
+         
+          const receivedData: any = JSON.parse(event.data);
+          const msgData = receivedData.chat_message ? receivedData.chat_message : receivedData;
       
-          // Kiểm tra type của tin nhắn
-          if (receivedData.type === "chat") {
-            // console.log("Received chat message:", receivedData);
-
-            // Xử lý tin nhắn từ Agent (dạng chunk)
-            if (receivedData.sender_type === "agent") {
-              setIsAgentThinking(false); // Tắt trạng thái typing ngay khi nhận được tin nhắn chat từ agent
-              setTimeoutStage(0);
-              setMessages(prevMessages => {
-                // Kiểm tra xem tin nhắn cuối có phải của agent không
-                if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
-                    
-                    // LẤY RA TIN NHẮN CUỐI
-                    const lastMessage = prevMessages[prevMessages.length - 1];
-                    
-                    // TẠO RA MỘT OBJECT TIN NHẮN CUỐI HOÀN TOÀN MỚI VÀ ÉP KIỂU TƯỜNG MINH
-                    const updatedLastMessage: ChatMessage = {
-                        ...lastMessage, // Sao chép tất cả thuộc tính cũ
-                        content: lastMessage.content + receivedData.content, // Nối chuỗi để tạo content mới
-                        timestamp: receivedData.timestamp // Cập nhật timestamp mới
-                    };
-                    
-                    // TRẢ VỀ MỘT ARRAY MỚI: bao gồm tất cả tin nhắn cũ (trừ tin cuối) VÀ object tin nhắn mới của chúng ta
-                    return [...prevMessages.slice(0, -1), updatedLastMessage];
-
+        
+          const optimisticId = receivedData.optimistic_id || msgData.optimistic_id;
+      
+     
+          if (optimisticId) {
+            setMessages(prevMessages => {
+              const confirmedMessage: ChatMessage = {
+                id: msgData.id,
+                content: msgData.message_content || msgData.content,
+                sender: msgData.sender_type,
+                timestamp: msgData.created_at,
+                agentId: msgData.sender_agent_id,
+                image_url: msgData.image_url,
+                file_url: msgData.file_url,
+                isStreaming: false
+              };
+      
+              const indexToReplace = prevMessages.findIndex(m => m.id === optimisticId);
+      
+              if (indexToReplace !== -1) {
+                const newMessages = [...prevMessages];
+                newMessages[indexToReplace] = confirmedMessage;
+                return newMessages;
                 } else {
-                    // Nếu không có tin nhắn agent nào trước đó, tạo một tin nhắn mới và ÉP KIỂU TƯỜNG MINH
-                    const newChatMessage: ChatMessage = {
-                        id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                        content: receivedData.content,
-                        sender: 'agent', // Thay receivedData.sender_type bằng literal 'agent'
-                        timestamp: receivedData.timestamp,
-                        agentId: receivedData.sender_user_id,
-                    };
-                    return [...prevMessages, newChatMessage];
+                if (!prevMessages.some(m => m.id === confirmedMessage.id)) {
+                  return [...prevMessages, confirmedMessage];
                 }
-            })}
-            else if (receivedData.sender_type === "user") {
-              setMessages(prevMessages => {
-                const isEcho = prevMessages.some(msg =>
-                  msg.sender === 'user' &&
-                  msg.content === receivedData.content &&
-                  Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
-                );
-                if (isEcho) {
-                  // console.log("Skipping user message echo:", receivedData);
                   return prevMessages;
-                } else {
-                  // Đây có thể là tin nhắn từ user khác trong multi-user chat
-                  const newChatMessage: ChatMessage = {
-                    id: receivedData.thread_id + ":" + receivedData.timestamp + ":" + receivedData.sender_user_id + ":" + Math.random(),
-                    content: receivedData.content,
-                    sender: receivedData.sender_type, // Thay receivedData.sender_type bằng literal 'user'
-                    timestamp: receivedData.timestamp,
-                    agentId: receivedData.sender_user_id,
-                  };
-                  return [...prevMessages, newChatMessage];
-                }
-              });
+              }
+            });
+            // CHỈ tắt trạng thái đang nghĩ nếu message này là của agent
+            if (msgData.sender_type === "agent") {
+              setIsAgentThinking(false);
             }
+            return; // Kết thúc
+          }
+          
+       
+          if (receivedData.type === "chat" && msgData.sender_type === "agent") {
+            
+            setTimeoutStage(0);
+            setMessages(prevMessages => {
+              const lastMessageIndex = prevMessages.length - 1;
+              if (prevMessages.length > 0 && prevMessages[lastMessageIndex].sender === 'agent' && prevMessages[lastMessageIndex].isStreaming) {
+                const lastMessage = prevMessages[lastMessageIndex];
+                const updatedContent = msgData.message_content || msgData.content;
+                const updatedLastMessage: ChatMessage = {
+                  ...lastMessage,
+                  content: updatedContent,
+                  timestamp: msgData.created_at || receivedData.timestamp,
+                };
+                const updatedMessages = [...prevMessages];
+                updatedMessages[lastMessageIndex] = updatedLastMessage;
+                return updatedMessages;
+              } else {
+                const newChatMessage: ChatMessage = {
+                  id: msgData.id || `ws-${Date.now()}`,
+                  content: msgData.message_content || msgData.content,
+                  sender: msgData.sender_type,
+                  timestamp: msgData.created_at || receivedData.timestamp,
+                  agentId: msgData.sender_user_id,
+                  image_url: msgData.image_url,
+                  file_url: msgData.file_url,
+                  isStreaming: true,
+                };
+                if (prevMessages.some(m => m.id === newChatMessage.id)) return prevMessages;
+                return [...prevMessages, newChatMessage];
+              }
+            });
+            return;
+          }
+      
 
-          } else if (receivedData.type === "typing") {
-             if (receivedData.sender_type === "agent") {
-                setIsAgentThinking(true);
-             }
-          } else if (receivedData.type === "done") {
+          if (receivedData.type === "done") {
             lastAgentMessageIdRef.current = null;
-            setIsAgentThinking(false); // Dừng các chỉ báo chờ
-            setTimeoutStage(0);      // Reset stage
-           
-          } else if (receivedData.type === "status") {
+            setIsAgentThinking(false);
+            setTimeoutStage(0);
+            setMessages(prevMessages => {
+              if (prevMessages.length === 0) return prevMessages;
+              const lastMessageIndex = prevMessages.length - 1;
+              const lastMessage = prevMessages[lastMessageIndex];
+              if (lastMessage.sender === 'agent' && lastMessage.isStreaming) {
+                const finalizedMessage = { ...lastMessage, isStreaming: false };
+                const updatedMessages = [...prevMessages];
+                updatedMessages[lastMessageIndex] = finalizedMessage;
+                return updatedMessages;
+              }
+              return prevMessages;
+            });
+            return;
+          }
+          if (receivedData.type === "status") {
            
             try {
                 const statusUpdate = JSON.parse(receivedData.content);
                 const runIdToUpdate = statusUpdate.task_run_id;
         
                 if (runIdToUpdate) {
-                    setTaskRunItems(prevRuns => {
-                        // Tạo bản sao cập nhật của task run
-                        const updatedRuns = prevRuns.map(run => {
+                    setTaskRunItems(prevRuns =>
+                        prevRuns.map(run => {
                             // Tìm đúng item trong danh sách bằng run_id
                             if (run.id === runIdToUpdate) {
-                                console.log('Đang cập nhật task từ websocket:', statusUpdate);
-                                // Force re-render bằng cách tạo một đối tượng mới hoàn toàn
+                                // Cập nhật lại trạng thái, kết quả và thông báo lỗi (nếu có)
                                 return {
                                     ...run,
                                     status: statusUpdate.status,
                                     output_data: statusUpdate.response || run.output_data,
                                     updated_at: new Date().toISOString(),
                                     error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') : undefined,
-                                    // Thêm trường ngẫu nhiên để đảm bảo React nhận diện là object mới
-                                    _lastUpdate: Date.now()
                                 };
                             }
                             return run;
-                        });
-
-                        // Log để debug
-                        console.log('TaskRun cập nhật từ websocket:', updatedRuns.find(run => run.id === runIdToUpdate));
-                        
-                        // Nếu trạng thái đã hoàn thành hoặc lỗi, hiển thị thông báo
-                        if (statusUpdate.status === 'completed') {
-                            toast({
-                                title: "Task hoàn thành",
-                                description: "Task đã thực thi xong.",
-                                variant: "default",
-                            });
-                        } else if (statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
-                            toast({
-                                title: "Task thất bại",
-                                description: statusUpdate.message || statusUpdate.error_message || "Đã xảy ra lỗi.",
-                                variant: "destructive",
-                            });
-                        }
-
-                        // Đẩy task đã cập nhật lên đầu danh sách để dễ nhìn thấy
-                        const taskToUpdate = updatedRuns.find(run => run.id === runIdToUpdate);
-                        const otherTasks = updatedRuns.filter(run => run.id !== runIdToUpdate);
-                        return taskToUpdate ? [taskToUpdate, ...otherTasks] : updatedRuns;
-                    });
-                    
-                    // Luôn mở panel Task History khi nhận được cập nhật trạng thái task
-                    if (!showTaskHistory && (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed')) {
-                        setShowTaskHistory(true);
-                    }
-
-                    // Thực hiện thêm xử lý khi task hoàn thành hoặc lỗi
-                    if (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
-                        // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
-                        queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
-                        queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread, currentAgent?.id] });
-                        
-                        // Thêm một chút trễ trước khi hiển thị task để đảm bảo quá trình tải ảnh hoặc nội dung được hoàn tất
-                        setTimeout(() => {
-                            // Tạo biến cờ để theo dõi nếu đã cập nhật dữ liệu từ cache
-                            let hasUpdatedFromCache = false;
-                            
-                            // Cập nhật cache của React Query
-                            queryClient.setQueryData(['taskRuns', currentThread, currentAgent?.id], (oldData: { data?: TaskRun[] } | undefined) => {
-                                if (!oldData || !oldData.data) return oldData;
-                                
-                                // Tìm và cập nhật task run trong cache 
-                                const updatedData = {
-                                    ...oldData,
-                                    data: oldData.data.map((item: TaskRun) => {
-                                        if (item.id === runIdToUpdate) {
-                                            hasUpdatedFromCache = true;
-                                            console.log('Cập nhật task trong cache React Query:', runIdToUpdate);
-                                            return {
-                                                ...item,
-                                                status: statusUpdate.status,
-                                                output_data: statusUpdate.response || item.output_data,
-                                                updated_at: new Date().toISOString(),
-                                                error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') 
-                                                    ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') 
-                                                    : undefined,
-                                                // Force re-render khi data thay đổi
-                                                _lastUpdate: Date.now()
-                                            };
-                                        }
-                                        return item;
-                                    })
-                                };
-                                
-                                return updatedData;
-                            });
-                            
-                            // Nếu không tìm thấy task trong cache, thêm vào
-                            if (!hasUpdatedFromCache) {
-                                // Lấy thông tin task hiện tại từ taskRunItems
-                                const currentTask = taskRunItems.find(run => run.id === runIdToUpdate);
-                                if (currentTask) {
-                                    const updatedTask = {
-                                        ...currentTask,
-                                        status: statusUpdate.status,
-                                        output_data: statusUpdate.response || currentTask.output_data,
-                                        updated_at: new Date().toISOString(),
-                                        error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') 
-                                            ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') 
-                                            : undefined,
-                                        _lastUpdate: Date.now()
-                                    };
-                                    
-                                    queryClient.setQueryData(['taskRuns', currentThread, currentAgent?.id], (oldData: { data?: TaskRun[] } | undefined) => {
-                                        if (!oldData) return { data: [updatedTask] };
-                                        return {
-                                            ...oldData,
-                                            data: oldData.data ? [updatedTask, ...oldData.data] : [updatedTask]
-                                        };
-                                    });
-                                }
-                            }
-                        }, 200); // Đợi 200ms để đảm bảo xử lý hoàn tất
-                    }
+                        })
+                    );
+                                        if (statusUpdate.status === 'completed' || statusUpdate.status === 'error' || statusUpdate.status === 'failed') {
+                      // Ra lệnh cho useQuery tự động fetch lại dữ liệu mới nhất từ API
+                      queryClient.invalidateQueries({ queryKey: ['taskRuns', currentThread] });
+                  }
                 }
             } catch (e) {
                 console.error("Error parsing status update: ", e);
             }
-        }
+          }
+      
         } catch (error) {
-          // console.error("Error processing WebSocket message:", error);
-          // console.error("Raw WebSocket data that caused error:", event.data);
+          console.error("Error processing WebSocket message:", error);
         }
       };
   
@@ -478,7 +406,9 @@ const AgentChat = () => {
                     content: msg.message_content,
                     sender: msg.sender_type,
                     timestamp: msg.created_at,
-                    agentId: msg.sender_agent_id
+                    agentId: msg.sender_agent_id,
+                    image_url: msg.image_url,
+                    file_url: msg.file_url,
                 })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
                 if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -487,7 +417,9 @@ const AgentChat = () => {
                     content: agentData.data.greeting_message || 'Hello! How can I help you?',
                     sender: 'agent',
                     timestamp: new Date().toISOString(),
-                    agentId: agentData.data.id
+                    agentId: agentData.data.id,
+                    image_url: agentData.data.image_url,
+                    file_url: agentData.data.file_url,
                   };
                   initialMessages.push(welcomeMessage);
                 }
@@ -516,7 +448,9 @@ const AgentChat = () => {
                 content: agentData.data.greeting_message || 'Hello! How can I help you?',
                 sender: 'agent',
                 timestamp: new Date().toISOString(),
-                agentId: agentData.data.id
+                agentId: agentData.data.id,
+                image_url: agentData.data.image_url,
+                file_url: agentData.data.file_url,
               };
               initialMessages = [welcomeMessage];
             }
@@ -529,7 +463,9 @@ const AgentChat = () => {
                   content: msg.message_content,
                   sender: msg.sender_type,
                   timestamp: msg.created_at,
-                  agentId: msg.sender_agent_id
+                  agentId: msg.sender_agent_id,
+                  image_url: msg.image_url,
+                  file_url: msg.file_url,
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
               if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -538,7 +474,9 @@ const AgentChat = () => {
                   content: agentData.data.greeting_message || 'Hello! How can I help you?',
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
-                  agentId: agentData.data.id
+                  agentId: agentData.data.id,
+                  image_url: agentData.data.image_url,
+                  file_url: agentData.data.file_url,
                 };
                 initialMessages.push(welcomeMessage);
               }
@@ -569,63 +507,102 @@ const AgentChat = () => {
   }, [agentId, currentThread]);
 
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 150;
+  
+      // Luôn cuộn xuống nếu agent vừa trả lời xong (isAgentThinking chuyển từ true -> false)
+      // Hoặc nếu người dùng đang ở cuối
+      if (isAtBottom || !isAgentThinking) {
+        requestAnimationFrame(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+      }
     }
-  }, [messages]);
+    // THÊM `isAgentThinking` VÀO ĐÂY
+  }, [messages, messages[messages.length - 1]?.content, isAgentThinking]);
 
-  const handleSendMessage = async () => { // Made async
-    if (message.trim() && currentThread) { // Check if threadId exists
-      setIsSending(true); // Start loading
-      setIsAgentThinking(true); // Khóa input, chờ agent trả lời
-      setTimeoutStage(0);
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    
+    // Chỉ thực hiện sau khi đã tải xong dữ liệu (isLoading = false)
+    if (!isLoading && chatContainer) {
+      // Dùng setTimeout để đảm bảo DOM đã được render đầy đủ trước khi cuộn.
+      // Đây là một kỹ thuật phổ biến để tăng độ ổn định.
+      const timer = setTimeout(() => {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 100); // Đợi 100ms
 
-      // Set a timeout for the agent's response (e.g., 30 seconds)
+      // Dọn dẹp timer khi component bị unmount
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(), // Temporary ID
+  const handleSendMessage = () => {
+    // Cho phép gửi nếu có text hoặc có ảnh
+    if ((message.trim() || imageFile) && currentThread) {
+      setIsSending(true);
+  
+      // Tạo ID tạm thời duy nhất
+      const optimisticId = `optimistic-${Date.now()}`;
+      
+      // Tạo tin nhắn tạm thời để hiển thị ngay
+      const optimisticMessage: ChatMessage = {
+        id: optimisticId,
         content: message,
         sender: 'user',
         timestamp: new Date().toISOString(),
-        // agentId is not applicable for user message sent from frontend
+        file_url: imagePreview || undefined,
+        image_url: imagePreview || undefined,
       };
-      
-      // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
+  
+      // Cập nhật UI ngay lập tức
+      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+  
+      // Lưu lại dữ liệu để gửi đi
+      const messageToSend = message;
+      const fileToSend = imageFile;
+      const threadIdToSend = currentThread;
+  
+      // Xóa input
       setMessage('');
-      
-      try {
-        // ** Thay thế gọi API REST bằng gửi qua WebSocket **
-        const messageToSend = {
-          type: "chat", // Loại tin nhắn
-          thread_id: currentThread, // ID của thread
-          content: userMessage.content, // Nội dung tin nhắn
-          sender_type: userMessage.sender, // Loại người gửi (user)
-          sender_user_id: user?.id, // Placeholder cho UserID
-        };
-
-        ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
-        setIsSending(false); 
-      } catch (error) {
-        console.error('Error sending message via WebSocket:', error);
-        setIsSending(false);
-        setIsAgentThinking(false); // Stop typing indicator
-
-        toast({
-          title: "Lỗi!",
-          description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
-          variant: "destructive",
-        });
-        // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
+      setImageFile(null);
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-
-    } else if (aboveInputContent === 'knowledge') {
-       console.log("Sending message with knowledge context:", selectedTaskInputs);
-       // Logic xử lý knowledge context (nếu có)
-       setMessage('');
-       setAboveInputContent('none'); 
+      
+      // Gửi dữ liệu trong nền
+      if (fileToSend) { // Trường hợp có ảnh
+        setIsAgentThinking(true);
+        uploadMessageWithFile(threadIdToSend, messageToSend, fileToSend, optimisticId)
+          .catch(error => {
+            console.error('Error sending message with file:', error);
+            toast({ variant: "destructive", title: "Lỗi", description: "Gửi ảnh thất bại." });
+            setMessages(prev => prev.filter(m => m.id !== optimisticId));
+          })
+          .finally(() => {
+            setIsSending(false);
+          });
+      } else { // Trường hợp chỉ có text
+        
+        // ===== ĐIỂM SỬA QUAN TRỌNG CHO CLIENT =====
+        const messageToSendObj = {
+          type: "chat",
+          thread_id: threadIdToSend,
+          content: messageToSend,
+          sender_type: "user",
+          sender_user_id: user?.id,
+          message_id: optimisticId, // <-- THÊM DÒNG NÀY ĐỂ GỬI ID TẠM THỜI
+        };
+        // ===========================================
+  
+        ws.current?.send(JSON.stringify(messageToSendObj));
+        setIsSending(false); 
+        setIsAgentThinking(true);
+      }
     }
   };
-  
 
   
   const handleTaskSelect = (task: ApiTaskType) => {
@@ -692,7 +669,9 @@ const AgentChat = () => {
           content: msg.message_content,
           sender: msg.sender_type,
           timestamp: msg.created_at,
-          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+          agentId: msg.sender_agent_id,
+          image_url: msg.image_url,
+          file_url: msg.file_url,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setMessages(initialMessages); // Sử dụng messages từ backend
@@ -704,7 +683,9 @@ const AgentChat = () => {
           content: currentAgent.greeting_message || 'Hello! How can I help you?',
           sender: 'agent',
           timestamp: new Date().toISOString(),
-          agentId: currentAgent.id
+          agentId: currentAgent.id,
+          image_url: currentAgent.image_url,
+          file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
       }
@@ -840,7 +821,9 @@ const handleSubmitTaskInputs = async () => {
           content: msg.message_content,
           sender: msg.sender_type,
           timestamp: msg.created_at,
-          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+          agentId: msg.sender_agent_id,
+          image_url: msg.image_url,
+          file_url: msg.file_url,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Update the state with messages from the clicked thread
@@ -850,7 +833,9 @@ const handleSubmitTaskInputs = async () => {
           content: currentAgent.greeting_message || 'Hello! How can I help you?',
           sender: 'agent',
           timestamp: new Date().toISOString(),
-          agentId: currentAgent.id
+          agentId: currentAgent.id,
+          image_url: currentAgent.image_url,
+          file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
       } else {
@@ -981,6 +966,39 @@ const handleSubmitTaskInputs = async () => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
     }
+  };
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setImageFile(file);
+          setImagePreview(URL.createObjectURL(file));
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -1206,8 +1224,18 @@ const handleSubmitTaskInputs = async () => {
                   <ChatMessageContent
                     content={msg.content}
                     isAgent={msg.sender === 'agent'}
-                   
+                    stream={msg.isStreaming ?? false}
                   />
+                  {/* Hiển thị ảnh nếu có image_url hoặc file_url */}
+                  {(msg.image_url || msg.file_url) && (
+                    <div style={{ marginTop: 8 }}>
+                      <img
+                        src={msg.image_url || msg.file_url}
+                        alt="uploaded"
+                        style={{ maxWidth: 300, borderRadius: 8 }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {msg.sender === 'user' && (
                                 <Avatar className="h-9 w-9 flex-shrink-0">
@@ -1323,21 +1351,44 @@ const handleSubmitTaskInputs = async () => {
                   </div>
                 )}
 
-{isAgentThinking && (
-                  <AgentTypingIndicator
-                    agentName={currentAgent?.name}
-                    agentAvatar={currentAgent?.avatar}
-                    stage={timeoutStage} 
-                  />
-                )}
+{(() => {
+  // Lấy ra tin nhắn cuối cùng trong danh sách
+  const lastMessage = messages[messages.length - 1];
+  // Kiểm tra xem có phải agent đang trong quá trình streaming hay không
+  const isAgentCurrentlyStreaming = lastMessage?.sender === 'agent' && lastMessage.isStreaming;
+
+  // Chỉ hiển thị chỉ báo "..." KHI agent đang nghĩ VÀ CHƯA bắt đầu streaming
+  if (isAgentThinking && !isAgentCurrentlyStreaming) {
+    return (
+      <AgentTypingIndicator
+        agentName={currentAgent?.name}
+        agentAvatar={currentAgent?.avatar}
+        stage={timeoutStage}
+      />
+    );
+  }
+  
+  // Trả về null trong các trường hợp khác
+  return null;
+})()}
 
               <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
+                            {/* Preview ảnh phía trên input chat */}
+                            {imagePreview && (
+                              <div className="mb-2 relative w-24 h-24">
+                                <img src={imagePreview} alt="preview" className="rounded-lg object-cover w-full h-full" />
+                                <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full" onClick={handleRemoveImage}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            <div className="flex items-end relative">
                             <Textarea
                                 ref={textareaRef}
                                 placeholder={t('common.askAI')}
-                                className="w-full no-scrollbar  rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
+                                className="w-full no-scrollbar rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
                                 value={message}
                                 onChange={(e) => { setMessage(e.target.value); handleInputAutoGrow(e); }}
                                 onInput={handleInputAutoGrow}
@@ -1345,6 +1396,7 @@ const handleSubmitTaskInputs = async () => {
                                 rows={1}
                                 disabled={isSending || isAgentThinking || !currentThread}
                                 style={{ overflow: 'auto', maxHeight: '300px' }}
+                                onPaste={handlePaste}
                             />
                             <Button
                                 type="submit"
@@ -1355,10 +1407,11 @@ const handleSubmitTaskInputs = async () => {
                             >
                                 <Send className="h-5 w-5" />
                             </Button>
+                            </div>
                         </div>
                         <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" title="Đính kèm tệp"><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
@@ -1395,8 +1448,16 @@ const handleSubmitTaskInputs = async () => {
         agent={currentAgent}
         onSelectPrompt={handleSelectPrompt}
       />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        />
     </div>
   );
 };
 
 export default AgentChat;
+

@@ -1253,3 +1253,36 @@ export const clearAgentThreadHistory = async (
   if (res.status === 204) return;
   return res.json();
 };
+
+// Gửi message kèm file lên thread
+export const uploadMessageWithFile = async (
+  threadId: string,
+  messageContent: string,
+  file: File,
+  optimisticId: string
+): Promise<{ data: any }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const formData = new FormData();
+  formData.append("message_content", messageContent);
+  formData.append("image", file);
+  formData.append("optimistic_id", optimisticId);
+  const response = await fetch(
+    `${API_BASE_URL}/threads/${threadId}/messages/upload`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Không set Content-Type, để browser tự set boundary cho multipart/form-data
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
