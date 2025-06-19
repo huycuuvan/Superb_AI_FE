@@ -271,7 +271,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                                 return {
                                     ...run,
                                     status: statusUpdate.status,
-                                    output_data: statusUpdate.response || run.output_data,
+                                    output_data: statusUpdate.result ?? statusUpdate.response ?? run.output_data,
                                     updated_at: new Date().toISOString(),
                                     error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') : undefined,
                                 };

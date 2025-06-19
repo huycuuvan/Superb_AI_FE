@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { useEffect } from "react"
 import { API_BASE_URL } from "@/config/api"
+import ReactMarkdown from 'react-markdown'
 
 // Component hiển thị huy hiệu trạng thái (giữ nguyên)
 const StatusBadge = ({ status }: { status: string }) => {
@@ -128,266 +129,116 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
     return fullUrl;
   };
 
+  // Hàm render output custom UI cho từng loại dữ liệu
   const renderOutput = (output: any) => {
-    console.log('Rendering output:', output);
-    
-    // Debug hiển thị chi tiết cấu trúc output để phát hiện vấn đề
-    console.log('Output type:', typeof output);
-    console.log('Output keys:', output && typeof output === 'object' ? Object.keys(output) : 'not an object');
-    
-    // Kiểm tra nếu output là string
-    if (typeof output === 'string') {
-      // Kiểm tra nếu là URL ảnh
-      if (output.startsWith('http') && (output.endsWith('.jpg') || output.endsWith('.jpeg') || output.endsWith('.png') || output.endsWith('.gif'))) {
-        return (
-          <div className="mt-2 flex flex-col items-center space-y-2">
-            <img 
-              src={output} 
-              alt="Direct image URL" 
-              className="max-w-full rounded-lg shadow-lg"
-            />
-            <a 
-              href={output} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-500 hover:text-blue-700 flex items-center gap-1.5"
-            >
-              <FileImage className="h-4 w-4" /> Mở ảnh trong tab mới
-            </a>
-          </div>
-        );
-      }
-      // Kiểm tra nếu là URL thông thường
-      if (output.startsWith('http')) {
-        return (
-          <div className="mt-2">
-            <a 
-              href={output} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-700 underline"
-            >
-              Xem kết quả
-            </a>
-          </div>
-        );
-      }
-      // Nếu là text thông thường
-      return <div className="mt-2 text-gray-700">{output}</div>;
+    // Nếu là HTML
+    if (typeof output === "string" && output.trim().startsWith("<") && output.trim().endsWith(">")) {
+      return (
+        <div
+          className="prose max-w-none"
+          dangerouslySetInnerHTML={{ __html: output }}
+        />
+      );
     }
 
-    // Kiểm tra nếu output là object
-    if (typeof output === 'object' && output !== null) {
-      // Kiểm tra các trường hợp đặc biệt
-      if (output.error) {
-        return <div className="mt-2 text-red-500">{output.error}</div>;
-      }
-
-      // Kiểm tra nhiều trường hợp có chứa đường dẫn ảnh
-      const imageUrl = output.file_url || output.image_url || output.url || 
-                      (output.data?.file_url) || (output.data?.image_url) || 
-                      (output.data?.url) || (output.result?.file_url) || 
-                      (output.result?.image_url) || (output.result?.url) ||
-                      (output.output?.url) || (output.output?.file_url) ||
-                      (output.content?.url) || (output.content?.file_url);
-
-      // Kiểm tra nếu có trường content_type hoặc mime_type
-      const isImageType = output.content_type?.includes('image') || 
-                         output.mime_type?.includes('image') ||
-                         output.data_type === 'image' ||
-                         output.type?.includes('image');
-      
-      // Kiểm tra định dạng file từ các trường khác nhau
-      const imageFormat = output.format || output.extension || 
-                          (imageUrl && typeof imageUrl === 'string' && 
-                           imageUrl.split('.').pop()?.toLowerCase());
-      
-      const isImageFormat = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(imageFormat);
-      
-      console.log('Image check:', { 
-        imageUrl, isImageType, imageFormat, isImageFormat,
-        hasImageUrlPattern: typeof imageUrl === 'string' && (
-          imageUrl.endsWith('.png') || imageUrl.endsWith('.jpg') || 
-          imageUrl.endsWith('.jpeg') || imageUrl.endsWith('.gif') ||
-          imageUrl.includes('/images/') || imageUrl.includes('image')
-        )
-      });
-
-      if (imageUrl && (
-          isImageType || isImageFormat ||
-          (typeof imageUrl === 'string' && (
-            imageUrl.endsWith('.png') || imageUrl.endsWith('.jpg') || 
-            imageUrl.endsWith('.jpeg') || imageUrl.endsWith('.gif') ||
-            imageUrl.includes('/images/') || imageUrl.includes('image')
-          ))
-      )) {
-        const fullImageUrl = getFullUrl(imageUrl);
-        // Thêm timestamp để tránh cache
-        const imageUrlWithTimestamp = `${fullImageUrl}${fullImageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
-        
-        return (
-          <div className="mt-2 flex flex-col items-center space-y-2">
-            <div className="relative w-full">
-              <img 
-                src={imageUrlWithTimestamp} 
-                alt={output.file_name || "Generated image"} 
-                className="max-w-full rounded-lg shadow-lg mx-auto"
-                onError={(e) => {
-                  console.error('Image failed to load:', fullImageUrl);
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  // Hiển thị URL đã thử tải nhưng lỗi
-                  const errorMsgElem = document.createElement('div');
-                  errorMsgElem.className = 'text-red-500 text-xs mt-2';
-                  errorMsgElem.textContent = `Không thể tải ảnh: ${fullImageUrl}`;
-                  e.currentTarget.parentNode?.appendChild(errorMsgElem);
-                }}
-                loading="eager"
-              />
-              <div className="absolute top-0 right-0 p-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-6 w-6 rounded-full bg-background/80 hover:bg-background"
-                  onClick={() => window.open(imageUrlWithTimestamp, '_blank')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                </Button>
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {output.file_name && <span className="block">Tên file: {output.file_name}</span>}
-              {imageFormat && <span className="block">Định dạng: {imageFormat.toUpperCase()}</span>}
-              {output.size_bytes && <span className="block">Kích thước: {(output.size_bytes / 1024 / 1024).toFixed(2)} MB</span>}
-            </div>
-            <Button 
-              variant="outline"
-              size="sm"
-              className="text-blue-500 hover:text-blue-700 flex items-center gap-1.5 mt-2"
-              onClick={() => window.open(imageUrlWithTimestamp, '_blank')}
-            >
-              <FileImage className="h-4 w-4" /> Mở ảnh trong tab mới
-            </Button>
-            
-            {/* Hiển thị URL ảnh để debug */}
-            <div className="w-full mt-1">
-              <details className="text-xs">
-                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Chi tiết URL</summary>
-                <code className="block mt-1 p-1 bg-muted rounded text-xs break-all">{fullImageUrl}</code>
-              </details>
-            </div>
-          </div>
-        );
-      }
-
-      // Kiểm tra cấu trúc data phổ biến
-      if (output.data && typeof output.data === 'object') {
-        // Nếu data chứa video_url
-        if (output.data.video_url || output.data.url) {
-          const videoUrl = output.data.video_url || output.data.url;
-          return (
-            <div className="mt-2 flex justify-center">
-              <video 
-                src={videoUrl} 
-                controls 
-                className="max-h-[50vh] w-auto aspect-[9/16] rounded-xl shadow-lg object-cover bg-black"
-                style={{ maxWidth: '100%' }}
-              />
-            </div>
-          );
-        }
-      }
-
-      // Kiểm tra video_url trực tiếp trong output
-      if (output.video_url || output.url) {
-        const videoUrl = output.video_url || output.url;
-        return (
-          <div className="mt-2 flex justify-center">
-            <video 
-              src={videoUrl} 
-              controls 
-              className="max-h-[50vh] w-auto aspect-[9/16] rounded-xl shadow-lg object-cover bg-black"
-              style={{ maxWidth: '100%' }}
-            />
-          </div>
-        );
-      }
-
-      // Kiểm tra snapshot_url
-      if (output.snapshot_url) {
-        return (
-          <div className="mt-2">
-            <img 
-              src={output.snapshot_url} 
-              alt="Thumbnail" 
-              className="max-w-full rounded-lg"
-            />
-            {output.url && (
-              <div className="mt-2">
-                <a 
-                  href={output.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-700 underline"
-                >
-                  Xem video đầy đủ
-                </a>
-              </div>
-            )}
-          </div>
-        );
-      }
-
-      if (output.image_url) {
-        return (
-          <div className="mt-2">
-            <img 
-              src={output.image_url} 
-              alt="Generated" 
-              className="max-w-full rounded-lg"
-            />
-          </div>
-        );
-      }
-
-      // Hiển thị các trường URL quan trọng
-      const urlFields = Object.entries(output).filter(([key, value]) => 
-        typeof value === 'string' && 
-        (value.startsWith('http://') || value.startsWith('https://')) &&
-        (key.includes('url') || key.includes('link'))
+    // Nếu là markdown
+    if (typeof output === "string" && /[*_`#\[\]]/.test(output)) {
+      return (
+        <div className="prose max-w-none">
+          <ReactMarkdown>{output}</ReactMarkdown>
+        </div>
       );
+    }
 
-      if (urlFields.length > 0) {
+    // Nếu là ảnh
+    if (typeof output === "string" && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(output)) {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <img src={output} alt="Ảnh kết quả" className="max-w-xs rounded shadow mx-auto" />
+          <a href={output} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Mở ảnh trong tab mới</a>
+        </div>
+      );
+    }
+
+    // Nếu là video
+    if (typeof output === "string" && /\.(mp4|webm|ogg)$/i.test(output)) {
+      return (
+        <div className="flex justify-center w-full">
+          <video src={output} controls className="max-w-xs rounded shadow mx-auto" />
+        </div>
+      );
+    }
+
+    // Nếu là link
+    if (typeof output === "string" && /^https?:\/\//.test(output)) {
+      return (
+        <a href={output} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+          {output}
+        </a>
+      );
+    }
+
+    // Nếu là file (pdf, doc, ...)
+    if (typeof output === "string" && /\.(pdf|docx?|xlsx?|pptx?)$/i.test(output)) {
+      return (
+        <a href={output} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-500 underline">
+          <span role="img" aria-label="file">📄</span> Tải file
+        </a>
+      );
+    }
+
+    // Nếu là object có trường đặc biệt
+    if (typeof output === "object" && output !== null) {
+      // Nếu có trường "video_url" là video
+      if (output.video_url && typeof output.video_url === "string" && /\.(mp4|webm|ogg)$/i.test(output.video_url)) {
         return (
-          <div className="mt-2 space-y-2">
-            {urlFields.map(([key, value]) => (
-              <div key={key} className="flex flex-col">
-                <span className="text-sm font-medium">{key}:</span>
-                <a 
-                  href={value as string} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-700 underline break-all"
-                >
-                  {value as string}
-                </a>
+          <div className="flex justify-center w-full">
+            <video src={output.video_url} controls className="max-w-xs rounded shadow mt-2 mx-auto" />
+          </div>
+        );
+      }
+      // Nếu có trường "content" là HTML/text
+      if (output.content) {
+        return renderOutput(output.content);
+      }
+      // Nếu có trường "url" là ảnh/video/link
+      if (output.url) {
+        return renderOutput(output.url);
+      }
+      // Nếu là mảng
+      if (Array.isArray(output)) {
+        return (
+          <div className="space-y-2">
+            {output.map((item, idx) => (
+              <div key={idx} className="border rounded p-2">
+                {renderOutput(item)}
               </div>
             ))}
           </div>
         );
       }
-
-      // Nếu là object thông thường, hiển thị dạng JSON
+      // Nếu là object thông thường: hiển thị bảng hoặc thông báo nếu toàn bộ giá trị rỗng
+      const entries = Object.entries(output);
+      const allEmpty = entries.every(([_, value]) => !value || (typeof value === 'string' && value.trim() === ''));
+      if (allEmpty) {
+        return <div className="text-muted-foreground italic">Không có dữ liệu hiển thị.</div>;
+      }
       return (
-        <div className="mt-2">
-          <pre className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">
-            {JSON.stringify(output, null, 2)}
-          </pre>
-        </div>
+        <table className="min-w-full text-xs border mt-2">
+          <tbody>
+            {entries.map(([key, value]) => (
+              <tr key={key}>
+                <td className="font-semibold pr-2">{key}</td>
+                <td>{typeof value === "object" ? renderOutput(value) : String(value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       );
     }
 
-    // Trường hợp mặc định
-    return <div className="mt-2 text-gray-700">Không có kết quả</div>;
+    // Nếu là text thông thường
+    return <div className="text-gray-700">{String(output)}</div>;
   };
 
   if (!runs || runs.length === 0) {
@@ -431,14 +282,25 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                   <XCircle size={16} /> Chi tiết lỗi
                 </h4>
                 <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs font-mono whitespace-pre-wrap break-all">
-                  {run.error || 
+                  {run.error ||
                    run.error_message ||
-                   (run.output_data && typeof run.output_data === 'object' && 'error_message' in run.output_data && String(run.output_data.error_message)) || 
-                   (run.output_data && typeof run.output_data === 'object' && 'error' in run.output_data && 
-                    (typeof run.output_data.error === 'string' ? run.output_data.error : 
+                   (run.output_data && typeof run.output_data === 'object' && 'error_message' in run.output_data && String(run.output_data.error_message)) ||
+                   (run.output_data && typeof run.output_data === 'object' && 'error' in run.output_data &&
+                    (typeof run.output_data.error === 'string' ? run.output_data.error :
                      JSON.stringify(run.output_data.error, null, 2))
-                   ) || 
+                   ) ||
                    'Đã xảy ra lỗi không xác định'}
+                  {/* Nếu có raw_response thì cho phép xem/copy */}
+                  {run.output_data &&
+                    typeof run.output_data === 'object' &&
+                    !Array.isArray(run.output_data) &&
+                    'raw_response' in run.output_data &&
+                    run.output_data.raw_response && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Xem raw response</summary>
+                        <pre className="bg-muted rounded p-2 select-all max-h-60 overflow-auto">{String(run.output_data.raw_response)}</pre>
+                      </details>
+                  )}
                 </div>
                 <Button 
                   variant="outline"
@@ -476,47 +338,49 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
               {/* --- CẬP NHẬT: Phần hiển thị kết quả đầu ra --- */}
               <div key={`output-${run.id}-${run.status}-${run.updated_at}`}>
                 <h4 className="font-semibold mb-2 flex items-center gap-2"><FileVideo size={16} /> Kết quả (Output)</h4>
-                {(!run.output_data || Object.keys(run.output_data).length === 0) ? (
-                  <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
-                ) : (
-                  <div className="space-y-1/2">
-                    {/* Debug hiển thị cấu trúc output_data để phát hiện vấn đề */}
-                    <div className="text-xs text-muted-foreground mb-2">
-                      <code>Output type: {typeof run.output_data}</code>
-                    </div>
-                    
-                    {/* Debug hiển thị dữ liệu gốc */}
-                    <details className="text-xs mb-4">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                        Dữ liệu gốc
-                      </summary>
-                      <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">
-                        {JSON.stringify(run.output_data, null, 2)}
-                      </pre>
-                    </details>
-                    
-                    {/* Xử lý trường hợp output_data là mảng */}
-                    {Array.isArray(run.output_data) ? (
-                      <div className="space-y-4">
-                        {run.output_data.map((item, index) => (
-                          <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
-                            <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
-                            {renderOutput(item)}
-                          </div>
-                        ))}
-                      </div>
+                {(run.status === 'error' || run.status === 'failed') ? null :
+                  (
+                    (!run.output_data || Object.keys(run.output_data).length === 0) ? (
+                      <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
                     ) : (
-                      /* Xử lý trường hợp output_data là đối tượng đơn */
-                      <div key={`${run.id}-output-object-${run.updated_at}`}>
-                        {renderOutput(run.output_data)}
+                      <div className="space-y-1/2">
+                        {/* Debug hiển thị cấu trúc output_data để phát hiện vấn đề */}
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <code>Output type: {typeof run.output_data}</code>
+                        </div>
+                        {/* Debug hiển thị dữ liệu gốc */}
+                        <details className="text-xs mb-4">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Dữ liệu gốc
+                          </summary>
+                          <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">
+                            {JSON.stringify(run.output_data, null, 2)}
+                          </pre>
+                        </details>
+                        {/* Xử lý trường hợp output_data là mảng */}
+                        {Array.isArray(run.output_data) ? (
+                          <div className="space-y-4">
+                            {run.output_data.map((item, index) => (
+                              <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
+                                <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
+                                {renderOutput(item)}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          /* Xử lý trường hợp output_data là đối tượng đơn */
+                          <div key={`${run.id}-output-object-${run.updated_at}`}>
+                            {renderOutput(run.output_data)}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
+                    )
+                  )
+                }
               </div>
 
               {/* Nút thiết lập tự động (giữ nguyên) */}
-              {run.status === 'completed' && (
+              {String(run.status) === 'completed' && (
                 <div className="pt-4 border-t border-border">
                   <Button 
                     onClick={() => navigate(`/dashboard/agents/${agentId}/task/${run.task_id}/config`)}
