@@ -25,13 +25,13 @@ jobs:
             # Pull code mới nhất
             if [ -d ".git" ]; then
               git config pull.rebase false
-              git pull https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main || {
+              git pull https://${{ secrets.PAT_TOKEN }}@github.com/huycuuvan/Superb_AI_FE.git main || {
                 echo "Git pull failed, resetting repository..."
-                git fetch https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git main
+                git fetch https://${{ secrets.PAT_TOKEN }}@github.com/huycuuvan/Superb_AI_FE.git main
                 git reset --hard FETCH_HEAD
               }
             else
-              git clone https://${{ secrets.PAT_TOKEN }}@github.com/CN-LEON-DX/EmployeeAI_FE.git .
+              git clone https://${{ secrets.PAT_TOKEN }}@github.com/huycuuvan/Superb_AI_FE.git .
             fi
             
             # Tạo file docker-compose.yml nếu chưa có
