@@ -102,6 +102,9 @@ const TableRenderer = ({ node, ...props }: any) => {
   );
 };
 
+const isVideoUrl = (url: string) =>
+  /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
+
 export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessageContentProps) => {
   
   // ================================================================
@@ -178,6 +181,38 @@ export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessag
     }
   };
   const renderContent = () => {
+    // Nếu là agent và nội dung là 1 link video duy nhất
+    if (isAgent && isVideoUrl(displayedContent.trim())) {
+      return (
+        <video
+          src={displayedContent.trim()}
+          controls
+          className="max-w-xs rounded shadow mx-auto my-2"
+          style={{ maxHeight: 320 }}
+        />
+      );
+    }
+    // Nếu là agent và nội dung chứa nhiều link video, tách từng dòng
+    if (isAgent && displayedContent.split('\n').some(line => isVideoUrl(line))) {
+      return (
+        <div className="space-y-2">
+          {displayedContent.split('\n').map((line, idx) =>
+            isVideoUrl(line) ? (
+              <video
+                key={idx}
+                src={line.trim()}
+                controls
+                className="max-w-xs rounded shadow mx-auto my-2"
+                style={{ maxHeight: 320 }}
+              />
+            ) : (
+              <ReactMarkdown key={idx} {...commonMarkdownProps}>{line}</ReactMarkdown>
+            )
+          )}
+        </div>
+      );
+    }
+    // Mặc định như cũ
     if (isAgent) {
       return <ReactMarkdown {...commonMarkdownProps}>{displayedContent}</ReactMarkdown>;
     } else {

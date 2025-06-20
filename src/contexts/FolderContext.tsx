@@ -2,20 +2,20 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getFolders } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { FolderType } from '@/types';
+import { Folder } from '@/types';
 
 interface FolderContextType {
-  folders: FolderType[];
+  folders: Folder[];
   loadingFolders: boolean;
   errorFolders: Error | null;
   fetchFolders: (workspaceId: string) => Promise<void>;
-  setFolders: React.Dispatch<React.SetStateAction<FolderType[]>>;
+  setFolders: React.Dispatch<React.SetStateAction<Folder[]>>;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [folders, setFolders] = useState<FolderType[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [errorFolders, setErrorFolders] = useState<Error | null>(null);
   const { workspace } = useSelectedWorkspace();
