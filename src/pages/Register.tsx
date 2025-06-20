@@ -60,9 +60,15 @@ const Register = () => {
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       if (isApiError(err)) {
-        setError(err.message);
+        if (err.tag === "REGISTER_PASSWORD_TOO_SHORT") {
+          setError("Mật khẩu phải có ít nhất 8 ký tự");
+        } else if (err.tag === "REGISTER_EMAIL_ALREADY_EXISTS") {
+          setError("Email đã được sử dụng");
+        } else {
+          setError(err.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
+        }
       } else {
-        setError("Register failed. Please try again later.");
+        setError("Đã xảy ra lỗi. Vui lòng thử lại.");
       }
     } finally {
       setLoading(false);

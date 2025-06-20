@@ -2,13 +2,15 @@ export interface ApiError {
   message: string;
   code?: string;
   status?: number;
-  details?: any;
+  details?: unknown;
+  tag?: string;
 }
 
 export class ApiErrorException extends Error {
   code?: string;
   status?: number;
-  details?: any;
+  details?: unknown;
+  tag?: string;
 
   constructor(error: ApiError) {
     super(error.message);
@@ -16,6 +18,7 @@ export class ApiErrorException extends Error {
     this.code = error.code;
     this.status = error.status;
     this.details = error.details;
+    this.tag = error.tag;
   }
 }
 
@@ -40,7 +43,8 @@ export const handleApiError = async (response: Response): Promise<never> => {
       errorData.message = errorData.message || "Session expired";
       break;
     case 403:
-      errorData.message = errorData.message || "You are not authorized to access this resource";
+      errorData.message =
+        errorData.message || "You are not authorized to access this resource";
       break;
     case 404:
       errorData.message = errorData.message || "Resource not found";
@@ -49,7 +53,8 @@ export const handleApiError = async (response: Response): Promise<never> => {
       errorData.message = errorData.message || "Server error";
       break;
     default:
-      errorData.message = errorData.message || "This email is already in use";
+      errorData.message =
+        errorData.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
   }
 
   throw new ApiErrorException(errorData);
