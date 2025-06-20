@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { agents } from "@/services/mockData";
-import { Agent } from "@/types";
-import { Folder, MoreVertical, Edit, Pin, Trash, Plus } from 'lucide-react';
+
+import { Agent, Folder } from "@/types";
+import { MoreVertical, Edit, Pin, Trash, Plus, FolderIcon } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/useTheme';
@@ -14,11 +14,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AddAgentDialog } from '@/components/AddAgentDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getFolders, updateFolder, deleteFolder, getAgentsByFolder } from '@/services/api';
+import { updateFolder, deleteFolder, getAgentsByFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -29,11 +29,7 @@ import React from 'react';
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslation } from "react-i18next";
 
-interface FolderType {
-  id: string;
-  name: string;
-  workspace_id: string;
-}
+
 
 const Dashboard = () => {
   console.log('Dashboard rendered');
@@ -44,13 +40,13 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
+  const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
-  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
 
@@ -79,7 +75,7 @@ const Dashboard = () => {
     }
   }, [editingFolder]);
 
-  const handleRenameClick = (folder: FolderType) => {
+  const handleRenameClick = (folder: Folder) => {
     setFolderToRename(folder);
     setNewFolderName(folder.name);
     setShowRenameDialog(true);
@@ -111,7 +107,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteClick = (folder: FolderType) => {
+  const handleDeleteClick = (folder: Folder) => {
     setFolderToDelete(folder);
     setShowConfirmDeleteDialog(true);
   };
@@ -200,7 +196,7 @@ const Dashboard = () => {
             <div key={folder.id} className="mb-8 md:mb-10">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Folder className="h-5 w-5 text-gradient" />
+                  <FolderIcon className="h-5 w-5 text-gradient" />
                   <h2 
                     className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
                     onClick={() => navigate(`/dashboard/folder/${folder.id}`)}

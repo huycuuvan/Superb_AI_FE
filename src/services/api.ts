@@ -1052,3 +1052,237 @@ export const getTaskRunsByThreadId = async (
 
   return response.json();
 };
+
+export const assignAgentToFolder = async (
+  agentId: string,
+  folderId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.agents.assignToFolder(agentId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// Create system prompt template for an agent
+export const createSystemPrompt = async (promptData: {
+  agent_id: string;
+  name: string;
+  description: string;
+  template_content: string;
+  category: string;
+  template_type: string;
+  is_featured: boolean;
+  order_index: number;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.promptTemplates.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(promptData),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+// Get prompt templates by agent
+export interface PromptTemplate {
+  id: string;
+  agent_id: string;
+  name: string;
+  description: string;
+  template_content: string;
+  category: string;
+  template_type: string;
+  is_featured: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PromptTemplatesResponse {
+  data: PromptTemplate[];
+  total: number;
+  limit: number;
+  offset: number;
+  total_pages: number;
+}
+
+export const getPromptTemplatesByAgent = async (
+  agentId: string,
+  limit = 10,
+  offset = 0
+): Promise<PromptTemplatesResponse> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    API_ENDPOINTS.promptTemplates.byAgent(agentId, limit, offset),
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+// Render a prompt template
+export const renderPromptTemplate = async (
+  templateId: string,
+  data: {
+    agent_id: string;
+    workspace_id: string;
+  }
+): Promise<{ rendered_content: string }> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.promptTemplates.render(templateId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
+export const getAllPromptTemplates = async (limit = 100, offset = 0) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/prompt-templates/all?limit=${limit}&offset=${offset}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const updatePromptTemplate = async (
+  id: string,
+  data: Partial<PromptTemplate>
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/prompt-templates/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const deletePromptTemplate = async (id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/prompt-templates/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  // Nếu là 204 No Content thì không cần parse json
+  if (res.status === 204) return;
+  return res.json();
+};
+
+export const clearAgentThreadHistory = async (
+  agent_id: string,
+  workspace_id: string
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/threads/clear?agent_id=${encodeURIComponent(
+      agent_id
+    )}&workspace_id=${encodeURIComponent(workspace_id)}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  if (res.status === 204) return;
+  return res.json();
+};
+
+// Gửi message kèm file lên thread
+export const uploadMessageWithFile = async (
+  threadId: string,
+  messageContent: string,
+  file: File,
+  optimisticId: string
+): Promise<{ data: any }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const formData = new FormData();
+  formData.append("message_content", messageContent);
+  formData.append("image", file);
+  formData.append("optimistic_id", optimisticId);
+  const response = await fetch(
+    `${API_BASE_URL}/threads/${threadId}/messages/upload`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Không set Content-Type, để browser tự set boundary cho multipart/form-data
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};

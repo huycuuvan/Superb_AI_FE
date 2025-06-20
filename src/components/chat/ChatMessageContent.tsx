@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/chat/ChatMessageContent.tsx
 
-import { useState, useMemo, memo, useRef } from 'react';
+import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -19,12 +19,12 @@ import { toast } from '@/components/ui/use-toast';
 interface ChatMessageContentProps {
   content: string;
   isAgent: boolean;
+  stream: boolean;
 }
 
-const MAX_LINES_BEFORE_COLLAPSE = 5;
-const MAX_CHARS_BEFORE_COLLAPSE = 500;
+const STREAMING_SPEED = 15;
 
-// Component Nút Copy tái sử dụng
+// ... Các component CopyButton, CodeBlockRenderer, TableRenderer không thay đổi ...
 const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }) => {
   const [copied, setCopied] = useState(false);
 
@@ -48,7 +48,7 @@ const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }
         description: "Nội dung đã được sao chép vào clipboard.",
         duration: 2000,
       });
-      setTimeout(() => setCopied(false), 2000); // Reset sau 2 giây
+      setTimeout(() => setCopied(false), 2000);
     }).catch(err => {
       console.error('Không thể sao chép', err);
       toast({
@@ -81,8 +81,6 @@ const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }
     </TooltipProvider>
   );
 };
-
-// Component riêng cho code block để sử dụng useRef
 const CodeBlockRenderer = ({ node, children, ...props }: any) => {
   const preRef = useRef<HTMLPreElement>(null);
   return (
@@ -94,8 +92,6 @@ const CodeBlockRenderer = ({ node, children, ...props }: any) => {
     </div>
   );
 };
-
-// Component riêng cho table để sử dụng useRef
 const TableRenderer = ({ node, ...props }: any) => {
   const tableRef = useRef<HTMLTableElement>(null);
   return (
@@ -106,26 +102,67 @@ const TableRenderer = ({ node, ...props }: any) => {
   );
 };
 
-export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContentProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const isVideoUrl = (url: string) =>
+  /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
 
-  // --- THAY ĐỔI CỐT LÕI NẰM Ở ĐÂY ---
-  const isLongMessage = useMemo(() => {
-    // Nếu tin nhắn là của Agent, KHÔNG BAO GIỜ thu gọn.
-    if (isAgent) {
-      return false;
+export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessageContentProps) => {
+  
+  // ================================================================
+  // ===== ĐÂY LÀ SỰ THAY ĐỔI QUAN TRỌNG NHẤT ========================
+  // ================================================================
+  // Khởi tạo state một cách thông minh:
+  // - Nếu là tin nhắn cần stream, bắt đầu với chuỗi rỗng "".
+  // - Nếu không, hiển thị toàn bộ nội dung ngay lập tức.
+  const [displayedContent, setDisplayedContent] = useState(() => 
+    (isAgent && stream) ? "" : content
+  );
+
+  useEffect(() => {
+    // Nếu không cần stream, chỉ cần đảm bảo nội dung cuối cùng được hiển thị.
+    if (!stream || !isAgent) {
+      if (displayedContent !== content) {
+        setDisplayedContent(content);
+      }
+      return;
+    }
+    
+    // Nếu nội dung đã hiển thị đầy đủ, không cần làm gì thêm.
+    if (displayedContent.length === content.length) {
+      return;
     }
 
-    // Logic thu gọn chỉ áp dụng cho tin nhắn của User.
-    const lineCount = (content.match(/\n/g) || []).length + 1;
-    return lineCount > MAX_LINES_BEFORE_COLLAPSE || content.length > MAX_CHARS_BEFORE_COLLAPSE;
-  }, [content, isAgent]); // Thêm isAgent vào dependency array
+    // Logic animation dùng setTimeout, đảm bảo luôn tiếp tục từ vị trí hiện tại.
+    const timerId = setTimeout(() => {
+      // Nếu nội dung mới không phải là phần tiếp theo của nội dung cũ 
+      // (ví dụ: một tin nhắn agent mới hoàn toàn chen vào), hãy reset.
+      if (!content.startsWith(displayedContent)) {
+        setDisplayedContent(content.substring(0, 1));
+      } else {
+        // Ngược lại, tiếp tục "gõ" ký tự tiếp theo.
+        const nextCharIndex = displayedContent.length + 1;
+        setDisplayedContent(content.substring(0, nextCharIndex));
+      }
+    }, STREAMING_SPEED);
+    
+    // Dọn dẹp timer
+    return () => clearTimeout(timerId);
 
+  }, [content, stream, isAgent, displayedContent]);
+
+
+  // Logic thu gọn/mở rộng cho tin nhắn user (không đổi)
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLongMessage = useMemo(() => {
+      if (isAgent) return false;
+      const lineCount = (content.match(/\n/g) || []).length + 1;
+      return lineCount > 5 || content.length > 500;
+  }, [content, isAgent]);
+  
+  // Các hàm và JSX render khác không thay đổi...
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsExpanded(!isExpanded);
   };
-
   const commonMarkdownProps = {
     remarkPlugins: [remarkGfm],
     rehypePlugins: [rehypeRaw],
@@ -143,29 +180,51 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
       td: ({ node, ...props }: any) => <td className="border border-slate-300 dark:border-slate-700 p-2" {...props} />,
     }
   };
-
   const renderContent = () => {
+    // Nếu là agent và nội dung là 1 link video duy nhất
+    if (isAgent && isVideoUrl(displayedContent.trim())) {
+      return (
+        <video
+          src={displayedContent.trim()}
+          controls
+          className="max-w-xs rounded shadow mx-auto my-2"
+          style={{ maxHeight: 320 }}
+        />
+      );
+    }
+    // Nếu là agent và nội dung chứa nhiều link video, tách từng dòng
+    if (isAgent && displayedContent.split('\n').some(line => isVideoUrl(line))) {
+      return (
+        <div className="space-y-2">
+          {displayedContent.split('\n').map((line, idx) =>
+            isVideoUrl(line) ? (
+              <video
+                key={idx}
+                src={line.trim()}
+                controls
+                className="max-w-xs rounded shadow mx-auto my-2"
+                style={{ maxHeight: 320 }}
+              />
+            ) : (
+              <ReactMarkdown key={idx} {...commonMarkdownProps}>{line}</ReactMarkdown>
+            )
+          )}
+        </div>
+      );
+    }
+    // Mặc định như cũ
     if (isAgent) {
-      return <ReactMarkdown {...commonMarkdownProps}>{content}</ReactMarkdown>;
+      return <ReactMarkdown {...commonMarkdownProps}>{displayedContent}</ReactMarkdown>;
     } else {
-      // User message
-      const displayedContent = (isLongMessage && !isExpanded)
-        ? content.split('\n').slice(0, MAX_LINES_BEFORE_COLLAPSE).join('\n') + "\n..."
+      const userContent = (isLongMessage && !isExpanded)
+        ? content.split('\n').slice(0, 5).join('\n') + "\n..."
         : content;
-
-      return <p className="whitespace-pre-wrap break-all">{displayedContent}</p>;
+      return <p className="whitespace-pre-wrap break-all">{userContent}</p>;
     }
   };
-  
-  const containerClassName = cn(
-    'w-full',
-    isAgent ? 'text-card-foreground' : 'text-primary-foreground',
-    // Apply max-height and overflow-y only to non-agent long messages when not expanded
-    isLongMessage && !isExpanded && !isAgent && 'max-h-[60vh] overflow-y-auto'
-  );
-
+  const containerClassName = cn( 'w-full', isAgent ? 'text-card-foreground' : 'text-primary-foreground' );
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
-    <div className="absolute -top-3 right-12">
+    <div className="absolute -top-3 right-1">
         <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -181,17 +240,13 @@ export const ChatMessageContent = memo(({ content, isAgent }: ChatMessageContent
         </TooltipProvider>
     </div>
   );
-
+  
   return (
     <div className="relative pt-2">
         <div className={containerClassName}>
             {renderContent()}
         </div>
-        
-        {/* Nút bấm chỉ hiển thị nếu isLongMessage là true */}
-        {isLongMessage && (
-            <ToggleButton isExpanded={isExpanded} />
-        )}
+        {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}
     </div>
   );
 });

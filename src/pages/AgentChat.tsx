@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
   ListPlus, Book, Clock,
-  Rocket
+  Rocket, Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -22,8 +23,11 @@ import { AgentTypingIndicator } from '@/components/ui/agent-typing-indicator';
 import { ChatMessageContent } from '@/components/chat/ChatMessageContent';
 import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter } from '@/components/ui/card';
 import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
+import { PromptTemplatesModal } from '@/components/chat/PromptTemplatesModal';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 interface TaskInput {
   id: string;
@@ -47,6 +51,7 @@ interface Message {
   timestamp: string;
   sender_type: "user" | "agent";
   sender_user_id: string;
+  chat_message?: ApiMessage;
 }
 
 // Định nghĩa một kiểu dữ liệu cho output video
@@ -71,26 +76,48 @@ interface TaskLog {
 }
 
 const AgentChat = () => {
-  const { agentId, threadId: paramThreadId } = useParams<{ agentId: string, threadId?: string }>();
+  const { agentId, threadId: threadFromUrl } = useParams<{ agentId: string; threadId?: string }>();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
-  const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
+  const [isAgentThinking, setIsAgentThinking] = useState(false);
+  const { user } = useAuth();
+const [agentTargetContent, setAgentTargetContent] = useState('');
+  // Loading states
   const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false); // New state for sending message loading
-  const [currentThread, setCurrentThread] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
+
+  // Agent and workspace info
+  const [currentThread, setCurrentThread] = useState<string | null>(threadFromUrl || null);
+  const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [isAgentThinking, setIsAgentThinking] = useState(false); // New state for agent thinking indicator
-  const [isCreatingThread, setIsCreatingThread] = useState(false); // State for new thread creation loading
+
+  // Mobile sidebar state
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
+  // Ref to prevent duplicate thread creation
+  const isInitializingRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  
+  // Chat display states
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // State mới để lưu tasks được fetch từ API
   const [tasks, setTasks] = useState<ApiTaskType[]>([]); // Khởi tạo rỗng, sẽ fetch data
   
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    // Initial message, will be added after agent data is fetched
-  ]);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
+  const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+
+  // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
+  const lastAgentMessageIdRef = useRef<string | null>(null);
+  const agentDoneTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [timeoutStage, setTimeoutStage] = useState<number>(0);
+  const [showTaskHistory, setShowTaskHistory] = useState(false);
+  const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
 
   const queryClient = useQueryClient();
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null); // Ref to store WebSocket instance
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
@@ -98,18 +125,24 @@ const AgentChat = () => {
 
   const [selectedTaskInputs, setSelectedTaskInputs] = useState<{[key: string]: string}>({});
 
-  // State mới để theo dõi trạng thái thực thi của từng task: taskId -> 'idle' | 'loading' | 'success' | 'error'
-  const [taskExecutionStatus, setTaskExecutionStatus] = useState<{[taskId: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
-  // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
-  const lastAgentMessageIdRef = useRef<string | null>(null);
+  // Thêm hàm để lấy lịch sử task
+  const { 
+    data: historyData, 
+    isLoading: isLoadingHistory 
+  } = useQuery({
+    queryKey: ['taskRuns', currentThread, currentAgent?.id],
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
+      const user = JSON.parse(userStr);
+      return getTaskRunsByThreadId(user.id, currentAgent?.id || "");
+    },
+    enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
+  });
 
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false); // Thêm state
-  // const [isTimeoutOccurred, setIsTimeoutOccurred] = useState(false);
-  // const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [timeoutStage, setTimeoutStage] = useState<number>(0);
-  const [showTaskHistory, setShowTaskHistory] = useState(false);
-  const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
     if (currentThread) {
@@ -128,79 +161,102 @@ const AgentChat = () => {
 
       ws.current.onmessage = (event) => {
         try {
-          const receivedData: Message = JSON.parse(event.data);
+         
+          const receivedData: any = JSON.parse(event.data);
+          const msgData = receivedData.chat_message ? receivedData.chat_message : receivedData;
       
-          // Kiểm tra type của tin nhắn
-          if (receivedData.type === "chat") {
-            // console.log("Received chat message:", receivedData);
-
-            // Xử lý tin nhắn từ Agent (dạng chunk)
-            if (receivedData.sender_type === "agent") {
-              setIsAgentThinking(false); // Tắt trạng thái typing ngay khi nhận được tin nhắn chat từ agent
-              setTimeoutStage(0);
-              setMessages(prevMessages => {
-                // Kiểm tra xem tin nhắn cuối có phải của agent không
-                if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].sender === 'agent') {
-                    
-                    // LẤY RA TIN NHẮN CUỐI
-                    const lastMessage = prevMessages[prevMessages.length - 1];
-                    
-                    // TẠO RA MỘT OBJECT TIN NHẮN CUỐI HOÀN TOÀN MỚI VÀ ÉP KIỂU TƯỜNG MINH
-                    const updatedLastMessage: ChatMessage = {
-                        ...lastMessage, // Sao chép tất cả thuộc tính cũ
-                        content: lastMessage.content + receivedData.content, // Nối chuỗi để tạo content mới
-                        timestamp: receivedData.timestamp // Cập nhật timestamp mới
-                    };
-                    
-                    // TRẢ VỀ MỘT ARRAY MỚI: bao gồm tất cả tin nhắn cũ (trừ tin cuối) VÀ object tin nhắn mới của chúng ta
-                    return [...prevMessages.slice(0, -1), updatedLastMessage];
-
+        
+          const optimisticId = receivedData.optimistic_id || msgData.optimistic_id;
+      
+     
+          if (optimisticId) {
+            setMessages(prevMessages => {
+              const confirmedMessage: ChatMessage = {
+                id: msgData.id,
+                content: msgData.message_content || msgData.content,
+                sender: msgData.sender_type,
+                timestamp: msgData.created_at,
+                agentId: msgData.sender_agent_id,
+                image_url: msgData.image_url,
+                file_url: msgData.file_url,
+                isStreaming: false
+              };
+      
+              const indexToReplace = prevMessages.findIndex(m => m.id === optimisticId);
+      
+              if (indexToReplace !== -1) {
+                const newMessages = [...prevMessages];
+                newMessages[indexToReplace] = confirmedMessage;
+                return newMessages;
                 } else {
-                    // Nếu không có tin nhắn agent nào trước đó, tạo một tin nhắn mới và ÉP KIỂU TƯỜNG MINH
-                    const newChatMessage: ChatMessage = {
-                        id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                        content: receivedData.content,
-                        sender: 'agent', // Thay receivedData.sender_type bằng literal 'agent'
-                        timestamp: receivedData.timestamp,
-                        agentId: receivedData.sender_user_id,
-                    };
-                    return [...prevMessages, newChatMessage];
+                if (!prevMessages.some(m => m.id === confirmedMessage.id)) {
+                  return [...prevMessages, confirmedMessage];
                 }
-            })}
-            else if (receivedData.sender_type === "user") {
-              setMessages(prevMessages => {
-                const isEcho = prevMessages.some(msg =>
-                  msg.sender === 'user' &&
-                  msg.content === receivedData.content &&
-                  Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedData.timestamp).getTime()) < 3000 // lệch dưới 3s
-                );
-                if (isEcho) {
-                  // console.log("Skipping user message echo:", receivedData);
                   return prevMessages;
-                } else {
-                  // Đây có thể là tin nhắn từ user khác trong multi-user chat
-                  const newChatMessage: ChatMessage = {
-                    id: receivedData.thread_id + ":" + receivedData.timestamp + ":" + receivedData.sender_user_id + ":" + Math.random(),
-                    content: receivedData.content,
-                    sender: receivedData.sender_type, // Thay receivedData.sender_type bằng literal 'user'
-                    timestamp: receivedData.timestamp,
-                    agentId: receivedData.sender_user_id,
-                  };
-                  return [...prevMessages, newChatMessage];
-                }
-              });
+              }
+            });
+            // CHỈ tắt trạng thái đang nghĩ nếu message này là của agent
+            if (msgData.sender_type === "agent") {
+              setIsAgentThinking(false);
             }
+            return; // Kết thúc
+          }
+          
+       
+          if (receivedData.type === "chat" && msgData.sender_type === "agent") {
+            
+            setTimeoutStage(0);
+            setMessages(prevMessages => {
+              const lastMessageIndex = prevMessages.length - 1;
+              if (prevMessages.length > 0 && prevMessages[lastMessageIndex].sender === 'agent' && prevMessages[lastMessageIndex].isStreaming) {
+                const lastMessage = prevMessages[lastMessageIndex];
+                const updatedContent = msgData.message_content || msgData.content;
+                const updatedLastMessage: ChatMessage = {
+                  ...lastMessage,
+                  content: updatedContent,
+                  timestamp: msgData.created_at || receivedData.timestamp,
+                };
+                const updatedMessages = [...prevMessages];
+                updatedMessages[lastMessageIndex] = updatedLastMessage;
+                return updatedMessages;
+              } else {
+                const newChatMessage: ChatMessage = {
+                  id: msgData.id || `ws-${Date.now()}`,
+                  content: msgData.message_content || msgData.content,
+                  sender: msgData.sender_type,
+                  timestamp: msgData.created_at || receivedData.timestamp,
+                  agentId: msgData.sender_user_id,
+                  image_url: msgData.image_url,
+                  file_url: msgData.file_url,
+                  isStreaming: true,
+                };
+                if (prevMessages.some(m => m.id === newChatMessage.id)) return prevMessages;
+                return [...prevMessages, newChatMessage];
+              }
+            });
+            return;
+          }
+      
 
-          } else if (receivedData.type === "typing") {
-             if (receivedData.sender_type === "agent") {
-                setIsAgentThinking(true);
-             }
-          } else if (receivedData.type === "done") {
+          if (receivedData.type === "done") {
             lastAgentMessageIdRef.current = null;
-            setIsAgentThinking(false); // Dừng các chỉ báo chờ
-            setTimeoutStage(0);      // Reset stage
-           
-          } else if (receivedData.type === "status") {
+            setIsAgentThinking(false);
+            setTimeoutStage(0);
+            setMessages(prevMessages => {
+              if (prevMessages.length === 0) return prevMessages;
+              const lastMessageIndex = prevMessages.length - 1;
+              const lastMessage = prevMessages[lastMessageIndex];
+              if (lastMessage.sender === 'agent' && lastMessage.isStreaming) {
+                const finalizedMessage = { ...lastMessage, isStreaming: false };
+                const updatedMessages = [...prevMessages];
+                updatedMessages[lastMessageIndex] = finalizedMessage;
+                return updatedMessages;
+              }
+              return prevMessages;
+            });
+            return;
+          }
+          if (receivedData.type === "status") {
            
             try {
                 const statusUpdate = JSON.parse(receivedData.content);
@@ -215,7 +271,7 @@ const AgentChat = () => {
                                 return {
                                     ...run,
                                     status: statusUpdate.status,
-                                    output_data: statusUpdate.response || run.output_data,
+                                    output_data: statusUpdate.result ?? statusUpdate.response ?? run.output_data,
                                     updated_at: new Date().toISOString(),
                                     error: (statusUpdate.status === 'error' || statusUpdate.status === 'failed') ? (statusUpdate.message || statusUpdate.error_message || 'Đã xảy ra lỗi.') : undefined,
                                 };
@@ -231,10 +287,10 @@ const AgentChat = () => {
             } catch (e) {
                 console.error("Error parsing status update: ", e);
             }
-        }
+          }
+      
         } catch (error) {
-          // console.error("Error processing WebSocket message:", error);
-          // console.error("Raw WebSocket data that caused error:", event.data);
+          console.error("Error processing WebSocket message:", error);
         }
       };
   
@@ -292,8 +348,12 @@ const AgentChat = () => {
     };
   }, [isAgentThinking]);
   useEffect(() => {
-    if (agentId) {
+    if (agentId && !hasInitializedRef.current && !isInitializingRef.current) {
       const initializeChat = async () => {
+        // Prevent duplicate initializations
+        if (isInitializingRef.current) return;
+        isInitializingRef.current = true;
+        
         try {
           setIsLoading(true);
           
@@ -312,28 +372,25 @@ const AgentChat = () => {
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
-          console.log('Agent loaded:', agentData.data
-          );
+          console.log('Agent loaded:', agentData.data);
 
           // TODO: Fetch tasks for the agent
           if (agentId) {
             try {
-              const agentTasksResponse = await getAgentTasks(agentId); // Gọi API mới
+              const agentTasksResponse = await getAgentTasks(agentId);
               if (agentTasksResponse.data) {
-                // Mapping dữ liệu từ API nếu cần, đảm bảo khớp với TaskWithInputs[]
-                // Hiện tại giả định cấu trúc trả về từ API khớp
                 setTasks(agentTasksResponse.data);
                 console.log("Fetched tasks:", agentTasksResponse.data);
               }
             } catch (taskError) {
               console.error('Error fetching agent tasks:', taskError);
-              // Xử lý lỗi fetch tasks
             }
           }
 
-          let threadId: string | null = null;
+          let threadId: string | null = currentThread;
           let initialMessages: ChatMessage[] = [];
 
+          // Check if we already have a thread ID from URL or state
           if (!threadId) {
             let threadCheck = null;
             if (currentWorkspaceId) {
@@ -349,7 +406,9 @@ const AgentChat = () => {
                     content: msg.message_content,
                     sender: msg.sender_type,
                     timestamp: msg.created_at,
-                    agentId: msg.sender_agent_id
+                    agentId: msg.sender_agent_id,
+                    image_url: msg.image_url,
+                    file_url: msg.file_url,
                 })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
                 if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -358,7 +417,9 @@ const AgentChat = () => {
                     content: agentData.data.greeting_message || 'Hello! How can I help you?',
                     sender: 'agent',
                     timestamp: new Date().toISOString(),
-                    agentId: agentData.data.id
+                    agentId: agentData.data.id,
+                    image_url: agentData.data.image_url,
+                    file_url: agentData.data.file_url,
                   };
                   initialMessages.push(welcomeMessage);
                 }
@@ -370,6 +431,10 @@ const AgentChat = () => {
                 console.error('Error fetching initial messages:', fetchError);
               }
             } else {
+              // Tạo thread mới khi không tồn tại thread nào, bất kể fromProfile là gì
+              console.log("No existing thread found, creating a new one");
+                
+              // Tạo thread mới
               const threadData = {
                 agent_id: agentId,
                 workspace_id: currentWorkspaceId,
@@ -383,11 +448,14 @@ const AgentChat = () => {
                 content: agentData.data.greeting_message || 'Hello! How can I help you?',
                 sender: 'agent',
                 timestamp: new Date().toISOString(),
-                agentId: agentData.data.id
+                agentId: agentData.data.id,
+                image_url: agentData.data.image_url,
+                file_url: agentData.data.file_url,
               };
               initialMessages = [welcomeMessage];
             }
           } else {
+            // If threadId was already available, fetch its messages
             try {
               const messagesResponse = await getThreadMessages(threadId);
               initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
@@ -395,7 +463,9 @@ const AgentChat = () => {
                   content: msg.message_content,
                   sender: msg.sender_type,
                   timestamp: msg.created_at,
-                  agentId: msg.sender_agent_id
+                  agentId: msg.sender_agent_id,
+                  image_url: msg.image_url,
+                  file_url: msg.file_url,
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
               if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -404,7 +474,9 @@ const AgentChat = () => {
                   content: agentData.data.greeting_message || 'Hello! How can I help you?',
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
-                  agentId: agentData.data.id
+                  agentId: agentData.data.id,
+                  image_url: agentData.data.image_url,
+                  file_url: agentData.data.file_url,
                 };
                 initialMessages.push(welcomeMessage);
               }
@@ -414,79 +486,123 @@ const AgentChat = () => {
             }
           }
 
+          // Only update state if component is still mounted
           setCurrentThread(threadId);
           setMessages(initialMessages);
           console.log("Thread ID set to:", threadId);
+          
+          // Mark as initialized to prevent duplicate initialization
+          hasInitializedRef.current = true;
 
         } catch (error) {
           console.error('Error initializing chat:', error);
         } finally {
           setIsLoading(false);
+          isInitializingRef.current = false;
         }
       };
 
       initializeChat();
     }
-  }, [agentId]);
+  }, [agentId, currentThread]);
 
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 150;
+  
+      // Luôn cuộn xuống nếu agent vừa trả lời xong (isAgentThinking chuyển từ true -> false)
+      // Hoặc nếu người dùng đang ở cuối
+      if (isAtBottom || !isAgentThinking) {
+        requestAnimationFrame(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+      }
     }
-  }, [messages]);
+    // THÊM `isAgentThinking` VÀO ĐÂY
+  }, [messages, messages[messages.length - 1]?.content, isAgentThinking]);
 
-  const handleSendMessage = async () => { // Made async
-    if (message.trim() && currentThread) { // Check if threadId exists
-      setIsSending(true); // Start loading
-      setIsAgentThinking(true); // Khóa input, chờ agent trả lời
-      setTimeoutStage(0);
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    
+    // Chỉ thực hiện sau khi đã tải xong dữ liệu (isLoading = false)
+    if (!isLoading && chatContainer) {
+      // Dùng setTimeout để đảm bảo DOM đã được render đầy đủ trước khi cuộn.
+      // Đây là một kỹ thuật phổ biến để tăng độ ổn định.
+      const timer = setTimeout(() => {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 100); // Đợi 100ms
 
-      // Set a timeout for the agent's response (e.g., 30 seconds)
+      // Dọn dẹp timer khi component bị unmount
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(), // Temporary ID
+  const handleSendMessage = () => {
+    // Cho phép gửi nếu có text hoặc có ảnh
+    if ((message.trim() || imageFile) && currentThread) {
+      setIsSending(true);
+  
+      // Tạo ID tạm thời duy nhất
+      const optimisticId = `optimistic-${Date.now()}`;
+      
+      // Tạo tin nhắn tạm thời để hiển thị ngay
+      const optimisticMessage: ChatMessage = {
+        id: optimisticId,
         content: message,
         sender: 'user',
         timestamp: new Date().toISOString(),
-        // agentId is not applicable for user message sent from frontend
+        file_url: imagePreview || undefined,
+        image_url: imagePreview || undefined,
       };
-      
-      // Thêm tin nhắn của người dùng vào state ngay lập tức để cập nhật UI
+  
+      // Cập nhật UI ngay lập tức
+      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+  
+      // Lưu lại dữ liệu để gửi đi
+      const messageToSend = message;
+      const fileToSend = imageFile;
+      const threadIdToSend = currentThread;
+  
+      // Xóa input
       setMessage('');
-      
-      try {
-        // ** Thay thế gọi API REST bằng gửi qua WebSocket **
-        const messageToSend = {
-          type: "chat", // Loại tin nhắn
-          thread_id: currentThread, // ID của thread
-          content: userMessage.content, // Nội dung tin nhắn
-          sender_type: userMessage.sender, // Loại người gửi (user)
-          sender_user_id: "current_user_placeholder_id", // Placeholder cho UserID
-        };
-
-        ws.current?.send(JSON.stringify(messageToSend)); // Gửi tin nhắn qua WebSocket
-        setIsSending(false); 
-      } catch (error) {
-        console.error('Error sending message via WebSocket:', error);
-        setIsSending(false);
-        setIsAgentThinking(false); // Stop typing indicator
-
-        toast({
-          title: "Lỗi!",
-          description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
-          variant: "destructive",
-        });
-        // Xử lý lỗi: có thể hiển thị thông báo cho người dùng
+      setImageFile(null);
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-
-    } else if (aboveInputContent === 'knowledge') {
-       console.log("Sending message with knowledge context:", selectedTaskInputs);
-       // Logic xử lý knowledge context (nếu có)
-       setMessage('');
-       setAboveInputContent('none'); 
+      
+      // Gửi dữ liệu trong nền
+      if (fileToSend) { // Trường hợp có ảnh
+        setIsAgentThinking(true);
+        uploadMessageWithFile(threadIdToSend, messageToSend, fileToSend, optimisticId)
+          .catch(error => {
+            console.error('Error sending message with file:', error);
+            toast({ variant: "destructive", title: "Lỗi", description: "Gửi ảnh thất bại." });
+            setMessages(prev => prev.filter(m => m.id !== optimisticId));
+          })
+          .finally(() => {
+            setIsSending(false);
+          });
+      } else { // Trường hợp chỉ có text
+        
+        // ===== ĐIỂM SỬA QUAN TRỌNG CHO CLIENT =====
+        const messageToSendObj = {
+          type: "chat",
+          thread_id: threadIdToSend,
+          content: messageToSend,
+          sender_type: "user",
+          sender_user_id: user?.id,
+          message_id: optimisticId, // <-- THÊM DÒNG NÀY ĐỂ GỬI ID TẠM THỜI
+        };
+        // ===========================================
+  
+        ws.current?.send(JSON.stringify(messageToSendObj));
+        setIsSending(false); 
+        setIsAgentThinking(true);
+      }
     }
   };
-  
 
   
   const handleTaskSelect = (task: ApiTaskType) => {
@@ -553,19 +669,48 @@ const AgentChat = () => {
           content: msg.message_content,
           sender: msg.sender_type,
           timestamp: msg.created_at,
-          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+          agentId: msg.sender_agent_id,
+          image_url: msg.image_url,
+          file_url: msg.file_url,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setMessages(initialMessages); // Sử dụng messages từ backend
+      
+      // Thêm tin nhắn chào mừng nếu không có tin nhắn ban đầu
+      if (initialMessages.length === 0 && currentAgent?.greeting_message) {
+        const welcomeMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: currentAgent.greeting_message || 'Hello! How can I help you?',
+          sender: 'agent',
+          timestamp: new Date().toISOString(),
+          agentId: currentAgent.id,
+          image_url: currentAgent.image_url,
+          file_url: currentAgent.file_url,
+        };
+        setMessages([welcomeMessage]);
+      }
 
-      navigateToAgentChat(agentId); // Giữ lại navigate helper
+      // Không cần navigateToAgentChat vì đã ở đúng trang
+      // navigateToAgentChat(agentId);
+      
+      // Cập nhật URL không reload trang
+      window.history.replaceState(null, '', `/dashboard/agents/${agentId}`);
+      
+      // Cập nhật danh sách threads trong sidebar
+      queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
+      
       setIsCreatingThread(false); // End loading on success
 
+      // Hiển thị thông báo thành công
+      toast({
+        title: "Thành công!",
+        description: "Đã tạo cuộc hội thoại mới.",
+      });
     }
   } catch (error) {
     console.error('Lỗi khi tạo thread mới:', error);
-            toast({
-              title: "Lỗi!",
+    toast({
+      title: "Lỗi!",
       description: `Không thể tạo cuộc hội thoại mới: ${error instanceof Error ? error.message : String(error)}`,
       variant: "destructive",
     });
@@ -676,7 +821,9 @@ const handleSubmitTaskInputs = async () => {
           content: msg.message_content,
           sender: msg.sender_type,
           timestamp: msg.created_at,
-          agentId: msg.sender_agent_id // Giả định agentId có trong ApiMessage
+          agentId: msg.sender_agent_id,
+          image_url: msg.image_url,
+          file_url: msg.file_url,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Update the state with messages from the clicked thread
@@ -686,7 +833,9 @@ const handleSubmitTaskInputs = async () => {
           content: currentAgent.greeting_message || 'Hello! How can I help you?',
           sender: 'agent',
           timestamp: new Date().toISOString(),
-          agentId: currentAgent.id
+          agentId: currentAgent.id,
+          image_url: currentAgent.image_url,
+          file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
       } else {
@@ -722,31 +871,18 @@ const handleSubmitTaskInputs = async () => {
   // Helper function for navigation
   const navigateToAgentChat = (agentId: string) => {
     if (agentId) {
-      navigate(`/dashboard/agents/${agentId}`);
+      navigate(`/dashboard/agents/${agentId}?fromProfile=true`);
     }
   };
 
   const { t } = useLanguage();
 
-  // Thêm hàm để lấy lịch sử task
-  const { 
-    data: historyData, 
-    isLoading: isLoadingHistory 
-  } = useQuery({
-    queryKey: ['taskRuns', currentThread, currentAgent?.id],
-    queryFn: () => {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
-      const user = JSON.parse(userStr);
-      return getTaskRunsByThreadId(user.id, currentAgent?.id || "");
-    },
-    enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
-  });
   useEffect(() => {
     const runsFromApi = historyData?.data;
 
-    // Chỉ cập nhật từ API nếu có dữ liệu mới và state đang rỗng
-    if (runsFromApi && taskRunItems.length === 0) {
+    // Chỉ cập nhật từ API nếu có dữ liệu mới và state đang rỗng hoặc khi có cập nhật từ API
+    if (runsFromApi && Array.isArray(runsFromApi)) {
+        console.log(`[AgentChat] Nhận được ${runsFromApi.length} task runs từ API`);
         // Ánh xạ lại dữ liệu để chuẩn hóa thuộc tính lỗi
         const mappedRuns = runsFromApi.map(run => ({
             ...run,
@@ -755,17 +891,115 @@ const handleSubmitTaskInputs = async () => {
             error: run.error || 
                   (run.output_data && typeof run.output_data === 'object' && 
                    'error_message' in run.output_data ? String(run.output_data.error_message) : undefined),
+            // Thêm trường để force re-render
+            _lastUpdate: Date.now()
         }));
 
         // Sắp xếp dữ liệu đã được chuẩn hóa
         const sortedRuns = [...mappedRuns].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
         
-        setTaskRunItems(sortedRuns);
+        // Hợp nhất dữ liệu mới và dữ liệu hiện tại dựa vào ID
+        // Ưu tiên dữ liệu từ taskRunItems vì có thể được cập nhật từ websocket
+        const mergedRuns = sortedRuns.map(apiRun => {
+            const localRun = taskRunItems.find(item => item.id === apiRun.id);
+            if (localRun) {
+                // Nếu dữ liệu local mới hơn, thì ưu tiên sử dụng local
+                if (new Date(localRun.updated_at).getTime() > new Date(apiRun.updated_at).getTime()) {
+                    console.log(`Sử dụng dữ liệu local cho Task ID ${apiRun.id} vì mới hơn`);
+                    return localRun;
+                }
+            }
+            return apiRun;
+        });
+        
+        // Kiểm tra xem có run mới trong taskRunItems nhưng chưa có trong API
+        const additionalRuns = taskRunItems.filter(
+            localRun => !sortedRuns.some(apiRun => apiRun.id === localRun.id)
+        );
+        
+        // Kết hợp và sắp xếp lại tất cả 
+        const combinedRuns = [...additionalRuns, ...mergedRuns].sort(
+            (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+        );
+        
+        console.log(`[AgentChat] Cập nhật taskRunItems với ${combinedRuns.length} task runs sau khi merge`);
+        setTaskRunItems(combinedRuns);
     }
-}, [historyData, taskRunItems.length]);
+}, [historyData]);
 
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [showPromptTemplatesModal, setShowPromptTemplatesModal] = useState(false);
+
+  // Handle selecting a prompt template
+  const handleSelectPrompt = (renderedPrompt: string) => {
+    setMessage(renderedPrompt);
+  };
+
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
+
+  const handleClearHistory = async () => {
+    if (!currentAgent?.id || !workspace?.id) return;
+    setIsClearingHistory(true);
+    try {
+      await clearAgentThreadHistory(currentAgent.id, workspace.id);
+      toast({ title: 'Đã xóa lịch sử trò chuyện', variant: 'default' });
+      // Refetch threads list (đúng queryKey)
+      queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
+      setCurrentThread(null);
+      setMessages([]);
+      setShowClearHistoryModal(false);
+    } catch (err) {
+      toast({ title: 'Xóa lịch sử thất bại', description: String(err), variant: 'destructive' });
+    } finally {
+      setIsClearingHistory(false);
+    }
+  };
+
+  // Helper: kiểm tra thread hiện tại đã có tin nhắn user chưa
+  const hasUserMessage = messages.some(msg => msg.sender === 'user');
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const handleInputAutoGrow = (e?: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+  };
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setImageFile(file);
+          setImagePreview(URL.createObjectURL(file));
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -823,7 +1057,7 @@ const handleSubmitTaskInputs = async () => {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 text-white">
-                  {threadsData?.data?.map((thread, index, arr) => (
+                  {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
                     <div key={thread.id}>
                       <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
                         <Button variant='primary' className="text-sm font-medium" onClick={() => handleThreadClick(thread.id)}>
@@ -834,7 +1068,7 @@ const handleSubmitTaskInputs = async () => {
                         <div className="border-b border-muted-foreground/20 my-2"></div>
                       )}
                     </div>
-                  ))}
+                  )) : <div className="text-center p-2">Không có cuộc hội thoại nào</div>}
                 </div>
               </>
             )}
@@ -874,19 +1108,22 @@ const handleSubmitTaskInputs = async () => {
               </div>
             </div>
             <div className="p-4 border-b">
-              <Button variant="primary"  className="w-full flex items-center justify-center space-x-2" onClick={() => handleNewChat(currentAgent?.id)}
-                disabled={isCreatingThread || isLoading} // Disable when creating or initial loading
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 rounded-xl group transition-all duration-200 "
+                onClick={() => handleNewChat(currentAgent?.id)}
+                disabled={isCreatingThread || isLoading || (!!currentThread && !hasUserMessage)}
               >
                 {isCreatingThread ? (
-                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span> // Spinner
+                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
                 ) : (
                   <Plus className="h-4 w-4 " />
                 )}
-                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span> {/* Change text and color */}
+                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span>
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {threadsData?.data?.map((thread, index, arr) => (
+              {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
                 <div key={thread.id}>
                   <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
                     <button className="text-sm font-medium " onClick={() => handleThreadClick(thread.id)}>
@@ -897,11 +1134,38 @@ const handleSubmitTaskInputs = async () => {
                     <div className="border-b border-muted-foreground/20 my-2"></div>
                   )}
                 </div>
-              ))}
+              )) : <div className="text-center text-muted-foreground p-2">Không có cuộc hội thoại nào</div>}
             </div>
           </>
         )}
       </aside>
+
+      {/* Button nổi xóa lịch sử trò chuyện và AlertDialog đặt ngoài sidebar */}
+      <Button
+        variant="primary"
+        className="fixed md:absolute left-0 md:left-auto bottom-4 md:bottom-6 w-[90vw] md:w-56 mx-4 md:mx-4 z-1 pointer-events-auto flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 animate-bounce"
+        onClick={() => setShowClearHistoryModal(true)}
+        disabled={isClearingHistory || isLoading}
+      >
+        <X className="h-4 w-4" />
+        <span>Xóa lịch sử trò chuyện</span>
+      </Button>
+      <AlertDialog open={showClearHistoryModal} onOpenChange={setShowClearHistoryModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn với agent này trong workspace hiện tại và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingHistory}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearHistory} disabled={isClearingHistory} className="bg-destructive text-white">
+              {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background">
@@ -960,8 +1224,18 @@ const handleSubmitTaskInputs = async () => {
                   <ChatMessageContent
                     content={msg.content}
                     isAgent={msg.sender === 'agent'}
-                   
+                    stream={msg.isStreaming ?? false}
                   />
+                  {/* Hiển thị ảnh nếu có image_url hoặc file_url */}
+                  {(msg.image_url || msg.file_url) && (
+                    <div style={{ marginTop: 8 }}>
+                      <img
+                        src={msg.image_url || msg.file_url}
+                        alt="uploaded"
+                        style={{ maxWidth: 300, borderRadius: 8 }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {msg.sender === 'user' && (
                                 <Avatar className="h-9 w-9 flex-shrink-0">
@@ -1077,25 +1351,52 @@ const handleSubmitTaskInputs = async () => {
                   </div>
                 )}
 
-{isAgentThinking && (
-                  <AgentTypingIndicator
-                    agentName={currentAgent?.name}
-                    agentAvatar={currentAgent?.avatar}
-                    stage={timeoutStage} 
-                  />
-                )}
+{(() => {
+  // Lấy ra tin nhắn cuối cùng trong danh sách
+  const lastMessage = messages[messages.length - 1];
+  // Kiểm tra xem có phải agent đang trong quá trình streaming hay không
+  const isAgentCurrentlyStreaming = lastMessage?.sender === 'agent' && lastMessage.isStreaming;
+
+  // Chỉ hiển thị chỉ báo "..." KHI agent đang nghĩ VÀ CHƯA bắt đầu streaming
+  if (isAgentThinking && !isAgentCurrentlyStreaming) {
+    return (
+      <AgentTypingIndicator
+        agentName={currentAgent?.name}
+        agentAvatar={currentAgent?.avatar}
+        stage={timeoutStage}
+      />
+    );
+  }
+  
+  // Trả về null trong các trường hợp khác
+  return null;
+})()}
 
               <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
+                            {/* Preview ảnh phía trên input chat */}
+                            {imagePreview && (
+                              <div className="mb-2 relative w-24 h-24">
+                                <img src={imagePreview} alt="preview" className="rounded-lg object-cover w-full h-full" />
+                                <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full" onClick={handleRemoveImage}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            <div className="flex items-end relative">
                             <Textarea
+                                ref={textareaRef}
                                 placeholder={t('common.askAI')}
-                                className="w-full rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
+                                className="w-full no-scrollbar rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
                                 value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                onChange={(e) => { setMessage(e.target.value); handleInputAutoGrow(e); }}
+                                onInput={handleInputAutoGrow}
                                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
                                 rows={1}
                                 disabled={isSending || isAgentThinking || !currentThread}
+                                style={{ overflow: 'auto', maxHeight: '300px' }}
+                                onPaste={handlePaste}
                             />
                             <Button
                                 type="submit"
@@ -1106,13 +1407,23 @@ const handleSubmitTaskInputs = async () => {
                             >
                                 <Send className="h-5 w-5" />
                             </Button>
+                            </div>
                         </div>
                         <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" title="Đính kèm tệp"><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Gợi ý prompt" 
+                                  onClick={() => setShowPromptTemplatesModal(true)}
+                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+                                >
+                                  <Lightbulb className="h-5 w-5" />
+                                </Button>
                                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMobileSidebar(true)}><Clock className="h-5 w-5 text-muted-foreground"/></Button>
                             </div>
                             <p className="text-xs text-muted-foreground">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
@@ -1131,8 +1442,22 @@ const handleSubmitTaskInputs = async () => {
             tasks={tasks}
             onTaskSelect={handleTaskSelect} // Dùng lại hàm cũ để mở ô nhập liệu
         />
+      <PromptTemplatesModal
+        open={showPromptTemplatesModal}
+        onOpenChange={setShowPromptTemplatesModal}
+        agent={currentAgent}
+        onSelectPrompt={handleSelectPrompt}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        />
     </div>
   );
 };
 
 export default AgentChat;
+

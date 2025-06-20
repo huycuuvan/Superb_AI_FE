@@ -37,6 +37,8 @@ export interface Agent {
   created_at: string;
   updated_at: string;
   folders: Folder[];
+  image_url?: string;
+  file_url?: string;
 }
 
 export interface ApiTaskType {
@@ -111,6 +113,8 @@ export interface ApiMessage {
   created_at: string;
   updated_at: string;
   parent_message_id?: string; // For replies
+  image_url?: string;
+  file_url?: string;
 }
 
 export interface ChatTask {
@@ -126,6 +130,9 @@ export interface ChatMessage {
   sender: "user" | "agent";
   timestamp: string;
   agentId?: string;
+  image_url?: string;
+  file_url?: string;
+  isStreaming?: boolean;
 }
 
 export interface SidebarItem {

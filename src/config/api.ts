@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
     byFolder: `${API_BASE_URL}/agents/by-folder`,
     delete: (id: string) => `${API_BASE_URL}/agents/${id}`,
     getById: (id: string) => `${API_BASE_URL}/agents/${id}`,
+    assignToFolder: (id: string) => `${API_BASE_URL}/agents/${id}/folders`,
   },
   tasks: {
     base: `${API_BASE_URL}/tasks`,
@@ -61,5 +62,15 @@ export const API_ENDPOINTS = {
   },
   messages: {
     list: `${API_BASE_URL}/messages`,
+  },
+  promptTemplates: {
+    create: `${API_BASE_URL}/prompt-templates`,
+    list: `${API_BASE_URL}/prompt-templates`,
+    getById: (id: string) => `${API_BASE_URL}/prompt-templates/${id}`,
+    update: (id: string) => `${API_BASE_URL}/prompt-templates/${id}`,
+    delete: (id: string) => `${API_BASE_URL}/prompt-templates/${id}`,
+    byAgent: (agentId: string, limit = 10, offset = 0) =>
+      `${API_BASE_URL}/prompt-templates/by-agent/${agentId}?template_type=user_prompt&limit=${limit}&offset=${offset}`,
+    render: (id: string) => `${API_BASE_URL}/prompt-templates/${id}/render`,
   },
 };

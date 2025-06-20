@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { FiSearch, FiArrowRight, FiCode, FiUsers, FiLock, FiGithub, FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi';
 import Lottie from 'lottie-react';
 
 // Lottie URL Loader Component
@@ -179,705 +180,7 @@ const AnimatedSection = ({ children, className = '' }: { children: React.ReactNo
     );
 };
 
-// Header Component
-const Header = ({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () => void }) => {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const navLinks = [
-        { name: 'Features', href: '#features' }, 
-        { name: 'Pricing', href: '#pricing' }, 
-        { name: 'Testimonials', href: '#testimonials' }, 
-        { name: 'Affiliate', href: '#' }, 
-    ];
-
-    const handleScrollTo = (e: React.MouseEvent, href: string) => {
-        e.preventDefault();
-        document.querySelector(href)?.scrollIntoView({
-            behavior: 'smooth'
-        });
-        setIsMenuOpen(false);
-    };
-
-  return (
-        <>
-            <header className={`${isDark ? 'bg-slate-900/80 text-white border-slate-700/60' : 'bg-white/80 text-slate-800 border-gray-200/70'} backdrop-blur-lg sticky top-0 z-50 border-b`}>
-                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                    <Link to="/" className="flex items-center space-x-3 group relative z-10">
-                        <div className={`p-2 ${isDark ? 'bg-gradient-to-br from-cyan-500 to-blue-600 group-hover:shadow-cyan-400/30' : 'bg-gradient-to-br from-purple-600 to-indigo-600 group-hover:shadow-purple-400/30'} rounded-lg shadow-lg transition-all duration-300 group-hover:scale-105`}>
-                            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-                        </div>
-                        <span className={`font-bold text-xl ${isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-800 group-hover:text-purple-600'} transition-colors`}>SuperbAI</span>
-          </Link>
-          
-                    <nav className="hidden lg:flex items-center space-x-8">
-                        {navLinks.map(link => (
-                            <a key={link.name} href={link.href} onClick={(e) => handleScrollTo(e, link.href)} className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-purple-600'} transition-colors font-medium`}>{link.name}</a>
-          ))}
-          </nav>
-
-        <div className="flex items-center space-x-4">
-                        <button 
-                            onClick={toggleTheme}
-                            className={`p-2 rounded-lg ${isDark ? 'bg-slate-800 text-cyan-400 hover:bg-slate-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}
-                            aria-label="Toggle theme"
-                        >
-                            {isDark ? <SunIcon /> : <MoonIcon />}
-                        </button>
-                        <Link to="/login" className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-purple-600'} transition-colors hidden sm:block font-medium`}>Log in</Link>
-                        <Link to="/register" className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg`}>
-                            Try for Free
-            </Link>
-                        <button className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                            {isMenuOpen ? <CloseIcon className={isDark ? "text-slate-300" : "text-slate-600"} /> : <MenuIcon className={isDark ? "text-slate-300" : "text-slate-600"} />}
-                        </button>
-          </div>
-        </div>
-      </header>
-
-            {/* Mobile Menu */}
-            <div className={`fixed inset-0 ${isDark ? 'bg-slate-900' : 'bg-white'} z-40 transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out lg:hidden`}>
-                <nav className="flex flex-col items-center justify-center h-full space-y-8">
-                    {navLinks.map(link => (
-                        <a key={link.name} href={link.href} onClick={(e) => handleScrollTo(e, link.href)} className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-purple-600'} transition-colors text-2xl font-medium`}>{link.name}</a>
-                    ))}
-                </nav>
-            </div>
-        </>
-    );
-};
-
-// Hero Component
-const Hero = ({ isDark }: { isDark: boolean }) => {
-    const aiAgents = [
-        { title: "AI Business Analyst", description: "Generate detailed business reports from raw data.", img: isDark ? "https://placehold.co/300x168/0F172A/0EA5E9?text=Analyst&font=raleway" : "https://placehold.co/300x168/EDE9FE/4C1D95?text=Analyst&font=raleway", views: "5M+ reports generated" },
-        { title: "AI Sales Agent", description: "Automate your sales funnel and customer outreach.", img: isDark ? "https://placehold.co/300x168/0F172A/0d9488?text=Sales&font=raleway" : "https://placehold.co/300x168/F5D0FE/701A75?text=Sales&font=raleway", views: "3.2M+ deals closed" },
-        { title: "AI Marketing Guru", description: "Craft multi-channel marketing strategies.", img: isDark ? "https://placehold.co/300x168/0F172A/f59e0b?text=Marketing&font=raleway" : "https://placehold.co/300x168/FEF3C7/92400E?text=Marketing&font=raleway", views: "4.1M+ campaigns launched" },
-        { title: "AI Content Creator", description: "Produce professional multimedia content in minutes.", img: isDark ? "https://placehold.co/300x168/0F172A/be123c?text=Content&font=raleway" : "https://placehold.co/300x168/FEE2E2/991B1B?text=Content&font=raleway", views: "6.8M+ assets created" },
-        { title: "AI Financial Analyst", description: "Analyze financial data and forecast trends.", img: isDark ? "https://placehold.co/300x168/0F172A/16a34a?text=Finance&font=raleway" : "https://placehold.co/300x168/D1FAE5/065F46?text=Finance&font=raleway", views: "2.9M+ analyses performed" },
-        { title: "AI Support Specialist", description: "Provide 24/7 customer support with intelligent AI.", img: isDark ? "https://placehold.co/300x168/0F172A/6d28d9?text=Support&font=raleway" : "https://placehold.co/300x168/E0E7FF/3730A3?text=Support&font=raleway", views: "8.5M+ tickets resolved" },
-        { title: "AI Data Scientist", description: "Unlock insights with big data and machine learning.", img: isDark ? "https://placehold.co/300x168/0F172A/db2777?text=Data+Sci&font=raleway" : "https://placehold.co/300x168/FCE7F3/9D2670?text=Data+Sci&font=raleway", views: "1.7M+ models trained" },
-        { title: "AI HR Manager", description: "Streamline recruitment and HR processes.", img: isDark ? "https://placehold.co/300x168/0F172A/2563eb?text=HR&font=raleway" : "https://placehold.co/300x168/DBEAFE/1E40AF?text=HR&font=raleway", views: "3.4M+ candidates sourced" },
-    ];
-
-  return (
-        <section className={`${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-800'} relative overflow-hidden`}>
-            <div className="absolute inset-0 w-full h-full overflow-hidden opacity-50">
-                <div className={`absolute top-0 -left-1/4 w-full h-full ${isDark ? 'bg-gradient-radial from-cyan-500/10 via-blue-600/10 to-transparent' : 'bg-gradient-radial from-purple-200/30 via-indigo-200/30 to-transparent'} rounded-full filter blur-3xl animate-pulse`}></div>
-                <div className={`absolute bottom-0 -right-1/4 w-full h-full ${isDark ? 'bg-gradient-radial from-blue-600/10 via-cyan-500/10 to-transparent' : 'bg-gradient-radial from-indigo-200/30 via-purple-200/30 to-transparent'} rounded-full filter blur-3xl animate-pulse animation-delay-1000`}></div>
-      </div>
-
-            <div className="container mx-auto px-6 pt-24 pb-28 relative z-10">
-                <div className="flex flex-col lg:flex-row items-center gap-12">
-                    {/* Left side - Hero Content */}
-                    <div className="lg:w-1/2 text-center lg:text-left">
-                         <AnimatedSection>
-                            <div className={`inline-flex items-center ${isDark ? 'bg-slate-800/50 text-cyan-300 border-slate-700' : 'bg-purple-100/70 text-purple-700 border-purple-200/80'} px-4 py-2 rounded-full text-sm font-semibold mb-6 border`}>
-                                <span className={`w-2.5 h-2.5 ${isDark ? 'bg-cyan-400' : 'bg-green-500'} rounded-full mr-3 animate-pulse`}></span>
-                                No.1 Platform for AI Agents
-        </div>
-                            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6">
-                                <span className={`${isDark ? 'bg-gradient-to-r from-cyan-400 via-teal-300 to-white' : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-rose-500'} bg-clip-text text-transparent`}>Viral AI Agents</span>
-                                <br />
-                                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>& Automation</span>
-        </h1>
-                            <p className={`text-lg ${isDark ? 'text-slate-400' : 'text-slate-600'} mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed`}>
-                                Ideate & automate your business processes faster and cheaper with intelligent, autonomous AI agents.
-                            </p>
-                            <div className="flex flex-col sm:flex-row justify-center lg:justify-start items-center gap-5 mb-12">
-                                <Link to="/register" className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg`}>
-                                    Get Started - It's Free
-          </Link>
-                                <button className={`flex items-center justify-center ${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} font-semibold space-x-3 transition-colors w-full sm:w-auto group`}>
-                                    <div className={`p-3 rounded-full ${isDark ? 'bg-slate-800/80 group-hover:bg-slate-700/80 border-slate-700' : 'bg-gray-200/70 group-hover:bg-gray-300/70 border-gray-300/80'} transition-colors border`}>
-                                        <PlayIcon className={`w-5 h-5 ${isDark ? 'text-cyan-400' : 'text-slate-700'}`}/>
-        </div>
-                                    <span>Watch Demo <span className={isDark ? 'text-slate-500' : 'text-slate-500'}>(90s)</span></span>
-                                </button>
-              </div>
-                             <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} flex items-center justify-center lg:justify-start gap-4`}>
-                                <div className="flex -space-x-2 overflow-hidden">
-                                    <img className={`inline-block h-8 w-8 rounded-full ring-2 ${isDark ? 'ring-slate-800' : 'ring-white'}`} src="https://images.unsplash.com/photo-1491528323818-fdd1faba62cc?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt=""/>
-                                    <img className={`inline-block h-8 w-8 rounded-full ring-2 ${isDark ? 'ring-slate-800' : 'ring-white'}`} src="https://images.unsplash.com/photo-1550525811-e586910b323f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt=""/>
-                                    <img className={`inline-block h-8 w-8 rounded-full ring-2 ${isDark ? 'ring-slate-800' : 'ring-white'}`} src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt=""/>
-      </div>
-                                <p><span className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>350k+</span> users trust SuperbAI</p>
-        </div>
-                        </AnimatedSection>
-          </div>
-
-                    {/* Right side - AI Agent Cards */}
-                    <div className="lg:w-1/2 w-full">
-                        <div className="space-y-4 h-[500px] overflow-hidden [mask-image:_linear-gradient(to_bottom,transparent_0,_black_10%,_black_90%,transparent_100%)]">
-                            {/* Row 1 - Scrolling left to right */}
-                            <div className="flex space-x-4 animate-scroll-left">
-                                {[...aiAgents, ...aiAgents].map((agent, index) => (
-                                    <div key={`row1-${index}`} className={`${isDark ? 'bg-slate-800/50 border-slate-700/80 hover:border-cyan-400/50' : 'bg-white/70 border-gray-200/80 hover:border-purple-300'} backdrop-blur-sm p-4 rounded-xl border transition-all duration-300 min-w-[280px] flex-shrink-0 hover:-translate-y-1 shadow-lg hover:shadow-xl`}>
-                                        <img src={agent.img} alt={agent.title} className={`w-full rounded-lg aspect-video object-cover mb-3 ${isDark ? 'shadow-lg' : 'shadow-md'}`} onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/300x168/0F172A/ffffff?text=Error'}/>
-                                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} text-base mb-1`}>{agent.title}</h3>
-                                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>{agent.description}</p>
-                                        <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-xs font-semibold`}>{agent.views}</p>
-        </div>
-                                ))}
-              </div>
-                            
-                            {/* Row 2 - Scrolling right to left */}
-                            <div className="flex space-x-4 animate-scroll-right">
-                                {[...aiAgents.slice().reverse(), ...aiAgents.slice().reverse()].map((agent, index) => (
-                                     <div key={`row2-${index}`} className={`${isDark ? 'bg-slate-800/50 border-slate-700/80 hover:border-cyan-400/50' : 'bg-white/70 border-gray-200/80 hover:border-purple-300'} backdrop-blur-sm p-4 rounded-xl border transition-all duration-300 min-w-[280px] flex-shrink-0 hover:-translate-y-1 shadow-lg hover:shadow-xl`}>
-                                        <img src={agent.img} alt={agent.title} className={`w-full rounded-lg aspect-video object-cover mb-3 ${isDark ? 'shadow-lg' : 'shadow-md'}`} onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/300x168/0F172A/ffffff?text=Error'}/>
-                                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} text-base mb-1`}>{agent.title}</h3>
-                                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>{agent.description}</p>
-                                        <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-xs font-semibold`}>{agent.views}</p>
-      </div>
-                                ))}
-                            </div>
-        </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// Features Component
-const Features = ({ isDark }: { isDark: boolean }) => {
-    // Step 1 state
-    const [activeStep1Tab, setActiveStep1Tab] = useState('Sales');
-    
-    // Step 2 state  
-    const [activeStep2Action, setActiveStep2Action] = useState('default');
-
-    // Step 3 state
-    const [activeStep3Action, setActiveStep3Action] = useState('default');
-
-    // Step 1 content data
-    const step1Content = {
-        Sales: [
-            'Lead qualification automation with AI scoring system.',
-            'Automated follow-up email sequences for prospects.',
-            'Sales pipeline management and opportunity tracking.',
-            'Customer engagement analysis and optimization.',
-            'Quote generation and proposal automation.'
-        ],
-        Marketing: [
-            'Social media content scheduling and posting automation.',
-            'Email marketing campaigns with personalization.',
-            'SEO content optimization and keyword analysis.',
-            'Marketing performance analytics and reporting.',
-            'Lead nurturing workflows and segmentation.'
-        ],
-        Support: [
-            'AI-powered customer service chatbot deployment.',
-            'Ticket routing and priority assignment automation.',
-            'Knowledge base management and updates.',
-            'Customer satisfaction surveys and feedback analysis.',
-            'Live chat integration with AI assistance.'
-        ]
-    };
-
-    // Step 2 content components
-    const renderStep2Content = () => {
-        switch(activeStep2Action) {
-            case 'create':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Create New Schedule</h4>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Daily Execution</span>
-                                <div className={`${isDark ? 'bg-cyan-500' : 'bg-purple-600'} w-10 h-5 rounded-full relative cursor-pointer`}>
-                                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform translate-x-5"></div>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Weekly Reports</span>
-                                <div className={`${isDark ? 'bg-slate-600' : 'bg-gray-400'} w-10 h-5 rounded-full relative cursor-pointer`}>
-                                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200"></div>
-                                </div>
-                            </div>
-                            <div className="mt-4">
-                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Execution Time:</label>
-                                <input 
-                                    type="time" 
-                                    defaultValue="09:00"
-                                    className={`w-full px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-gray-300 text-slate-900'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                );
-            
-            case 'input':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>💬 Chat with Agent</h4>
-                        <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} rounded-lg p-3 mb-3 max-h-32 overflow-y-auto`}>
-                            <div className="space-y-2">
-                                <div className={`${isDark ? 'bg-slate-600' : 'bg-gray-100'} rounded-lg p-2 text-sm`}>
-                                    <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-semibold`}>Agent:</span>
-                                    <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} ml-2`}>Hello! I'm ready to help you set up your automation. What specific requirements do you have?</span>
-                                </div>
-                                <div className={`${isDark ? 'bg-cyan-500/20' : 'bg-purple-100'} rounded-lg p-2 text-sm ml-4`}>
-                                    <span className={`${isDark ? 'text-white' : 'text-slate-800'} font-semibold`}>You:</span>
-                                    <span className={`${isDark ? 'text-slate-200' : 'text-slate-700'} ml-2`}>I need to automate my sales pipeline...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex space-x-2">
-                            <input 
-                                type="text" 
-                                placeholder="Type your requirements here..."
-                                className={`flex-1 px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-slate-900 placeholder-slate-500'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}
-                            />
-                            <button className={`${isDark ? 'bg-cyan-500 hover:bg-cyan-600' : 'bg-purple-600 hover:bg-purple-700'} text-white px-4 py-2 rounded-md text-sm transition-colors`}>
-                                Send
-                            </button>
-                        </div>
-                    </div>
-                );
-            
-            case 'knowledge':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>📚 Upload Knowledge Base</h4>
-                        <div className="space-y-3">
-                            <div className={`border-2 border-dashed ${isDark ? 'border-slate-600 bg-slate-800/30' : 'border-gray-300 bg-gray-50'} rounded-lg p-4 text-center`}>
-                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>
-                                    📄 Drag & drop files here or click to browse
-                                </div>
-                                <button className={`${isDark ? 'bg-slate-600 hover:bg-slate-500 text-slate-300' : 'bg-gray-200 hover:bg-gray-300 text-slate-700'} px-4 py-2 rounded-md text-sm transition-colors`}>
-                                    Choose Files
-                                </button>
-                            </div>
-                            <div className="text-xs space-y-1">
-                                <div className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>✅ company_policies.pdf (2.3 MB)</div>
-                                <div className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>✅ sales_guidelines.docx (1.1 MB)</div>
-                                <div className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>⏳ training_manual.pdf (Processing...)</div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            
-            default:
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-lg mb-6 transition-all duration-300 hover:shadow-lg cursor-pointer`}>
-                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Agent Configuration</h3>
-                        <div className="space-y-3">
-                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Requirements Input</span>
-                                <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Complete</span>
-                            </div>
-                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Knowledge Base</span>
-                                <span className={`${isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-100 text-purple-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Adding...</span>
-                            </div>
-                            <div className={`flex justify-between items-center p-2 rounded-md transition-all duration-200 ${isDark ? 'hover:bg-slate-600/30' : 'hover:bg-gray-50'}`}>
-                                <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} text-sm`}>Schedule Setup</span>
-                                <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'} text-xs`}>Pending</span>
-                            </div>
-                        </div>
-                    </div>
-                );
-        }
-    };
-
-    // Step 3 content components
-    const renderStep3Content = () => {
-        switch(activeStep3Action) {
-            case 'analytics':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>📊 Performance Analytics</h4>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg text-center`}>
-                                <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-2xl font-bold`}>98.5%</div>
-                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Success Rate</div>
-                            </div>
-                            <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg text-center`}>
-                                <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-2xl font-bold`}>2.4s</div>
-                                <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Avg Response</div>
-                            </div>
-                        </div>
-                        <div className={`${isDark ? 'bg-slate-800/50' : 'bg-white'} p-3 rounded-lg`}>
-                            <div className="flex justify-between items-center mb-2">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Tasks Completed</span>
-                                <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold`}>1,247/1,250</span>
-                            </div>
-                            <div className={`w-full ${isDark ? 'bg-slate-600' : 'bg-gray-200'} rounded-full h-2`}>
-                                <div className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} h-2 rounded-full`} style={{width: '99.8%'}}></div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            
-            case 'optimize':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>⚡ Optimization Suggestions</h4>
-                        <div className="space-y-3">
-                            <div className={`${isDark ? 'bg-green-500/20 border-green-500/30' : 'bg-green-50 border-green-200'} border rounded-lg p-3`}>
-                                <div className={`${isDark ? 'text-green-400' : 'text-green-700'} text-sm font-semibold mb-1`}>✨ Recommended</div>
-                                <div className={`${isDark ? 'text-green-300' : 'text-green-600'} text-xs`}>Increase batch processing by 25% for better efficiency</div>
-                            </div>
-                            <div className={`${isDark ? 'bg-yellow-500/20 border-yellow-500/30' : 'bg-yellow-50 border-yellow-200'} border rounded-lg p-3`}>
-                                <div className={`${isDark ? 'text-yellow-400' : 'text-yellow-700'} text-sm font-semibold mb-1`}>⚠️ Attention</div>
-                                <div className={`${isDark ? 'text-yellow-300' : 'text-yellow-600'} text-xs`}>Memory usage at 78%, consider scaling up</div>
-                            </div>
-                            <div className={`${isDark ? 'bg-blue-500/20 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-lg p-3`}>
-                                <div className={`${isDark ? 'text-blue-400' : 'text-blue-700'} text-sm font-semibold mb-1`}>💡 Tip</div>
-                                <div className={`${isDark ? 'text-blue-300' : 'text-blue-600'} text-xs`}>Enable auto-scaling for peak hours</div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            
-            case 'scale':
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-4 rounded-lg transition-all duration-300`}>
-                        <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>🚀 Scale Configuration</h4>
-                        <div className="space-y-4">
-                            <div>
-                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Auto-scaling Threshold:</label>
-                                <div className="flex items-center space-x-3">
-                                    <input 
-                                        type="range" 
-                                        min="50" 
-                                        max="100" 
-                                        defaultValue="75"
-                                        className={`flex-1 ${isDark ? 'accent-cyan-500' : 'accent-purple-600'}`}
-                                    />
-                                    <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold min-w-[3rem]`}>75%</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm block mb-2`}>Max Instances:</label>
-                                <select className={`w-full px-3 py-2 rounded-md text-sm ${isDark ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-gray-300 text-slate-900'} border focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}>
-                                    <option>5 instances</option>
-                                    <option>10 instances</option>
-                                    <option>20 instances</option>
-                                    <option>Unlimited</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                );
-            
-            default:
-                return (
-                    <div className={`${isDark ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-lg mb-6 transition-all duration-300 hover:shadow-lg cursor-pointer`}>
-                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-3`}>Execution Dashboard</h3>
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Agent Status</span>
-                                <span className={`${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} px-2 py-1 text-xs rounded-md font-semibold`}>Running</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Tasks Processed</span>
-                                <span className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-sm font-semibold`}>1,247</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm`}>Success Rate</span>
-                                <span className={`${isDark ? 'text-green-400' : 'text-green-600'} text-sm font-semibold`}>98.5%</span>
-                            </div>
-                        </div>
-                    </div>
-                );
-        }
-    };
-
-    return (
-        <section id="features" className={`${isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
-            <div className="container mx-auto px-6">
-                 <AnimatedSection className="text-center max-w-3xl mx-auto mb-20">
-                    <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
-                    <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-lg`}>
-                        Transform your business in four simple steps. From idea to full-scale automation, SuperbAI makes it effortless.
-                    </p>
-                </AnimatedSection>
-                
-                {/* Step 1 */}
-                <AnimatedSection className="mb-24">
-                    <div className="flex flex-col md:flex-row items-center gap-12">
-                        <div className="md:w-1/2 text-center md:text-left">
-                            <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-bold mb-2`}>Step 1: Discover</p>
-                            <h3 className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                                Uncover Automation
-                                <br />
-                                <span className={`${isDark ? 'bg-gradient-to-r from-cyan-400 to-teal-400' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} bg-clip-text text-transparent`}>Opportunities</span>
-                            </h3>
-                            <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
-                                Why spend hours brainstorming? Our AI analyzes your workflows to pinpoint the best automation opportunities, saving you time and skyrocketing efficiency.
-                            </p>
-                            <button className={`mt-8 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/30'} text-white font-semibold px-6 py-3 rounded-lg transition-all transform hover:scale-105 shadow-lg cursor-pointer`}>
-                                AI Idea Generator
-                            </button>
-      </div>
-                        <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 shadow-black/20 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 shadow-gray-200/50 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border shadow-2xl transition-all duration-500 hover:shadow-3xl hover:-translate-y-3`}>
-                                                                    <div className={`flex justify-between items-center ${isDark ? 'bg-slate-600/30 backdrop-blur-lg border border-slate-500/20' : 'bg-white/50 backdrop-blur-lg border border-gray-300/30'} p-3 rounded-lg mb-8 flex-wrap gap-2`}>
-                                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Business Automation Ideas</h3>
-                                    <div className="flex space-x-2">
-                                        {['Sales', 'Marketing', 'Support'].map((tab) => (
-                                            <button
-                                                key={tab}
-                                                onClick={() => setActiveStep1Tab(tab)}
-                                                className={`px-3 py-1 text-sm rounded-md font-semibold transition-all duration-300 ${
-                                                    activeStep1Tab === tab
-                                                        ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                                        : (isDark ? 'bg-slate-600 text-slate-300 hover:bg-slate-500 hover:text-white' : 'bg-gray-200 text-slate-700 hover:bg-gray-300 hover:text-slate-800')
-                                                }`}
-                                            >
-                                                {tab}
-                                            </button>
-                                        ))}
-      </div>
-    </div>
-                                <div className="space-y-3">
-                                    {step1Content[activeStep1Tab].map((item, index) => (
-                                        <div 
-                                            key={index}
-                                            className={`p-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-pointer ${
-                                                index === 0
-                                                    ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/10 hover:shadow-cyan-500/20 text-white' : 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-purple-500/20 hover:shadow-purple-500/30 text-white')
-                                                    : (isDark ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/60 hover:text-white hover:shadow-lg' : 'bg-gray-100/70 text-slate-700 hover:bg-gray-200/80 hover:text-slate-800 hover:shadow-lg')
-                                            }`}
-                                        >
-                                            {item}
-                                        </div>
-                                    ))}
-          </div>
-        </div>
-      </div>
-    </div>
-                </AnimatedSection>
-      
-                {/* Step 2 */}
-                <AnimatedSection className="mb-24">
-                    <div className="flex flex-col md:flex-row-reverse items-center gap-12">
-                        <div className="md:w-1/2 text-center md:text-left">
-                            <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-bold mb-2`}>Step 2: Configure</p>
-                            <h3 className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                                Setup Requirements &
-                                <br />
-                                <span className={`${isDark ? 'bg-gradient-to-r from-cyan-400 to-teal-400' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} bg-clip-text text-transparent`}>Configure Agent</span>
-                            </h3>
-                            <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
-                                Input your complete requirements, add knowledge bases, create schedules, and configure your AI agent to match your exact business needs.
-                            </p>
-                            <div className="flex flex-wrap gap-3 mt-8">
-                                <button 
-                                    onClick={() => setActiveStep2Action('knowledge')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep2Action === 'knowledge'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    Add Knowledge
-                                </button>
-                                <button 
-                                    onClick={() => setActiveStep2Action('create')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep2Action === 'create'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    Create Schedule
-                                </button>
-                                <button 
-                                    onClick={() => setActiveStep2Action('input')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep2Action === 'input'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    Input Requirements
-                                </button>
-                            </div>
-                        </div>
-                        <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
-                                {/* Configuration Interface */}
-                                {renderStep2Content()}
-                                
-                                {activeStep2Action === 'default' && (
-                                    <>
-                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20 hover:bg-slate-500/25 hover:border-slate-400/30 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30 hover:bg-white/60 hover:border-purple-300/40 hover:shadow-[0_0_20px_rgba(147,51,234,0.2)]'} p-4 rounded-lg mb-4 transition-all duration-300 hover:shadow-lg cursor-pointer hover:-translate-y-1`}>
-                                    <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
-                                        Current Task: Sales Pipeline Automation
-                                    </p>
-                                    <div className="space-y-2 text-xs">
-                                        <div className={`${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-700'} transition-colors duration-200`}>• Lead scoring algorithm configured</div>
-                                        <div className={`${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-700'} transition-colors duration-200`}>• Email templates uploaded</div>
-                                        <div className={`${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-700'} transition-colors duration-200`}>• CRM integration ready</div>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex space-x-2">
-                                    <button className={`flex-1 ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800'} px-3 py-2 text-xs rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-md`}>
-                                        Upload Files
-                                    </button>
-                                    <button className={`flex-1 ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800'} px-3 py-2 text-xs rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-md`}>
-                                        Set Schedule
-                                    </button>
-      </div>
-                                    </>
-                                )}
-      </div>
-    </div>
-                    </div>
-                </AnimatedSection>
-
-                {/* Step 3 */}
-                <AnimatedSection className="mb-24">
-                    <div className="flex flex-col md:flex-row items-center gap-12">
-                        <div className="md:w-1/2 text-center md:text-left">
-                            <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-bold mb-2`}>Step 3: Monitor</p>
-                            <h3 className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                                Review Requirements &
-                                <br />
-                                <span className={`${isDark ? 'bg-gradient-to-r from-cyan-400 to-teal-400' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} bg-clip-text text-transparent`}>Track Execution</span>
-                            </h3>
-                            <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
-                                Monitor your agent's performance in real-time. Review execution status, track results, and optimize workflows as your business grows.
-                            </p>
-                            <div className="flex flex-wrap gap-3 mt-8">
-                                <button 
-                                    onClick={() => setActiveStep3Action('analytics')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep3Action === 'analytics'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    View Analytics
-                                </button>
-                                <button 
-                                    onClick={() => setActiveStep3Action('optimize')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep3Action === 'optimize'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    Optimize
-                                </button>
-                                <button 
-                                    onClick={() => setActiveStep3Action('scale')}
-                                    className={`font-semibold px-4 py-2 rounded-lg transition-all text-sm ${
-                                        activeStep3Action === 'scale'
-                                            ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg')
-                                            : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800')
-                                    }`}
-                                >
-                                    Scale
-                                </button>
-                            </div>
-                        </div>
-                        <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
-                                {/* Monitoring Dashboard */}
-                                {renderStep3Content()}
-                                
-                                {activeStep3Action === 'default' && (
-                                    <>
-                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30'} p-4 rounded-lg mb-4`}>
-                                    <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
-                                        Recent Activity
-                                    </p>
-                                    <div className="space-y-2 text-xs">
-                                        <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>• Lead qualification completed - 15 qualified leads</div>
-                                        <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>• Email sequence sent to 247 prospects</div>
-                                        <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>• CRM data synced successfully</div>
-          </div>
-        </div>
-                                
-                                <div className="flex space-x-2">
-                                    <button className={`flex-1 ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800'} px-3 py-2 text-xs rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-md`}>
-                                        View Logs
-                                    </button>
-                                    <button className={`flex-1 ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white' : 'bg-gray-200 hover:bg-gray-300 text-slate-700 hover:text-slate-800'} px-3 py-2 text-xs rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-md`}>
-                                        Export Report
-                                    </button>
-    </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </AnimatedSection>
-
-                {/* Step 4 */}
-                <AnimatedSection className="mb-24">
-                    <div className="flex flex-col md:flex-row-reverse items-center gap-12">
-                        <div className="md:w-1/2 text-center md:text-left">
-                            <p className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} font-bold mb-2`}>Step 4: Complete</p>
-                            <h3 className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                                Mission Accomplished &
-                                <br />
-                                <span className={`${isDark ? 'bg-gradient-to-r from-cyan-400 to-teal-400' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} bg-clip-text text-transparent`}>Scale Further</span>
-                            </h3>
-                            <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-6 max-w-md mx-auto md:mx-0`}>
-                                Your automation is complete and running smoothly. Now scale to new departments, processes, or create entirely new AI agents for other business needs.
-                            </p>
-                            <Link to="/register" className={`inline-block mt-8 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-bold px-8 py-3.5 rounded-lg transition-all transform hover:scale-105 shadow-lg`}>
-                                Start Your Journey
-                            </Link>
-          </div>
-                        <div className="md:w-1/2 w-full">
-                            <div className={`${isDark ? 'bg-slate-700/30 border-slate-600/50 hover:bg-slate-600/40 hover:border-slate-500/70 hover:shadow-[0_0_40px_rgba(34,211,238,0.4),0_25px_50px_rgba(0,0,0,0.3)]' : 'bg-white/70 border-gray-200/60 hover:bg-white/90 hover:border-purple-300/60 hover:shadow-[0_0_40px_rgba(147,51,234,0.3),0_25px_50px_rgba(147,51,234,0.1)]'} backdrop-blur-xl backdrop-saturate-150 p-6 rounded-xl border transition-all duration-500 hover:shadow-2xl hover:-translate-y-3`}>
-                                {/* Success Dashboard */}
-                                <div className={`${isDark ? 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/20' : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'} p-4 rounded-lg mb-6 border`}>
-                                    <h3 className={`font-bold ${isDark ? 'text-green-400' : 'text-green-700'} mb-3`}>🎉 Automation Complete!</h3>
-                                    <div className="space-y-2">
-                                        <div className={`${isDark ? 'text-green-300' : 'text-green-600'} text-sm`}>✅ All requirements fulfilled</div>
-                                        <div className={`${isDark ? 'text-green-300' : 'text-green-600'} text-sm`}>✅ Agent deployed successfully</div>
-                                        <div className={`${isDark ? 'text-green-300' : 'text-green-600'} text-sm`}>✅ Performance metrics exceeded</div>
-      </div>
-    </div>
-                                
-                                <div className={`${isDark ? 'bg-slate-600/20 backdrop-blur-lg border border-slate-500/20' : 'bg-white/40 backdrop-blur-lg border border-gray-300/30'} p-4 rounded-lg mb-4`}>
-                                    <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} text-sm mb-3 font-semibold`}>
-                                        Impact Summary
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-4 text-center">
-                                        <div>
-                                            <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-lg font-bold`}>40%</div>
-                                            <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Time Saved</div>
-      </div>
-                                        <div>
-                                            <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-lg font-bold`}>85%</div>
-                                            <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Efficiency Boost</div>
-    </div>
-                                        <div>
-                                            <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-lg font-bold`}>$25k</div>
-                                            <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Cost Savings</div>
-                                        </div>
-                                        <div>
-                                            <div className={`${isDark ? 'text-cyan-400' : 'text-purple-600'} text-lg font-bold`}>24/7</div>
-                                            <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-xs`}>Uptime</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="text-center">
-                                    <button className={`w-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white font-semibold px-4 py-3 rounded-lg transition-all`}>
-                                        Create Another Agent
-                                    </button>
-          </div>
-                            </div>
-                        </div>
-                    </div>
-                </AnimatedSection>
-          </div>
-        </section>
-    );
-};
-
-// Simple 3D Cards Carousel Component (fallback without Swiper)
+// 3D Cards Carousel Component with enhanced effects
 const SwiperCoverflow = ({ agents, isDark, isLoaded }: { 
     agents: Array<{
         title: string;
@@ -919,7 +222,7 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
         setTimeout(() => setIsAutoplay(true), 5000);
     };
 
-        return (
+    return (
         <div className="w-full h-[500px] relative overflow-hidden">
             {/* 3D Carousel Container */}
             <div 
@@ -952,17 +255,17 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                             }}
                             onClick={() => goToSlide(index)}
                         >
-                            <div className={`agent-card w-full h-full ${isDark ? 'bg-slate-800/80 border-slate-600/50' : 'bg-white/80 border-gray-300/50'} backdrop-blur-xl backdrop-saturate-150 rounded-2xl border p-6 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isActive ? 'shadow-[0_0_20px_rgba(34,211,238,0.5)]' : 'hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] hover:-translate-y-2 hover:scale-105'}`}>
+                            <div className={`agent-card w-full h-full ${isDark ? 'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/40' : 'bg-gradient-to-br from-blue-50/95 to-cyan-50/95 border-blue-200/60'} backdrop-blur-xl backdrop-saturate-150 rounded-2xl border p-6 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isActive ? (isDark ? 'shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'shadow-[0_0_25px_rgba(59,130,246,0.4)]') : (isDark ? 'hover:shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]') + ' hover:-translate-y-2 hover:scale-105'}`}>
                                 {/* Base animated background gradient */}
-                                <div className={`absolute inset-0 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-30' : 'opacity-5 group-hover:opacity-25'} transition-opacity duration-500 rounded-2xl`}></div>
+                                <div className={`absolute inset-0 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-400/20 to-cyan-400/20'} ${isActive ? 'opacity-40' : 'opacity-10 group-hover:opacity-30'} transition-opacity duration-500 rounded-2xl`}></div>
                                 
-                                {/* Bright glow overlay - Multiple layers for intense effect - REDUCED */}
-                                <div className={`absolute -inset-1 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-40' : 'opacity-0 group-hover:opacity-40'} transition-all duration-500 rounded-xl blur-md`}></div>
-                                <div className={`absolute -inset-0.5 bg-gradient-to-br ${agent.bgColor} ${isActive ? 'opacity-60' : 'opacity-0 group-hover:opacity-60'} transition-all duration-500 rounded-lg blur-sm`}></div>
+                                {/* Bright glow overlay */}
+                                <div className={`absolute -inset-1 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-400/30 to-cyan-400/30'} ${isActive ? 'opacity-50' : 'opacity-0 group-hover:opacity-50'} transition-all duration-500 rounded-xl blur-md`}></div>
+                                <div className={`absolute -inset-0.5 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-500/40 to-cyan-500/40'} ${isActive ? 'opacity-70' : 'opacity-0 group-hover:opacity-70'} transition-all duration-500 rounded-lg blur-sm`}></div>
                                 
                                 {/* Content */}
                                 <div className="h-full flex flex-col text-center relative z-20">
-                                    {/* Large Animation Icon - Takes most of the card */}
+                                    {/* Large Animation Icon */}
                                     <div className="flex-1 flex items-center justify-center">
                                         <div className={`transform transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                                             {agent.icon}
@@ -973,8 +276,8 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                                     <div className="mt-auto">
                                         <h3 className={`text-lg font-bold mb-2 transition-all duration-500 ${
                                             isDark 
-                                                ? (isActive ? 'text-cyan-200 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]' : 'text-white group-hover:text-cyan-200 group-hover:drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]')
-                                                : (isActive ? 'text-purple-700 drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]' : 'text-slate-800 group-hover:text-purple-700 group-hover:drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]')
+                                                ? (isActive ? 'text-purple-200 drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]' : 'text-white group-hover:text-purple-200 group-hover:drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]')
+                                                : (isActive ? 'text-blue-800 drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]' : 'text-slate-800 group-hover:text-blue-800 group-hover:drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]')
                                         }`}>
                                             {agent.title}
                                         </h3>
@@ -989,19 +292,17 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                                         
                                         {/* Enhanced status indicator */}
                                         <div className="flex items-center justify-center">
-                                            <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-green-400' : 'bg-green-500'} animate-pulse mr-2 ${isActive ? 'shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'group-hover:shadow-[0_0_5px_rgba(34,197,94,0.8)]'} transition-all duration-500`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-green-400' : 'bg-blue-500'} animate-pulse mr-2 ${isActive ? (isDark ? 'shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'shadow-[0_0_5px_rgba(59,130,246,0.8)]') : (isDark ? 'group-hover:shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'group-hover:shadow-[0_0_5px_rgba(59,130,246,0.8)]')} transition-all duration-500`}></div>
                                             <span className={`text-xs ${
                                                 isDark 
                                                     ? (isActive ? 'text-green-300' : 'text-green-400 group-hover:text-green-300')
-                                                    : (isActive ? 'text-green-700' : 'text-green-600 group-hover:text-green-700')
-                                            } font-semibold transition-all duration-500`}>Ready to Deploy</span>
+                                                    : (isActive ? 'text-blue-700' : 'text-blue-600 group-hover:text-blue-700')
+                                            } font-semibold transition-all duration-500`}>Try Now</span>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                {/* Ultra bright outer glow - REMOVED the distant outer glow */}
-                                
-                                {/* Shimmer effect - Kept but contained */}
+                                {/* Shimmer effect */}
                                 <div className={`absolute inset-0 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-1000`}>
                                     <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 ${isActive ? '-translate-x-full' : 'translate-x-full group-hover:-translate-x-full'} transition-transform duration-1000 ease-in-out`}></div>
                                 </div>
@@ -1014,7 +315,7 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
             {/* Navigation Buttons */}
             <button
                 onClick={prevSlide}
-                className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/80 hover:bg-slate-700/90 text-cyan-400 border-slate-600' : 'bg-white/80 hover:bg-white/90 text-purple-600 border-gray-300'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
+                className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/90 hover:bg-slate-700/90 text-purple-400 border-slate-600/50' : 'bg-blue-50/90 hover:bg-blue-100/90 text-blue-600 border-blue-200/60'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1023,7 +324,7 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
 
             <button
                 onClick={nextSlide}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/80 hover:bg-slate-700/90 text-cyan-400 border-slate-600' : 'bg-white/80 hover:bg-white/90 text-purple-600 border-gray-300'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/90 hover:bg-slate-700/90 text-purple-400 border-slate-600/50' : 'bg-blue-50/90 hover:bg-blue-100/90 text-blue-600 border-blue-200/60'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1038,8 +339,8 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                         onClick={() => goToSlide(index)}
                         className={`w-3 h-3 rounded-full transition-all duration-300 ${
                             index === currentIndex
-                                ? (isDark ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50' : 'bg-purple-600 shadow-lg shadow-purple-600/50')
-                                : (isDark ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-300 hover:bg-gray-400')
+                                ? (isDark ? 'bg-purple-400 shadow-lg shadow-purple-400/50' : 'bg-blue-500 shadow-lg shadow-blue-500/50')
+                                : (isDark ? 'bg-slate-600 hover:bg-slate-500' : 'bg-blue-200 hover:bg-blue-300')
                         }`}
                     />
                 ))}
@@ -1047,13 +348,13 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
 
             {/* Autoplay indicator */}
             <div className={`absolute top-4 right-4 z-30 ${isAutoplay ? 'opacity-100' : 'opacity-50'} transition-opacity duration-300`}>
-                <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-cyan-400' : 'bg-purple-600'} animate-pulse`}></div>
+                <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-purple-400' : 'bg-blue-500'} animate-pulse`}></div>
             </div>
         </div>
     );
 };
 
-// 3D Coverflow AI Agents Component with Swiper
+// 3D AI Agents Component 
 const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -1065,10 +366,10 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
         {
             title: "AI Sales Agent",
             description: "Automate your sales pipeline with intelligent lead scoring",
-            bgColor: isDark ? 'from-blue-500 to-cyan-600' : 'from-blue-400 to-cyan-500',
+            bgColor: isDark ? 'from-purple-500 to-violet-600' : 'from-purple-400 to-violet-500',
             icon: (
                 <LottieFromURL 
-                    src="https://assets9.lottiefiles.com/packages/lf20_ydo1amjm.json"
+                    src="/animation/sales-service-provided-by-agent.json"
                     className="w-40 h-40"
                     loop={true}
                     autoplay={true}
@@ -1081,7 +382,7 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
             bgColor: isDark ? 'from-green-500 to-teal-600' : 'from-green-400 to-teal-500',
             icon: (
                 <LottieFromURL 
-                    src="https://assets3.lottiefiles.com/packages/lf20_UgZWvP.json"
+                    src="/animation/customer-care-service.json"
                     className="w-40 h-40"
                     loop={true}
                     autoplay={true}
@@ -1094,7 +395,7 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
             bgColor: isDark ? 'from-emerald-500 to-green-600' : 'from-emerald-400 to-green-500',
             icon: (
                 <LottieFromURL 
-                    src="https://assets2.lottiefiles.com/packages/lf20_1pxqjqps.json"
+                    src="/animation/customer-care-service copy.json"
                     className="w-44 h-44"
                     loop={true}
                     autoplay={true}
@@ -1107,7 +408,7 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
             bgColor: isDark ? 'from-yellow-500 to-orange-600' : 'from-yellow-400 to-orange-500',
             icon: (
                 <LottieFromURL 
-                    src="https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json"
+                    src="/animation/trademark-transfer.json"
                     className="w-40 h-40"
                     loop={true}
                     autoplay={true}
@@ -1119,12 +420,11 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
             description: "Generate engaging content for all your platforms",
             bgColor: isDark ? 'from-violet-500 to-purple-600' : 'from-violet-400 to-purple-500',
             icon: (
-                <LottieFromURL 
-                    src="https://assets9.lottiefiles.com/packages/lf20_khzniaya.json"
-                    className="w-44 h-44"
-                    loop={true}
-                    autoplay={true}
-                />
+                <div className={`w-40 h-40 mx-auto rounded-2xl ${isDark ? 'bg-gradient-to-br from-violet-500 to-purple-600' : 'bg-gradient-to-br from-violet-400 to-purple-500'} flex items-center justify-center shadow-lg transition-all duration-300`}>
+                    <svg className="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                </div>
             )
         },
         {
@@ -1132,12 +432,11 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
             description: "Streamline recruitment and employee management",
             bgColor: isDark ? 'from-pink-500 to-rose-600' : 'from-pink-400 to-rose-500',
             icon: (
-                <LottieFromURL 
-                    src="https://assets3.lottiefiles.com/private_files/lf30_GjhcdO.json"
-                    className="w-40 h-40"
-                    loop={true}
-                    autoplay={true}
-                />
+                <div className={`w-40 h-40 mx-auto rounded-2xl ${isDark ? 'bg-gradient-to-br from-pink-500 to-rose-600' : 'bg-gradient-to-br from-pink-400 to-rose-500'} flex items-center justify-center shadow-lg transition-all duration-300`}>
+                    <svg className="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
             )
         },
     ];
@@ -1146,8 +445,8 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
         <section className={`${isDark ? 'bg-slate-800 text-white' : 'bg-gray-50 text-slate-800'} py-24 relative overflow-hidden`}>
             <div className="container mx-auto px-6 text-center mb-16">
                 <AnimatedSection>
-                    <div className={`inline-flex items-center ${isDark ? 'bg-slate-700/50 text-cyan-300 border-slate-600' : 'bg-purple-100/70 text-purple-700 border-purple-200'} px-4 py-2 rounded-full text-sm font-semibold mb-6 border backdrop-blur-sm`}>
-                        <span className={`w-2 h-2 ${isDark ? 'bg-cyan-400' : 'bg-purple-500'} rounded-full mr-2 animate-pulse`}></span>
+                    <div className={`inline-flex items-center ${isDark ? 'bg-slate-700/50 text-purple-300 border-slate-600' : 'bg-purple-100/70 text-purple-700 border-purple-200'} px-4 py-2 rounded-full text-sm font-semibold mb-6 border backdrop-blur-sm`}>
+                        <span className={`w-2 h-2 ${isDark ? 'bg-purple-400' : 'bg-purple-500'} rounded-full mr-2 animate-pulse`}></span>
                         EXPLORE OUR AI AGENTS
                     </div>
                     <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -1162,7 +461,7 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
                 </AnimatedSection>
             </div>
 
-            {/* Swiper Coverflow */}
+            {/* 3D Swiper Coverflow */}
             <div className="w-full max-w-6xl mx-auto">
                 <SwiperCoverflow agents={agents} isDark={isDark} isLoaded={isLoaded} />
             </div>
@@ -1183,576 +482,921 @@ const ScrollableAIAgents = ({ isDark }: { isDark: boolean }) => {
     );
 };
 
-// AI Agents Component (fallback)
-const AIAgents = ({ isDark }: { isDark: boolean }) => {
-    const agents = [
-        {
-            title: "AI IT Agent",
-            description: "Provides technical support, troubleshoots issues, and manages IT systems.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-orange-500 to-red-600 group-hover:shadow-orange-500/30' : 'bg-gradient-to-br from-orange-400 to-red-500 group-hover:shadow-orange-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-      title: "AI Sales Agent",
-            description: "Optimizes sales processes, interacts with potential customers, and closes deals effectively.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-blue-500 to-cyan-600 group-hover:shadow-blue-500/30' : 'bg-gradient-to-br from-blue-400 to-cyan-500 group-hover:shadow-blue-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-      title: "AI Marketing Agent",
-            description: "Analyzes markets, creates advertising content, and deploys multi-channel marketing campaigns.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-green-500 to-teal-600 group-hover:shadow-green-500/30' : 'bg-gradient-to-br from-green-400 to-teal-500 group-hover:shadow-green-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-      title: "AI Accountant Agent",
-            description: "Manages finances, tracks expenses, prepares financial reports, and forecasts budgets.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-purple-500 to-indigo-600 group-hover:shadow-purple-500/30' : 'bg-gradient-to-br from-purple-400 to-indigo-500 group-hover:shadow-purple-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-            title: "AI HR Agent",
-            description: "Streamlines recruitment processes, manages employee data, and handles HR workflows.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-pink-500 to-rose-600 group-hover:shadow-pink-500/30' : 'bg-gradient-to-br from-pink-400 to-rose-500 group-hover:shadow-pink-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-            title: "AI Support Agent",
-            description: "Provides 24/7 customer support with intelligent responses and issue resolution.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-emerald-500 to-green-600 group-hover:shadow-emerald-500/30' : 'bg-gradient-to-br from-emerald-400 to-green-500 group-hover:shadow-emerald-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.458V5m0 14v2.542M21.542 12H19m-14 0H2.458M16.95 7.05L15.536 8.464M8.464 15.536L7.05 16.95" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-            title: "AI Data Analyst",
-            description: "Analyzes complex datasets, generates insights, and creates comprehensive reports.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-yellow-500 to-orange-600 group-hover:shadow-yellow-500/30' : 'bg-gradient-to-br from-yellow-400 to-orange-500 group-hover:shadow-yellow-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </div>
-            )
-        },
-        {
-            title: "AI Content Creator",
-            description: "Generates engaging content, writes copy, and creates multimedia materials for marketing.",
-            icon: (
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${isDark ? 'bg-gradient-to-br from-violet-500 to-purple-600 group-hover:shadow-violet-500/30' : 'bg-gradient-to-br from-violet-400 to-purple-500 group-hover:shadow-violet-500/30'} flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                    <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                </div>
-            )
-        }
-  ];
+// Hero Component - Compact & Modern
+const Hero = ({ isDark }: { isDark: boolean }) => {
+    const aiAgents = [
+        { title: "AI Business Analyst", description: "Generate reports from data.", img: isDark ? "https://placehold.co/300x168/0F172A/0EA5E9?text=Analyst&font=raleway" : "https://placehold.co/300x168/EDE9FE/4C1D95?text=Analyst&font=raleway", views: "5M+ reports" },
+        { title: "AI Sales Agent", description: "Automate sales funnel.", img: isDark ? "https://placehold.co/300x168/0F172A/0d9488?text=Sales&font=raleway" : "https://placehold.co/300x168/F5D0FE/701A75?text=Sales&font=raleway", views: "3.2M+ deals" },
+        { title: "AI Marketing Guru", description: "Multi-channel marketing.", img: isDark ? "https://placehold.co/300x168/0F172A/f59e0b?text=Marketing&font=raleway" : "https://placehold.co/300x168/FEF3C7/92400E?text=Marketing&font=raleway", views: "4.1M+ campaigns" },
+        { title: "AI Support", description: "24/7 customer support.", img: isDark ? "https://placehold.co/300x168/0F172A/6d28d9?text=Support&font=raleway" : "https://placehold.co/300x168/E0E7FF/3730A3?text=Support&font=raleway", views: "8.5M+ tickets" },
+    ];
 
   return (
-        <section className={`${isDark ? 'bg-slate-800 text-white' : 'bg-gray-50 text-slate-800'} py-24 relative overflow-hidden`}>
-            {/* Background decoration */}
+        <section className={`${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'} relative overflow-hidden pt-32 pb-20`}>
             <div className="absolute inset-0 w-full h-full overflow-hidden opacity-30">
-                <div className={`absolute top-10 left-1/4 w-32 h-32 ${isDark ? 'bg-cyan-400/10' : 'bg-purple-300/20'} rounded-full filter blur-xl`}></div>
-                <div className={`absolute bottom-20 right-1/4 w-48 h-48 ${isDark ? 'bg-blue-400/10' : 'bg-indigo-300/20'} rounded-full filter blur-xl`}></div>
-            </div>
-            
-            <div className="container mx-auto px-6 relative z-10">
-                <AnimatedSection className="text-center mb-16">
-                    <div className={`inline-flex items-center ${isDark ? 'bg-slate-700/50 text-cyan-300 border-slate-600' : 'bg-purple-100/70 text-purple-700 border-purple-200'} px-4 py-2 rounded-full text-sm font-semibold mb-6 border backdrop-blur-sm`}>
-                        <span className={`w-2 h-2 ${isDark ? 'bg-cyan-400' : 'bg-purple-500'} rounded-full mr-2 animate-pulse`}></span>
-                        POPULAR AI AGENTS
-                    </div>
-                    <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                        AI Built for Every Scenario
-          </h2>
-                    <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-lg max-w-3xl mx-auto`}>
-                        Delegate tasks to specialized AI agents and watch your productivity soar.
-                    </p>
-                </AnimatedSection>
+                <div className={`absolute top-0 -left-1/4 w-full h-full ${isDark ? 'bg-gradient-radial from-purple-600/15 via-pink-600/15 to-transparent' : 'bg-gradient-radial from-purple-200/40 via-pink-200/40 to-transparent'} rounded-full filter blur-3xl animate-pulse`}></div>
+                <div className={`absolute bottom-0 -right-1/4 w-full h-full ${isDark ? 'bg-gradient-radial from-pink-600/15 via-purple-600/15 to-transparent' : 'bg-gradient-radial from-pink-200/40 via-purple-200/40 to-transparent'} rounded-full filter blur-3xl animate-pulse animation-delay-1000`}></div>
+      </div>
 
-                <AnimatedSection>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                        {agents.map((agent, index) => (
-                            <div 
-                                key={index}
-                                className={`${isDark 
-                                    ? 'bg-slate-900/50 border-slate-700 hover:bg-slate-900/80 hover:border-slate-600 hover:shadow-2xl hover:shadow-cyan-500/20' 
-                                    : 'bg-white/90 border-gray-200/60 hover:bg-white hover:border-purple-300/50 shadow-lg hover:shadow-2xl hover:shadow-purple-500/20'
-                                } backdrop-blur-sm p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-3 cursor-pointer group relative overflow-hidden`}
-                            >
-                                <div className="text-center relative z-10">
-                                        {agent.icon}
-                                    <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-800 group-hover:text-purple-700'}`}>
-                                        {agent.title}
-                                    </h3>
-                                    <p className={`text-sm leading-relaxed transition-colors duration-300 ${isDark ? 'text-slate-400 group-hover:text-slate-200' : 'text-slate-600 group-hover:text-slate-800'}`}>
-                                        {agent.description}
-                                    </p>
-                                </div>
-                                
-                                {/* Enhanced hover overlay effect */}
-                                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-cyan-400/20 via-blue-500/15 to-teal-400/20' : 'bg-gradient-to-br from-purple-400/25 via-indigo-500/20 to-pink-400/25'} rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none`}></div>
-                                
-                                {/* Intense glow effect on hover */}
-                                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-cyan-300/15 to-blue-300/15' : 'bg-gradient-to-br from-purple-300/20 to-indigo-300/20'} rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-700 blur-xl pointer-events-none`}></div>
-                                
-                                {/* Strong border glow */}
-                                <div className={`absolute inset-0 rounded-2xl ${isDark ? 'group-hover:shadow-[0_0_30px_rgba(34,211,238,0.4)]' : 'group-hover:shadow-[0_0_30px_rgba(147,51,234,0.4)]'} transition-all duration-500 pointer-events-none`}></div>
-                                
-                                {/* Extra bright center glow */}
-                                <div className={`absolute inset-4 rounded-xl ${isDark ? 'bg-gradient-to-br from-cyan-400/10 to-blue-400/10' : 'bg-gradient-to-br from-purple-400/15 to-indigo-400/15'} opacity-0 group-hover:opacity-100 transition-all duration-500 blur-lg pointer-events-none`}></div>
+            <div className="container mx-auto px-6 relative z-10">
+                <div className="flex flex-col lg:flex-row items-center gap-16">
+                    {/* Left side - Hero Content */}
+                    <div className="lg:w-1/2 text-center lg:text-left mt-[4rem]">
+                         <AnimatedSection>
+                            
+                            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-5">
+                                <span className={`${isDark ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-violet-300' : 'bg-gradient-to-r from-purple-600 via-pink-600 to-violet-600'} bg-clip-text text-transparent`}>AI Agents</span>
+                                <br />
+                                <span className={isDark ? 'text-slate-200' : 'text-slate-700'}>& Automation</span>
+        </h1>
+                            <p className={`text-lg ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed`}>
+                                Automate your business with intelligent AI agents. Faster, cheaper, smarter.
+                            </p>
+                            <div className="flex flex-col sm:flex-row justify-center lg:justify-start items-center gap-4 mb-10">
+                                <Link to="/register" className="bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl transition-all transform hover:scale-105 w-full sm:w-auto shadow-lg hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 text-sm sm:text-base">
+                                    Get Started - Free
+          </Link>
+                                <button className={`flex items-center justify-center ${isDark ? 'text-slate-300 hover:text-white border-slate-600 hover:border-purple-400' : 'text-slate-600 hover:text-slate-900 border-gray-300 hover:border-purple-300'} font-medium space-x-2 transition-colors w-full sm:w-auto border px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl backdrop-blur-sm text-sm sm:text-base`}>
+                                    <div className={`p-2 rounded-full ${isDark ? 'bg-slate-800/80' : 'bg-purple-50'} transition-colors`}>
+                                        <PlayIcon className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}/>
+        </div>
+                                    <span>Watch Demo</span>
+                                </button>
+              </div>
+                             
+                        </AnimatedSection>
+          </div>
+
+                    {/* Right side - AI Agent Cards */}
+                    <div className="lg:w-1/2 w-full">
+                        <div className="space-y-4 h-[500px] overflow-hidden [mask-image:_linear-gradient(to_bottom,transparent_0,_black_10%,_black_90%,transparent_100%)]">
+                            {/* Row 1 - Scrolling left to right */}
+                            <div className="flex space-x-4 animate-scroll-left">
+                                {[...aiAgents, ...aiAgents].map((agent, index) => (
+                                    <div key={`row1-${index}`} className={`${isDark ? 'bg-slate-800/50 border-slate-700/80 hover:border-purple-400/50' : 'bg-white/70 border-gray-200/80 hover:border-purple-300'} backdrop-blur-sm p-4 rounded-xl border transition-all duration-300 min-w-[280px] flex-shrink-0 hover:-translate-y-1 shadow-lg hover:shadow-xl`}>
+                                        <img src={agent.img} alt={agent.title} className={`w-full rounded-lg aspect-video object-cover mb-3 ${isDark ? 'shadow-lg' : 'shadow-md'}`} onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/300x168/0F172A/ffffff?text=Error'}/>
+                                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} text-base mb-1`}>{agent.title}</h3>
+                                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>{agent.description}</p>
+                                        <p className={`${isDark ? 'text-purple-400' : 'text-purple-600'} text-xs font-semibold`}>{agent.views}</p>
+        </div>
+                                ))}
+              </div>
+                            
+                            {/* Row 2 - Scrolling right to left */}
+                            <div className="flex space-x-4 animate-scroll-right">
+                                {[...aiAgents.slice().reverse(), ...aiAgents.slice().reverse()].map((agent, index) => (
+                                     <div key={`row2-${index}`} className={`${isDark ? 'bg-slate-800/50 border-slate-700/80 hover:border-purple-400/50' : 'bg-white/70 border-gray-200/80 hover:border-purple-300'} backdrop-blur-sm p-4 rounded-xl border transition-all duration-300 min-w-[280px] flex-shrink-0 hover:-translate-y-1 shadow-lg hover:shadow-xl`}>
+                                        <img src={agent.img} alt={agent.title} className={`w-full rounded-lg aspect-video object-cover mb-3 ${isDark ? 'shadow-lg' : 'shadow-md'}`} onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/300x168/0F172A/ffffff?text=Error'}/>
+                                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'} text-base mb-1`}>{agent.title}</h3>
+                                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm mb-2`}>{agent.description}</p>
+                                        <p className={`${isDark ? 'text-purple-400' : 'text-purple-600'} text-xs font-semibold`}>{agent.views}</p>
+      </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </AnimatedSection>
+        </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 };
 
-// Pricing Component
-const Pricing = ({ isDark }: { isDark: boolean }) => {
-    const plans = [
-        { 
-            name: 'Essential', 
-            price: { monthly: 20, annually: 14 }, 
-            description: 'For individuals and small teams starting out.', 
-            features: [ 
-                { name: '5 AI Agents', included: true },
-                { name: '10,000 tasks/month', included: true },
-                { name: 'Basic Templates', included: true },
-                { name: 'Email Support', included: true },
-                { name: 'Custom AI Training', included: false }, 
-                { name: 'Advanced Analytics', included: false }, 
-                { name: 'API Access', included: false },
-                { name: 'Team Collaboration (3 seats)', included: false },
-            ], 
-            popular: false 
-        },
-        { 
-            name: 'Premium', 
-            price: { monthly: 40, annually: 28 }, 
-            description: 'For growing businesses that need more power.',
-            features: [ 
-                { name: '25 AI Agents', included: true },
-                { name: '50,000 tasks/month', included: true },
-                { name: 'Premium Templates', included: true },
-                { name: 'Priority Email & Chat Support', included: true },
-                { name: 'Custom AI Training', included: true }, 
-                { name: 'Advanced Analytics', included: true }, 
-                { name: 'API Access', included: true },
-                { name: 'Team Collaboration (10 seats)', included: false },
-            ], 
-            popular: true 
-        },
-        { 
-            name: 'Ultimate', 
-            price: { monthly: 80, annually: 56 }, 
-            description: 'For large teams and enterprises scaling up.', 
-            features: [ 
-                { name: 'Unlimited AI Agents', included: true },
-                { name: 'Unlimited tasks', included: true },
-                { name: 'All Templates & Features', included: true },
-                { name: 'Dedicated Support', included: true },
-                { name: 'Custom AI Training', included: true }, 
-                { name: 'Advanced Analytics', included: true }, 
-                { name: 'API Access', included: true },
-                { name: 'Team Collaboration (Unlimited)', included: true },
-            ], 
-            popular: false 
-        },
-    ];
+// Hook to detect which section is in view
+const useActiveSection = () => {
+  const [activeSection, setActiveSection] = useState('');
 
-    const [billingCycle, setBillingCycle] = useState('annually');
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      {
+        threshold: 0.3,
+        rootMargin: '-100px 0px -100px 0px'
+      }
+    );
 
-  return (
-        <section id="pricing" className={`${isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-gray-50 text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
-            <AnimatedSection className="container mx-auto px-6 text-center">
-                <h2 className="text-4xl md:text-5xl font-bold mb-4">Flexible Pricing for Teams of All Sizes</h2>
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-lg max-w-2xl mx-auto`}>Choose the perfect plan for your needs. No surprises, cancel anytime.</p>
-                
-                <div className={`mt-10 inline-flex items-center ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-gray-200'} p-1.5 rounded-lg border shadow-lg`}>
-                    <button
-                        onClick={() => setBillingCycle('monthly')}
-                        className={`px-4 sm:px-6 py-2 rounded-md transition-all text-sm sm:text-base font-semibold ${billingCycle === 'monthly' ? (isDark ? 'bg-slate-700 text-white' : 'bg-white shadow-md text-purple-600') : (isDark ? 'text-slate-400' : 'text-slate-600')}`}
-                    >
-                        Monthly
-                    </button>
-      <button
-                        onClick={() => setBillingCycle('annually')}
-                        className={`px-4 sm:px-6 py-2 rounded-md transition-all relative text-sm sm:text-base font-semibold ${billingCycle === 'annually' ? (isDark ? 'bg-slate-700 text-white' : 'bg-white shadow-md text-purple-600') : (isDark ? 'text-slate-400' : 'text-slate-600')}`}
-                    >
-                        Annually
-                        <span className={`absolute -top-3 -right-3 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-purple-500 to-indigo-500'} text-white text-xs font-bold px-2 py-0.5 rounded-full uppercase`}>Save 30%</span>
-      </button>
-    </div>
+    const sections = document.querySelectorAll('section[id]');
+    sections.forEach((section) => {
+      observer.observe(section);
+    });
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
-                    {plans.map((plan, index) => (
-                        <div key={index} className={`${isDark ? 'bg-slate-800/50 backdrop-blur-sm' : 'bg-white/70 backdrop-blur-sm'} p-8 rounded-2xl text-left flex flex-col transition-all duration-300 border
-                            ${plan.popular ? (isDark ? 'border-cyan-400/80 relative scale-105 shadow-2xl shadow-cyan-500/10' : 'border-purple-400/80 relative scale-105 shadow-2xl shadow-purple-500/10') : (isDark ? 'border-slate-700' : 'border-gray-200')}`}>
-              
-                            {plan.popular && <span className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 ${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-purple-600 to-indigo-600'} text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider`}>Most Popular</span>}
+    return () => {
+      sections.forEach((section) => {
+        observer.unobserve(section);
+      });
+    };
+  }, []);
 
-                            <h3 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{plan.name}</h3>
-                            <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mt-2 h-12`}>{plan.description}</p>
-
-                            <div className="flex items-baseline mt-6">
-                                <span className={`text-5xl font-extrabold ${isDark ? 'text-white' : 'text-slate-800'}`}>${plan.price[billingCycle]}</span>
-                                <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} ml-1.5`}>/ month</span>
-                                {billingCycle === 'annually' && <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'} text-lg font-semibold line-through ml-4`}>${plan.price.monthly}</span>}
-        </div>
-                            <p className={`${isDark ? 'text-slate-500' : 'text-slate-400'} text-sm mt-1`}>Billed {billingCycle}</p>
-              
-                            <ul className="space-y-4 mt-8 flex-grow">
-                                {plan.features.map((feature, fIndex) => (
-                                    <li key={fIndex} className="flex items-start">
-                                        {feature.included 
-                                            ? <CheckIcon className={`w-5 h-5 ${isDark ? 'text-cyan-400' : 'text-green-500'} mr-3 flex-shrink-0 mt-0.5`} /> 
-                                            : <XIcon className={`w-5 h-5 ${isDark ? 'text-slate-600' : 'text-red-400'} mr-3 flex-shrink-0 mt-0.5`} />
-                                        }
-                                        <span className={`${feature.included ? (isDark ? 'text-slate-300' : 'text-slate-700') : (isDark ? 'text-slate-500' : 'text-slate-400')}`}>{feature.name}</span>
-          </li>
-        ))}
-      </ul>
-              
-                            <button className={`w-full mt-8 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105
-                                ${plan.popular 
-                                    ? (isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-500/30')
-                                    : (isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-800 text-white hover:bg-gray-900')}`
-                                }>
-                                Choose Plan
-      </button>
-                </div>
-          ))}
-              </div>
-            </AnimatedSection>
-    </section>
-  );
+  return activeSection;
 };
 
-// Footer Component
-const Footer = ({ isDark }: { isDark: boolean }) => {
-    const footerLinks = {
-        product: [
-            { name: 'Features', href: '#features' },
-            { name: 'Pricing', href: '#pricing' },
-            { name: 'AI Templates', href: '#' },
-            { name: 'API Documentation', href: '#' },
-            { name: 'Integrations', href: '#' }
-        ],
-        company: [
-            { name: 'About Us', href: '#' },
-            { name: 'Careers', href: '#' },
-            { name: 'Blog', href: '#' },
-            { name: 'Press', href: '#' },
-            { name: 'Contact', href: '#' }
-        ],
-        support: [
-            { name: 'Help Center', href: '#' },
-            { name: 'Community', href: '#' },
-            { name: 'Tutorials', href: '#' },
-            { name: 'Status Page', href: '#' },
-            { name: 'Bug Reports', href: '#' }
-        ],
-        legal: [
-            { name: 'Privacy Policy', href: '#' },
-            { name: 'Terms of Service', href: '#' },
-            { name: 'Cookie Policy', href: '#' },
-            { name: 'GDPR', href: '#' }
-        ]
+const LandingPage: React.FC = () => {
+  // State để quản lý trạng thái dark/light mode
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  // State để quản lý trạng thái "dính" của Navbar
+  const [isSticky, setIsSticky] = useState(false);
+  // State để quản lý mobile menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const activeSection = useActiveSection();
+
+  // Effect để xử lý việc thêm/xóa class 'dark' vào thẻ <html>
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  // Effect để xử lý sự kiện cuộn trang cho sticky navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsSticky(true);
+      } else {
+        setIsSticky(false);
+      }
     };
 
-  return (
-        <footer className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'} border-t`}>
-            <div className="container mx-auto px-6 py-16">
-                {/* Main Footer Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-6 mb-12">
-                    {/* Company Info */}
-                    <div className="lg:col-span-2">
-                        <Link to="/" className="flex items-center space-x-3 group mb-6">
-                            <div className={`p-2 ${isDark ? 'bg-gradient-to-br from-cyan-500 to-blue-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
-                                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    window.addEventListener('scroll', handleScroll);
+    // Cleanup function để gỡ bỏ event listener khi component unmount
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
+                return (
+    <div className={`min-h-screen font-sans transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-purple-900/80 text-gray-100' 
+        : 'bg-white text-slate-800'
+    } relative overflow-hidden`}>
+      
+      {/* Animated background shapes - improved for both themes */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
+        <div className={`absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 ${
+          isDarkMode ? 'bg-purple-500/10' : 'bg-blue-100/40'
+        } rounded-full filter blur-3xl opacity-70 animate-pulse`} style={{animationDelay: '0.2s'}}></div>
+        <div className={`absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 ${
+          isDarkMode ? 'bg-slate-700/20' : 'bg-cyan-50/50'
+        } rounded-full filter blur-3xl opacity-60 animate-pulse`} style={{animationDelay: '1s'}}></div>
+        <div className={`absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 ${
+          isDarkMode ? 'bg-purple-600/8' : 'bg-indigo-50/35'
+        } rounded-full filter blur-3xl opacity-50 animate-pulse`} style={{animationDelay: '0.5s'}}></div>
+        <div className={`absolute bottom-1/2 left-1/3 w-40 h-40 sm:w-60 sm:h-60 ${
+          isDarkMode ? 'bg-slate-600/15' : 'bg-blue-50/45'
+        } rounded-full filter blur-3xl opacity-45 animate-pulse`} style={{animationDelay: '1.5s'}}></div>
+        
+        {/* Thêm animations từ JSON files */}
+        <div className="absolute top-20 right-10 w-32 h-32 sm:w-48 sm:h-48 opacity-25">
+          <LottieFromURL 
+            src="/animation/customer-care-service.json"
+            className="w-full h-full"
+            loop={true}
+            autoplay={true}
+          />
+        </div>
+        <div className="absolute bottom-20 left-10 w-28 h-28 sm:w-40 sm:h-40 opacity-20">
+          <LottieFromURL 
+            src="/animation/sales-service-provided-by-agent.json"
+            className="w-full h-full"
+            loop={true}
+            autoplay={true}
+          />
+        </div>
+        <div className="absolute top-1/2 left-20 w-24 h-24 sm:w-36 sm:h-36 opacity-15">
+          <LottieFromURL 
+            src="/animation/trademark-transfer.json"
+            className="w-full h-full"
+            loop={true}
+            autoplay={true}
+          />
+        </div>
+                            </div>
+
+      {/* CSS cho 3D effects */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          /* 3D Card Effects */
+          .agent-card {
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          
+          .agent-card:hover {
+            transform: scale(1.05) rotateY(5deg);
+            box-shadow: ${isDarkMode 
+              ? '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(147, 51, 234, 0.3)' 
+              : '0 25px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(147, 51, 234, 0.3)'
+            };
+          }
+          
+          /* Smooth perspective container */
+          [style*="perspective"] {
+            transform-style: preserve-3d;
+          }
+          
+          /* Enhanced animations */
+          @keyframes shimmer {
+            0% { transform: translateX(-100%) skewX(-12deg); }
+            100% { transform: translateX(100%) skewX(-12deg); }
+          }
+          
+          .shimmer {
+            animation: shimmer 2s infinite;
+          }
+        `
+      }} />
+
+      {/* Toàn bộ nội dung đặt trong relative để có z-index cao hơn nền */}
+      <div className="relative z-10">
+        
+        {/* ======================= Header / Navbar ======================= */}
+        <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${
+          isSticky 
+            ? `py-2 mt-2 rounded-2xl shadow-xl backdrop-blur-xl ${
+                isDarkMode 
+                  ? 'bg-slate-900/95 border-slate-700/30' 
+                  : 'bg-white/95 border-gray-100/50'
+              } border mx-4 md:mx-auto md:max-w-5xl` 
+            : `py-4 rounded-none backdrop-blur-sm border-transparent ${
+                isDarkMode 
+                  ? 'bg-slate-900/80' 
+                  : 'bg-white/70'
+              }`
+        }`}>
+          <div className={`transition-all duration-300 ${
+            isSticky ? 'px-6 md:px-8 mx-auto' : 'container mx-auto px-6'
+          } flex justify-between items-center`}>
+            {/* Logo */}
+            <Link to="/" className="font-bold flex items-center space-x-2">
+              <svg 
+                className={`transition-all duration-300 ${
+                  isSticky ? 'w-5 h-5 sm:w-6 sm:h-6' : 'w-6 h-6 sm:w-8 sm:h-8'
+                }`}
+                viewBox="0 0 375 374.999991" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <clipPath id="28682cf8b0">
+                    <path d="M 212.070312 79.519531 L 287.820312 79.519531 L 287.820312 155.269531 L 212.070312 155.269531 Z M 212.070312 79.519531 "/>
+                  </clipPath>
+                  <clipPath id="fbf10c9d0c">
+                    <path d="M 129.140625 45.132812 L 243.140625 45.132812 L 243.140625 306.261719 L 129.140625 306.261719 Z M 129.140625 45.132812 "/>
+                  </clipPath>
+                </defs>
+                <g clipPath="url(#28682cf8b0)">
+                  <path 
+                    fill="#5e17eb" 
+                    d="M 250.863281 99.785156 C 250.980469 100.84375 251.183594 101.882812 251.476562 102.90625 C 251.765625 103.929688 252.144531 104.921875 252.605469 105.882812 C 253.0625 106.84375 253.601562 107.757812 254.21875 108.628906 C 254.832031 109.496094 255.515625 110.308594 256.269531 111.058594 C 257.023438 111.8125 257.832031 112.496094 258.703125 113.113281 C 259.570312 113.726562 260.484375 114.265625 261.445312 114.726562 C 262.40625 115.1875 263.398438 115.5625 264.421875 115.855469 C 265.445312 116.148438 266.488281 116.351562 267.546875 116.464844 C 272.667969 117.027344 279.277344 117.390625 287.808594 117.390625 C 279.277344 117.390625 272.667969 117.753906 267.546875 118.3125 C 266.488281 118.429688 265.445312 118.632812 264.421875 118.925781 C 263.398438 119.21875 262.40625 119.59375 261.445312 120.054688 C 260.484375 120.515625 259.570312 121.050781 258.703125 121.667969 C 257.832031 122.28125 257.023438 122.96875 256.269531 123.71875 C 255.515625 124.472656 254.832031 125.285156 254.21875 126.152344 C 253.601562 127.023438 253.0625 127.9375 252.605469 128.898438 C 252.144531 129.855469 251.765625 130.847656 251.476562 131.871094 C 251.183594 132.898438 250.980469 133.9375 250.863281 134.996094 C 250.300781 140.117188 249.941406 146.726562 249.941406 155.261719 C 249.941406 146.726562 249.578125 140.117188 249.015625 134.996094 C 248.898438 133.9375 248.695312 132.898438 248.40625 131.871094 C 248.113281 130.847656 247.734375 129.855469 247.277344 128.898438 C 246.816406 127.9375 246.277344 127.023438 245.660156 126.152344 C 245.046875 125.285156 244.363281 124.472656 243.609375 123.71875 C 242.855469 122.96875 242.046875 122.28125 241.175781 121.667969 C 240.308594 121.050781 239.394531 120.515625 238.433594 120.054688 C 237.472656 119.59375 236.480469 119.21875 235.457031 118.925781 C 234.433594 118.632812 233.390625 118.429688 232.332031 118.3125 C 227.210938 117.753906 220.601562 117.390625 212.070312 117.390625 C 220.601562 117.390625 227.210938 117.027344 232.332031 116.464844 C 233.390625 116.351562 234.433594 116.148438 235.457031 115.855469 C 236.480469 115.5625 237.472656 115.1875 238.433594 114.726562 C 239.394531 114.265625 240.308594 113.726562 241.175781 113.113281 C 242.046875 112.496094 242.855469 111.8125 243.609375 111.058594 C 244.363281 110.308594 245.046875 109.496094 245.660156 108.628906 C 246.277344 107.757812 246.816406 106.84375 247.277344 105.882812 C 247.734375 104.921875 248.113281 103.929688 248.40625 102.90625 C 248.695312 101.882812 248.898438 100.84375 249.015625 99.785156 C 249.578125 94.664062 249.941406 88.054688 249.941406 79.519531 C 249.941406 88.050781 250.300781 94.664062 250.863281 99.785156 Z M 250.863281 99.785156 "
+                  />
+                </g>
+                <g clipPath="url(#fbf10c9d0c)">
+                  <path 
+                    fill="#5e17eb" 
+                    d="M 213.3125 45.132812 L 129.140625 216.617188 L 176.207031 216.902344 L 164.164062 306.261719 L 243.148438 171.058594 L 195.3125 169.582031 L 213.3125 45.132812 "
+                  />
+                </g>
               </svg>
-                            </div>
-                            <span className={`font-bold text-xl ${isDark ? 'text-white' : 'text-slate-800'}`}>SuperbAI</span>
+              <span className={`${isDarkMode ? 'text-white' : 'text-slate-800'} transition-all duration-300 ${
+                isSticky ? 'text-sm sm:text-base font-semibold' : 'text-lg sm:text-2xl font-bold'
+              }`}>SuperbAI</span>
             </Link>
-                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mb-6 leading-relaxed`}>
-                            Create and deploy intelligent AI Agents to automate your business processes. 
-                            Save time and increase efficiency with advanced AI technology.
-                        </p>
-                        
-                        {/* Contact Info */}
-                        <div className="space-y-3">
-                            <div className="flex items-center space-x-3">
-                                <EmailIcon className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-purple-600'} flex-shrink-0`} />
-                                <a href="mailto:support@superbai.com" className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                    support@superbai.com
-                                </a>
-          </div>
-                            <div className="flex items-center space-x-3">
-                                <PhoneIcon className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-purple-600'} flex-shrink-0`} />
-                                <a href="tel:+84123456789" className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                    +84 123 456 789
-                                </a>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <LocationIcon className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-purple-600'} flex-shrink-0`} />
-                                <span className={`${isDark ? 'text-slate-300' : 'text-slate-600'} text-sm`}>
-                                    Ho Chi Minh City, Vietnam
-                                </span>
+            
+            {/* Navigation Links - Desktop */}
+            <nav className={`hidden md:flex items-center transition-all duration-300 ${
+              isSticky ? 'space-x-4' : 'space-x-8'
+            }`}>
+              {['features', 'pricing', 'testimonials'].map((section) => (
+                <a 
+                  key={section}
+                  href={`#${section}`} 
+                  className={`transition-all duration-300 font-medium capitalize relative ${
+                    isSticky ? 'text-sm px-3 py-1.5' : 'text-sm px-0 py-0'
+                  } ${
+                    activeSection === section 
+                      ? (isDarkMode ? 'text-purple-400' : 'text-purple-600')
+                      : (isDarkMode ? 'text-gray-300 hover:text-purple-400' : 'text-slate-600 hover:text-purple-600')
+                  } ${
+                    activeSection === section && isSticky 
+                      ? (isDarkMode ? 'bg-purple-400/10' : 'bg-purple-600/10') + ' rounded-full'
+                      : ''
+                  }`}
+                >
+                  {section.replace('-', ' ')}
+                </a>
+              ))}
+            </nav>
+            
+            {/* Action Buttons */}
+            <div className={`flex items-center transition-all duration-300 ${
+              isSticky ? 'space-x-2' : 'space-x-4'
+            }`}>
+                                <button 
+                onClick={toggleDarkMode} 
+                className={`rounded-full transition-all duration-300 ${
+                  isSticky ? 'p-1 sm:p-1.5' : 'p-1.5 sm:p-2'
+                } ${
+                  isDarkMode 
+                    ? 'bg-slate-800/60 text-yellow-400 hover:bg-slate-700/80' 
+                    : 'bg-white/60 text-slate-600 hover:bg-white/80'
+                } backdrop-blur-sm border ${
+                  isDarkMode ? 'border-slate-700/40' : 'border-white/40'
+                }`}
+                aria-label="Toggle theme"
+              >
+                {isDarkMode ? <FiSun size={isSticky ? 16 : 18} /> : <FiMoon size={isSticky ? 16 : 18} />}
+                                </button>
+              
+              <Link 
+                to="/login" 
+                className={`hidden sm:block transition-all duration-300 font-medium ${
+                  isSticky ? 'text-sm' : 'text-sm'
+                } ${
+                  isDarkMode ? 'text-gray-300 hover:text-purple-400' : 'text-slate-600 hover:text-purple-600'
+                }`}
+              >
+                Log in
+              </Link>
+              
+              <Link 
+                to="/register" 
+                className={`font-semibold rounded-xl transition-all duration-300 ${
+                  isSticky ? 'px-3 py-1.5 text-xs sm:px-4 sm:text-sm' : 'px-4 py-2 text-xs sm:px-5 sm:text-sm'
+                } bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 shadow-lg hover:shadow-purple-500/25`}
+              >
+                Get started
+              </Link>
+              
+                            {/* Mobile Menu Button */}
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className={`md:hidden rounded-lg transition-all duration-300 relative ${
+                  isSticky ? 'p-1 sm:p-1.5' : 'p-1.5 sm:p-2'
+                } ${
+                  isDarkMode 
+                    ? 'bg-slate-800/60 text-gray-300 hover:bg-slate-700/80' 
+                    : 'bg-white/60 text-slate-600 hover:bg-white/80'
+                } backdrop-blur-sm border ${
+                  isDarkMode ? 'border-slate-700/40' : 'border-white/40'
+                } ${isMobileMenuOpen ? 'scale-110' : 'scale-100'}`}
+                aria-label="Toggle menu"
+              >
+                <div className="relative w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                  <FiMenu 
+                    size={isSticky ? 16 : 18} 
+                    className={`absolute transition-all duration-300 ${
+                      isMobileMenuOpen ? 'opacity-0 rotate-180 scale-75' : 'opacity-100 rotate-0 scale-100'
+                    }`}
+                  />
+                  <FiX 
+                    size={isSticky ? 16 : 18} 
+                    className={`absolute transition-all duration-300 ${
+                      isMobileMenuOpen ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-180 scale-75'
+                    }`}
+                  />
+                </div>
+              </button>
                             </div>
                         </div>
+          
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="absolute top-full left-4 right-4 mt-2 md:hidden z-[60]">
+              <div className={`rounded-2xl backdrop-blur-xl border shadow-xl transform transition-all duration-300 ${
+                isDarkMode 
+                  ? 'bg-slate-900/95 border-slate-700/30' 
+                  : 'bg-white/95 border-gray-200/50'
+              }`}>
+                <nav className="px-4 py-4 space-y-2">
+                  {['features', 'pricing', 'testimonials'].map((section) => (
+                    <a 
+                      key={section}
+                      href={`#${section}`} 
+                      className={`block px-3 py-2.5 rounded-lg transition-all duration-300 font-medium capitalize text-sm ${
+                        activeSection === section 
+                          ? (isDarkMode ? 'text-purple-400 bg-purple-400/10' : 'text-purple-600 bg-purple-600/10')
+                          : (isDarkMode ? 'text-gray-300 hover:text-purple-400 hover:bg-purple-400/5' : 'text-slate-600 hover:text-purple-600 hover:bg-purple-600/5')
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {section.replace('-', ' ')}
+                    </a>
+                  ))}
+                  
+                  {/* Mobile Menu Actions */}
+                  <div className="pt-3 border-t border-gray-200/20 space-y-2">
+                    <Link 
+                      to="/login" 
+                      className={`block px-3 py-2.5 rounded-lg transition-all duration-300 font-medium text-center text-sm ${
+                        isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100/50'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      className="block bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold px-3 py-2.5 rounded-lg transition-all transform hover:scale-105 text-center text-sm hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Get started
+                    </Link>
+                  </div>
+                </nav>
+              </div>
+            </div>
+          )}
+        </header>
+
+        <main>
+          <Hero isDark={isDarkMode} />
+          
+                    {/* Real Process Showcase Section */}
+          <section id="process" className={`${isDarkMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
+            <div className="container mx-auto px-6">
+              <AnimatedSection className="text-center max-w-4xl mx-auto mb-20">
+                <h2 className="text-4xl md:text-5xl font-bold mb-6">See How AI Agents Work</h2>
+                <p className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-xl leading-relaxed`}>
+                  Real examples of AI agents creating content, managing social media, and automating your business processes
+                </p>
+              </AnimatedSection>
+              
+              <AnimatedSection>
+                <div className="space-y-20 max-w-5xl mx-auto">
+                  
+                  {/* Process 1: Content Creation - Step by Step Visualization */}
+                  <div className="flex justify-center">
+                    <div className="max-w-xl w-full">
+                      <div className={`relative rounded-2xl overflow-hidden shadow-2xl ${isDarkMode ? 'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-600/40' : 'bg-gradient-to-br from-blue-50/95 to-cyan-50/95 border border-blue-200/60'}`}>
+                                                <div className={`h-8 ${isDarkMode ? 'bg-slate-700/80' : 'bg-blue-100/80'} flex items-center px-4`}>
+                          <div className="flex space-x-2">
+                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          </div>
+                          <span className={`ml-4 text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-blue-800'}`}>AI Fashion Generator</span>
+                        </div>
+                        <div className="p-6">
+                          {/* Step by Step Process */}
+                          <div className="space-y-6">
+                            {/* Step 1: Input */}
+                            <div className="flex items-center gap-6">
+                              <div className="flex-shrink-0">
+                                <div className={`w-10 h-10 rounded-full ${isDarkMode ? 'bg-blue-600' : 'bg-blue-600'} flex items-center justify-center text-white font-bold shadow-lg`}>1</div>
+                              </div>
+                              <div className="flex-1">
+                                <img 
+                                  src="/images/step1.png" 
+                                  alt="Original product image"
+                                  className="w-32 h-32 object-cover rounded-lg border-2 border-dashed border-gray-300 mx-auto"
+                                />
+                                <p className={`text-sm mt-2 text-center ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Upload product image</p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <svg className={`w-8 h-8 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                              </div>
+                            </div>
+
+                                                        {/* Prompt Input */}
+                            <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-blue-50/80 border-blue-200/60'}`}>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-blue-800'}`}>AI Prompt:</span>
+                              </div>
+                              <p className={`text-base ${isDarkMode ? 'text-slate-400' : 'text-blue-700'} italic leading-relaxed`}>
+                                "Create a professional model wearing this outfit in a modern studio setting"
+                              </p>
+                            </div>
+
+                            {/* Step 2 & 3: Results */}
+                            <div className="flex items-center gap-6">
+                              <div className="flex-shrink-0">
+                                <div className={`w-10 h-10 rounded-full ${isDarkMode ? 'bg-purple-600' : 'bg-purple-600'} flex items-center justify-center text-white font-bold shadow-lg`}>2</div>
+                              </div>
+                              <div className="flex gap-6 flex-1 justify-center">
+                                <div className="text-center">
+                                  <img 
+                                    src="/images/step2.png" 
+                                    alt="AI generated model 1"
+                                    className="w-28 h-28 object-cover rounded-lg shadow-lg"
+                                  />
+                                  <p className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-slate-400' : 'text-blue-900'}`}>Model A</p>
+                                </div>
+                                <div className="text-center">
+                                  <img 
+                                    src="/images/step3.png" 
+                                    alt="AI generated model 2"
+                                    className="w-28 h-28 object-cover rounded-lg shadow-lg"
+                                  />
+                                  <p className={`text-sm mt-2 font-medium ${isDarkMode ? 'text-slate-400' : 'text-blue-900'}`}>Model B</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Processing Status */}
+                            <div className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-blue-700'} space-y-2`}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span>✓ Background removal complete</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span>✓ AI models generated successfully</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                <span>Generating product descriptions...</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Product Links */}
-                    <div>
-                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Product</h3>
-                        <ul className="space-y-2">
-                            {footerLinks.product.map((link) => (
-                                <li key={link.name}>
-                                    <a href={link.href} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                        {link.name}
-                                    </a>
-                                </li>
-                ))}
-              </ul>
+                  </div>
+
+                  {/* Process 2: Social Media Automation */}
+                  <div className="flex justify-center">
+                    <div className="max-w-xl w-full">
+                      <div className={`relative rounded-2xl overflow-hidden shadow-2xl ${isDarkMode ? 'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-600/40' : 'bg-gradient-to-br from-purple-50/95 to-pink-50/95 border border-purple-200/60'}`}>
+                        <div className={`h-12 ${isDarkMode ? 'bg-slate-700/80' : 'bg-purple-100/80'} flex items-center px-4`}>
+                          <div className="flex items-center gap-2">
+                            <svg className={`w-6 h-6 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                            </svg>
+                            <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-purple-800'}`}>Social Media Manager</span>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <div className="space-y-4">
+                            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-slate-700/50' : 'bg-purple-50/80'}`}>
+                              <div className="flex items-start gap-3">
+                                <img 
+                                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                                  alt="User"
+                                  className="w-12 h-12 rounded-full"
+                                />
+                                <div className="flex-1">
+                                  <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-purple-900'} mb-2`}>Your Brand AI</div>
+                                  <p className={`${isDarkMode ? 'text-slate-300' : 'text-purple-900'} mb-3 leading-relaxed`}>
+                                    🚀 Just launched our new eco-friendly product line! Made with 100% sustainable materials. 
+                                    What's your favorite eco-friendly brand? #Sustainability #EcoFriendly #GreenLiving
+                                  </p>
+                                  <div className={`flex items-center gap-6 text-sm ${isDarkMode ? 'text-gray-500' : 'text-purple-700'}`}>
+                                    <span>💬 24</span>
+                                    <span>🔄 156</span>
+                                    <span>❤️ 892</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`text-sm ${isDarkMode ? 'text-green-400' : 'text-green-800'} flex items-center gap-2 px-2`}>
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span>Posted automatically at optimal time: 2:30 PM</span>
+                            </div>
+                            <div className={`text-sm ${isDarkMode ? 'text-purple-400' : 'text-purple-800'} flex items-center gap-2 px-2`}>
+                              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                              <span>Scheduling next posts for Instagram & Facebook...</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+
+
+                    </div>
+                </AnimatedSection>
+      </div>
+    </section>
+
+          {/* 3D AI Agents Section */}
+          <ScrollableAIAgents isDark={isDarkMode} />
+
+          {/* Simple Pricing Section */}
+          <section id="pricing" className={`${isDarkMode ? 'bg-slate-800 text-white border-slate-700' : 'bg-gray-50 text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
+            <div className="container mx-auto px-6">
+              <AnimatedSection className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-bold mb-4">Simple, Transparent Pricing</h2>
+                <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} text-lg max-w-3xl mx-auto`}>
+                  Start for free and scale as you grow. No hidden fees, no surprises.
+                </p>
+              </AnimatedSection>
+              
+              <AnimatedSection>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                  {/* Free Plan */}
+                  <div className={`p-8 rounded-xl backdrop-blur-sm border transition-all duration-300 ${
+                    isDarkMode 
+                      ? 'bg-slate-800/50 border-slate-700/50' 
+                      : 'bg-white/60 border-white/40'
+                  } hover:shadow-lg`}>
+                    <h3 className="text-2xl font-bold mb-2">Free</h3>
+                    <div className="text-4xl font-bold mb-4">$0<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <ul className="space-y-3 mb-6 text-left">
+                      <li className="flex items-center gap-2">✅ 5 AI Agents</li>
+                      <li className="flex items-center gap-2">✅ 100 tasks/month</li>
+                      <li className="flex items-center gap-2">✅ Basic templates</li>
+                      <li className="flex items-center gap-2">✅ Community support</li>
+                    </ul>
+                    <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
+                      Get Started
+      </button>
+    </div>
+
+                  {/* Pro Plan */}
+                  <div className={`p-8 rounded-xl border-2 border-purple-500 relative backdrop-blur-sm transition-all duration-300 ${
+                    isDarkMode ? 'bg-purple-900/20' : 'bg-purple-50/60'
+                  } hover:shadow-2xl`}>
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                      Most Popular
+        </div>
+                    <h3 className="text-2xl font-bold mb-2">Pro</h3>
+                    <div className="text-4xl font-bold mb-4">$29<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <ul className="space-y-3 mb-6 text-left">
+                      <li className="flex items-center gap-2">✅ 25 AI Agents</li>
+                      <li className="flex items-center gap-2">✅ 10,000 tasks/month</li>
+                      <li className="flex items-center gap-2">✅ Premium templates</li>
+                      <li className="flex items-center gap-2">✅ Priority support</li>
+                      <li className="flex items-center gap-2">✅ Custom integrations</li>
+      </ul>
+                    <button className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105">
+                      Start Free Trial
+                    </button>
+                  </div>
+
+                  {/* Enterprise Plan */}
+                  <div className={`p-8 rounded-xl backdrop-blur-sm border transition-all duration-300 ${
+                    isDarkMode 
+                      ? 'bg-slate-800/50 border-slate-700/50' 
+                      : 'bg-white/60 border-white/40'
+                  } hover:shadow-lg`}>
+                    <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
+                    <div className="text-4xl font-bold mb-4">Custom</div>
+                    <ul className="space-y-3 mb-6 text-left">
+                      <li className="flex items-center gap-2">✅ Unlimited agents</li>
+                      <li className="flex items-center gap-2">✅ Unlimited tasks</li>
+                      <li className="flex items-center gap-2">✅ Custom deployment</li>
+                      <li className="flex items-center gap-2">✅ Dedicated support</li>
+                      <li className="flex items-center gap-2">✅ SLA guarantees</li>
+                    </ul>
+                    <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
+                      Contact Sales
+      </button>
+                </div>
+                </div>
+              </AnimatedSection>
+            </div>
+          </section>
+
+          {/* CTA Section */}
+          <section className="py-20">
+            <div className="container mx-auto px-6">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-12 text-white backdrop-blur-lg shadow-2xl border border-purple-500/30 text-center">
+                <h2 className="text-4xl md:text-5xl font-bold mb-4">Ready to Transform Your Business?</h2>
+                <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 opacity-90">
+                  Join thousands of companies already using SuperbAI to automate their workflows and boost productivity.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Link 
+                    to="/register" 
+                    className="bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold px-8 py-3 rounded-lg hover:from-purple-700 hover:to-violet-700 transition-all hover:shadow-purple-500/25 transform hover:scale-105"
+                  >
+                    Start Free Trial
+                  </Link>
+                  <a 
+                    href="#" 
+                    className="border border-white/30 text-white font-semibold px-8 py-3 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    Schedule Demo
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+                {/* ======================= Footer ======================= */}
+        <footer className={`border-t backdrop-blur-lg ${
+          isDarkMode 
+            ? 'border-slate-700/50 bg-slate-900/50' 
+            : 'border-white/30 bg-white/50'
+        }`}>
+          <div className="container mx-auto px-6 py-16">
+            {/* Main Footer Content */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-6 mb-12">
+              {/* Company Info */}
+              <div className="lg:col-span-2">
+                <div className="flex items-center space-x-3 group mb-6">
+                  <div className={`p-2 ${isDarkMode ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
+                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className={`font-bold text-xl ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>SuperbAI</span>
+                </div>
+                <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} mb-6 leading-relaxed`}>
+                  Create and deploy intelligent AI Agents to automate your business processes. 
+                  Save time and increase efficiency with advanced AI technology.
+                </p>
+                
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <EmailIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
+                    <a href="mailto:support@superbai.com" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      support@superbai.com
+                    </a>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <PhoneIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
+                    <a href="tel:+84123456789" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      +84 123 456 789
+                    </a>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <LocationIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
+                    <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-sm`}>
+                      Ho Chi Minh City, Vietnam
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Links */}
+              <div>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Product</h3>
+                <ul className="space-y-2">
+                  {[
+                    { name: 'Features', href: '#features' },
+                    { name: 'Pricing', href: '#pricing' },
+                    { name: 'AI Templates', href: '#' },
+                    { name: 'API Documentation', href: '#' },
+                    { name: 'Integrations', href: '#' }
+                  ].map((link) => (
+                    <li key={link.name}>
+                      <a href={link.href} className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Company Links */}
+              <div>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Company</h3>
+                <ul className="space-y-2">
+                  {[
+                    { name: 'About Us', href: '#' },
+                    { name: 'Careers', href: '#' },
+                    { name: 'Blog', href: '#' },
+                    { name: 'Press', href: '#' },
+                    { name: 'Contact', href: '#' }
+                  ].map((link) => (
+                    <li key={link.name}>
+                      <a href={link.href} className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Support Links */}
+              <div>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Support</h3>
+                <ul className="space-y-2">
+                  {[
+                    { name: 'Help Center', href: '#' },
+                    { name: 'Community', href: '#' },
+                    { name: 'Tutorials', href: '#' },
+                    { name: 'Status Page', href: '#' },
+                    { name: 'Bug Reports', href: '#' }
+                  ].map((link) => (
+                    <li key={link.name}>
+                      <a href={link.href} className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Legal Links */}
+              <div>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Legal</h3>
+                <ul className="space-y-2">
+                  {[
+                    { name: 'Privacy Policy', href: '#' },
+                    { name: 'Terms of Service', href: '#' },
+                    { name: 'Cookie Policy', href: '#' },
+                    { name: 'GDPR', href: '#' }
+                  ].map((link) => (
+                    <li key={link.name}>
+                      <a href={link.href} className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-                    {/* Company Links */}
-                    <div>
-                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Company</h3>
-                        <ul className="space-y-2">
-                            {footerLinks.company.map((link) => (
-                                <li key={link.name}>
-                                    <a href={link.href} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                        {link.name}
-                                    </a>
-                                </li>
-                ))}
-              </ul>
-        </div>
-
-                    {/* Support Links */}
-                    <div>
-                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Support</h3>
-                        <ul className="space-y-2">
-                            {footerLinks.support.map((link) => (
-                                <li key={link.name}>
-                                    <a href={link.href} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                        {link.name}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-        </div>
-
-                    {/* Legal Links */}
-                    <div>
-                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Legal</h3>
-                        <ul className="space-y-2">
-                            {footerLinks.legal.map((link) => (
-                                <li key={link.name}>
-                                    <a href={link.href} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                                        {link.name}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+            {/* Newsletter Signup */}
+            <div className={`${isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-gray-200'} rounded-xl p-6 md:p-8 mb-12 border`}>
+              <div className="text-center max-w-lg mx-auto">
+                <h3 className={`text-xl md:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-2`}>
+                  Stay Updated
+                </h3>
+                <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} mb-6 text-sm md:text-base`}>
+                  Get the latest news about new features, AI trends and tips to optimize your business
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className={`flex-1 px-4 py-2.5 rounded-lg border text-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-slate-900 placeholder-slate-500'} focus:outline-none focus:ring-2 ${isDarkMode ? 'focus:ring-purple-400' : 'focus:ring-purple-500'}`}
+                  />
+                                      <button className="bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-all transform hover:scale-105 text-sm hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25">
+                      Subscribe
+                    </button>
                 </div>
+              </div>
+            </div>
 
-                {/* Newsletter Signup */}
-                <div className={`${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-gray-200'} rounded-xl p-6 md:p-8 mb-12 border`}>
-                    <div className="text-center max-w-lg mx-auto">
-                        <h3 className={`text-xl md:text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'} mb-2`}>
-                            Stay Updated
-                        </h3>
-                        <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} mb-6 text-sm md:text-base`}>
-                            Get the latest news about new features, AI trends and tips to optimize your business
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                            <input
-                                type="email"
-                                placeholder="Enter your email"
-                                className={`flex-1 px-4 py-2.5 rounded-lg border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-slate-900 placeholder-slate-500'} focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-cyan-400' : 'focus:ring-purple-500'}`}
-                            />
-                            <button className={`${isDark ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'} text-white font-semibold px-6 py-2.5 rounded-lg transition-all transform hover:scale-105 text-sm`}>
-                                Subscribe
-                            </button>
-                        </div>
-                    </div>
+            {/* Bottom Footer */}
+            <div className={`${isDarkMode ? 'border-slate-800' : 'border-gray-200'} border-t pt-8`}>
+              <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} text-sm`}>
+                  &copy; {new Date().getFullYear()} SuperbAI, Inc. All rights reserved. Made with ❤️ in Vietnam
                 </div>
+                
+                {/* Social Media Links */}
+                <div className="flex items-center space-x-6">
+                  <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} text-sm font-medium`}>
+                    Connect with us:
+                  </span>
+                  <div className="flex space-x-4">
+                    <a 
+                      href="https://facebook.com/superbai" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`${isDarkMode ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
+                      aria-label="Facebook"
+                    >
+                      <FacebookIcon className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="https://zalo.me/superbai" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`${isDarkMode ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
+                      aria-label="Zalo"
+                    >
+                      <ZaloIcon className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="https://twitter.com/superbai" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`${isDarkMode ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
+                      aria-label="Twitter"
+                    >
+                      <TwitterIcon className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="https://github.com/superbai" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-gray-900'} transition-colors`}
+                      aria-label="GitHub"
+                    >
+                      <GithubIcon className="w-5 h-5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
 
-                {/* Bottom Footer */}
-                <div className={`${isDark ? 'border-slate-800' : 'border-gray-200'} border-t pt-8`}>
-                    <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                        <div className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm`}>
-                            &copy; {new Date().getFullYear()} SuperbAI, Inc. All rights reserved. Made with ❤️ in Vietnam
                         </div>
-                        
-                        {/* Social Media Links */}
-                        <div className="flex items-center space-x-6">
-                            <span className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-sm font-medium`}>
-                                Connect with us:
-                            </span>
-                            <div className="flex space-x-4">
-                                <a 
-                                    href="https://facebook.com/superbai" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className={`${isDark ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
-                                    aria-label="Facebook"
-                                >
-                                    <FacebookIcon className="w-5 h-5" />
-                                </a>
-                                <a 
-                                    href="https://zalo.me/superbai" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className={`${isDark ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
-                                    aria-label="Zalo"
-                                >
-                                    <ZaloIcon className="w-5 h-5" />
-                                </a>
-                                <a 
-                                    href="https://twitter.com/superbai" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className={`${isDark ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'} transition-colors`}
-                                    aria-label="Twitter"
-                                >
-                                    <TwitterIcon className="w-5 h-5" />
-                                </a>
-                                <a 
-                                    href="https://github.com/superbai" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-gray-900'} transition-colors`}
-                                    aria-label="GitHub"
-                                >
-                                    <GithubIcon className="w-5 h-5" />
-                                </a>
                             </div>
-                        </div>
-          </div>
-          </div>
-        </div>
-      </footer>
-  );
-}
-
-// Main Landing Page Component with CSS animations
-const LandingPage: React.FC = () => {
-    const [isDark, setIsDark] = useState(false);
-    const toggleTheme = () => setIsDark(!isDark);
-
-  return (
-        <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} font-sans antialiased`}>
-            <style>{`
-                /* Smooth scrolling for anchor links */
-                html {
-                    scroll-behavior: smooth;
-                }
-
-                /* Keyframes for scrolling animation */
-                @keyframes scroll-left {
-                    from { transform: translateX(0); }
-                    to { transform: translateX(-50%); }
-                }
-                @keyframes scroll-right {
-                    from { transform: translateX(-50%); }
-                    to { transform: translateX(0); }
-                }
-
-                /* Applying animations */
-                .animate-scroll-left {
-                    animation: scroll-left 45s linear infinite;
-                }
-                .animate-scroll-right {
-                    animation: scroll-right 45s linear infinite;
-                }
-
-                /* Animation delay utilities */
-                .animation-delay-500 {
-                    animation-delay: 0.5s;
-                }
-                .animation-delay-1000 {
-                    animation-delay: 1s;
-                }
-
-                /* Gradient background for hero */
-                .bg-gradient-radial {
-                    background-image: radial-gradient(circle, var(--tw-gradient-stops));
-                }
-
-                /* GSAP 3D Scroll Styles */
-                .boxes {
-                    touch-action: none;
-                    user-select: none;
-                }
-
-                .agent-box {
-                    transform-style: preserve-3d;
-                    will-change: transform;
-                }
-
-                .agent-box:nth-child(odd) .agent-card {
-                    background: ${isDark ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))'};
-                }
-
-                .agent-box:nth-child(even) .agent-card {
-                    background: ${isDark ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))' : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.95))'};
-                }
-
-                /* Enhanced glow effects */
-                .agent-card:hover {
-                    transform: scale(1.05) rotateY(5deg);
-                    box-shadow: ${isDark 
-                        ? '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 211, 238, 0.3)' 
-                        : '0 25px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(147, 51, 234, 0.3)'
-                    };
-                }
-            `}</style>
-            <Header isDark={isDark} toggleTheme={toggleTheme} />
-            <main>
-                <Hero isDark={isDark} />
-                <Features isDark={isDark} />
-                <ScrollableAIAgents isDark={isDark} />
-                <Pricing isDark={isDark} />
-      </main>
-            <Footer isDark={isDark} />
-    </div>
   );
 };
 

@@ -159,6 +159,10 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks' },
     { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
+    // Thêm Prompt Templates chỉ cho admin
+    ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
+      { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' }
+    ] : []),
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
