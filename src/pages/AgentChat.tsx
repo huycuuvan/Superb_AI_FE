@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 
 interface TaskInput {
   id: string;
@@ -77,6 +78,7 @@ interface TaskLog {
 
 const AgentChat = () => {
   const { agentId, threadId: threadFromUrl } = useParams<{ agentId: string; threadId?: string }>();
+  const { workspace, isLoading: isWorkspaceLoading } = useSelectedWorkspace();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
   const [isAgentThinking, setIsAgentThinking] = useState(false);
@@ -90,7 +92,6 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
   // Agent and workspace info
   const [currentThread, setCurrentThread] = useState<string | null>(threadFromUrl || null);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
   // Mobile sidebar state
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
@@ -348,39 +349,28 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     };
   }, [isAgentThinking]);
   useEffect(() => {
-    if (agentId && !hasInitializedRef.current && !isInitializingRef.current) {
+    if (agentId && !hasInitializedRef.current && !isInitializingRef.current && workspace?.id) {
       const initializeChat = async () => {
-        // Prevent duplicate initializations
         if (isInitializingRef.current) return;
         isInitializingRef.current = true;
-        
         try {
           setIsLoading(true);
-          
-          // Add a delay before fetching data and creating thread
-          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-          // Get workspace information
-          const workspaceResponse = await getWorkspace();
-          let currentWorkspaceId: string | null = null;
-          if (workspaceResponse.data && workspaceResponse.data.length > 0) {
-            setWorkspace(workspaceResponse.data[0]);
-            currentWorkspaceId = workspaceResponse.data[0].id;
-            console.log('Workspace loaded:', workspaceResponse.data[0]);
-          }
+          // KHÔNG gọi getWorkspace nữa
+          // Lấy workspaceId từ context
+          const currentWorkspaceId = workspace.id;
 
           // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
-          console.log('Agent loaded:', agentData.data);
 
-          // TODO: Fetch tasks for the agent
+          // Fetch tasks for the agent
           if (agentId) {
             try {
               const agentTasksResponse = await getAgentTasks(agentId);
               if (agentTasksResponse.data) {
                 setTasks(agentTasksResponse.data);
-                console.log("Fetched tasks:", agentTasksResponse.data);
               }
             } catch (taskError) {
               console.error('Error fetching agent tasks:', taskError);
@@ -423,18 +413,11 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                   };
                   initialMessages.push(welcomeMessage);
                 }
-
-                console.log("Fetched messages for thread:", threadId, messagesResponse.data);
-                console.log("Formatted messages state:", initialMessages);
-
               } catch (fetchError) {
                 console.error('Error fetching initial messages:', fetchError);
               }
             } else {
-              // Tạo thread mới khi không tồn tại thread nào, bất kể fromProfile là gì
-              console.log("No existing thread found, creating a new one");
-                
-              // Tạo thread mới
+              // Tạo thread mới khi không tồn tại thread nào
               const threadData = {
                 agent_id: agentId,
                 workspace_id: currentWorkspaceId,
@@ -454,46 +437,39 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
               };
               initialMessages = [welcomeMessage];
             }
-          } else {
-            // If threadId was already available, fetch its messages
-            try {
-              const messagesResponse = await getThreadMessages(threadId);
-              initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
-                  id: msg.id,
-                  content: msg.message_content,
-                  sender: msg.sender_type,
-                  timestamp: msg.created_at,
-                  agentId: msg.sender_agent_id,
-                  image_url: msg.image_url,
-                  file_url: msg.file_url,
-              })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          }
+          // If threadId was already available, fetch its messages
+          try {
+            const messagesResponse = await getThreadMessages(threadId);
+            initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+                id: msg.id,
+                content: msg.message_content,
+                sender: msg.sender_type,
+                timestamp: msg.created_at,
+                agentId: msg.sender_agent_id,
+                image_url: msg.image_url,
+                file_url: msg.file_url,
+            })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-              if (initialMessages.length === 0 && agentData.data.greeting_message) {
-                const welcomeMessage: ChatMessage = {
-                  id: Date.now().toString(),
-                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
-                  sender: 'agent',
-                  timestamp: new Date().toISOString(),
-                  agentId: agentData.data.id,
-                  image_url: agentData.data.image_url,
-                  file_url: agentData.data.file_url,
-                };
-                initialMessages.push(welcomeMessage);
-              }
-
-            } catch (fetchError) {
-              console.error('Error fetching initial messages:', fetchError);
+            if (initialMessages.length === 0 && agentData.data.greeting_message) {
+              const welcomeMessage: ChatMessage = {
+                id: Date.now().toString(),
+                content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                sender: 'agent',
+                timestamp: new Date().toISOString(),
+                agentId: agentData.data.id,
+                image_url: agentData.data.image_url,
+                file_url: agentData.data.file_url,
+              };
+              initialMessages.push(welcomeMessage);
             }
+          } catch (fetchError) {
+            console.error('Error fetching initial messages:', fetchError);
           }
 
-          // Only update state if component is still mounted
           setCurrentThread(threadId);
           setMessages(initialMessages);
-          console.log("Thread ID set to:", threadId);
-          
-          // Mark as initialized to prevent duplicate initialization
           hasInitializedRef.current = true;
-
         } catch (error) {
           console.error('Error initializing chat:', error);
         } finally {
@@ -501,10 +477,9 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
           isInitializingRef.current = false;
         }
       };
-
       initializeChat();
     }
-  }, [agentId, currentThread]);
+  }, [agentId, workspace?.id]);
 
   useEffect(() => {
     const chatContainer = chatContainerRef.current;

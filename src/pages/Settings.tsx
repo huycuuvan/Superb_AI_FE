@@ -136,7 +136,7 @@ const Settings = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value="admin@teampal.ai" />
+                <Input id="email" type="email" value="admin@superb.ai" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -144,7 +144,7 @@ const Settings = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="teampal-button">Update Account</Button>
+              <Button className="superb-button">Update Account</Button>
             </CardFooter>
           </Card>
         </TabsContent>
