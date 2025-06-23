@@ -705,7 +705,8 @@ export const updateTask = async (
 export const executeTask = async (
   taskId: string,
   inputData: { [key: string]: string },
-  threadId: string
+  threadId: string,
+  extra?: { provider?: string; credential?: object }
 ): Promise<{
   message: string;
   status: number;
@@ -719,18 +720,22 @@ export const executeTask = async (
   if (!userStr) throw new Error("Không tìm thấy thông tin người dùng");
   const user = JSON.parse(userStr);
 
+  const body: any = {
+    task_id: taskId,
+    input_data: inputData,
+    thread_id: threadId,
+    user_id: user.id,
+  };
+  if (extra?.provider) body.provider = extra.provider;
+  if (extra?.credential) body.credential = extra.credential;
+
   const response = await fetch(API_ENDPOINTS.tasks.execute, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      task_id: taskId,
-      input_data: inputData,
-      thread_id: threadId,
-      user_id: user.id,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -1285,4 +1290,67 @@ export const uploadMessageWithFile = async (
   }
 
   return response.json();
+};
+
+// ========== CREDENTIALS API ==========
+export const createCredential = async (data: {
+  provider: string;
+  credential: object;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.credentials.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const getCredentials = async () => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.credentials.list, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const updateCredential = async (id: string, data: object) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.credentials.update(id), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const deleteCredential = async (id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.credentials.delete(id), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return { success: res.ok };
 };

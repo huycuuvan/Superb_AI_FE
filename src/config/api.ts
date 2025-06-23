@@ -73,4 +73,11 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/prompt-templates/by-agent/${agentId}?template_type=user_prompt&limit=${limit}&offset=${offset}`,
     render: (id: string) => `${API_BASE_URL}/prompt-templates/${id}/render`,
   },
+  credentials: {
+    create: `${API_BASE_URL}/credentials`,
+    list: `${API_BASE_URL}/credentials`,
+    getById: (id: string) => `${API_BASE_URL}/credentials/${id}`,
+    update: (id: string) => `${API_BASE_URL}/credentials/${id}`,
+    delete: (id: string) => `${API_BASE_URL}/credentials/${id}`,
+  },
 };

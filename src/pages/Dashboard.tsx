@@ -166,9 +166,7 @@ const Dashboard = () => {
             <span className="text-lg">+</span> {t('agent.createAgent')}
           </Button>
           )}
-          <Button variant="outline" className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddFolderDialog(true)}>
-            <span className="text-lg">+</span> {t('folder.createFolder')}
-          </Button>
+         
         </div>
       </div>
 

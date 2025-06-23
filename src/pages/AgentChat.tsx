@@ -15,7 +15,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -74,6 +74,14 @@ interface TaskLog {
   status?: 'completed' | 'processing' | 'error' | string; // Có thể có các trạng thái khác
   response?: unknown; // Sử dụng unknown thay cho any để yêu cầu kiểm tra kiểu rõ ràng
   task_id?: string;
+}
+
+// Định nghĩa interface Credential (giống CredentialsPage)
+interface Credential {
+  id: string;
+  provider: string;
+  credential: object;
+  created_at?: string;
 }
 
 const AgentChat = () => {
@@ -143,6 +151,11 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     },
     enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
   });
+
+  // State cho credential
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
 
   // Clean up interval on component unmount (now handled by WS cleanup)
   useEffect(() => {
@@ -546,6 +559,10 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      // Reset chiều cao textarea về mặc định (ví dụ 40px)
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '40px';
+      }
       
       // Gửi dữ liệu trong nền
       if (fileToSend) { // Trường hợp có ảnh
@@ -743,7 +760,15 @@ const handleSubmitTaskInputs = async () => {
   const selectedTask = tasks.find(t => t.id === selectedTaskId);
   if (selectedTask && currentThread) {
     try {
-      const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread);
+      const extra: any = {};
+      if (selectedCredentialId) {
+        const cred = credentials.find(c => String(c.id) === selectedCredentialId);
+        if (cred) {
+          extra.provider = cred.provider;
+          extra.credential = cred.credential;
+        }
+      }
+      const response = await executeTask(selectedTask.id, selectedTaskInputs, currentThread, extra);
       const runId = response.task_run_id;
 
       if (runId) {
@@ -771,6 +796,7 @@ const handleSubmitTaskInputs = async () => {
       toast({ title: "Lỗi Thực Thi", description: "Không thể bắt đầu task.", variant: "destructive" });
     }
     setAboveInputContent('none');
+    setSelectedCredentialId('');
   }
 };
   const handleThreadClick = async (threadId: string) => {
@@ -975,6 +1001,19 @@ const handleSubmitTaskInputs = async () => {
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  useEffect(() => {
+    // Fetch credentials khi mở form thực thi task
+    if (aboveInputContent === 'taskInputs') {
+      setLoadingCredentials(true);
+      getCredentials()
+        .then(res => {
+          setCredentials(Array.isArray(res) ? res : (res.data || []));
+        })
+        .catch(() => setCredentials([]))
+        .finally(() => setLoadingCredentials(false));
+    }
+  }, [aboveInputContent]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1190,12 +1229,15 @@ const handleSubmitTaskInputs = async () => {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className={cn(
-                                "max-w-[75%] p-3 rounded-2xl shadow-sm break-words relative overflow-hidden mr-2",
-                                msg.sender === 'user'
-                                    ? 'button-gradient-light dark:button-gradient-dark text-white rounded-br-lg'
-                                    : 'bg-muted text-foreground rounded-bl-lg'
-                            )}>
+                <div
+                  className={cn(
+                    "max-w-[75%] p-3 rounded-2xl shadow-sm whitespace-pre-line relative overflow-hidden mr-2",
+                    msg.sender === 'user'
+                      ? 'button-gradient-light dark:button-gradient-dark text-white rounded-br-lg'
+                      : 'bg-muted text-foreground rounded-bl-lg'
+                  )}
+                  style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}
+                >
                   <ChatMessageContent
                     content={msg.content}
                     isAgent={msg.sender === 'agent'}
@@ -1280,20 +1322,39 @@ const handleSubmitTaskInputs = async () => {
             </CardDescription>  
         </CardHeader>
         <CardContent className="space-y-4 max-h-60 overflow-y-auto pr-3">
+            {/* Select credential */}
+            <div className="space-y-2">
+              <Label htmlFor="credential-select" className="font-semibold">Chọn Credential (nếu cần)</Label>
+              <select
+                id="credential-select"
+                className="w-full border border-border rounded-lg px-3 py-2 bg-background text-foreground focus:ring-2 focus:ring-primary/40 focus:outline-none transition"
+                value={selectedCredentialId}
+                onChange={e => setSelectedCredentialId(e.target.value)}
+                disabled={loadingCredentials || credentials.length === 0}
+              >
+                <option value="">Không gửi credential</option>
+                {credentials.map(cred => (
+                  <option key={cred.id} value={cred.id}>
+                    {cred.provider} - {String(cred.id).slice(0, 6)}...{String(cred.id).slice(-4)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Các input khác */}
             {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
-                <div key={key} className="space-y-2">
-                    <Label htmlFor={key} className="capitalize font-semibold">
-                        {key.replace(/_/g, ' ')}
-                    </Label>
-                    <Textarea
-                        id={key}
-                        value={selectedTaskInputs[key] || ''}
-                        onChange={(e) => handleInputChange(key, e.target.value)}
-                        placeholder={`Nhập ${key.replace(/_/g, ' ')}...`}
-                        className="font-mono text-sm bg-muted/50"
-                        rows={key.toLowerCase().includes('script') ? 4 : 2} // Nếu là script thì cho ô nhập liệu cao hơn
-                    />
-                </div>
+              <div key={key} className="space-y-2">
+                <Label htmlFor={key} className="capitalize font-semibold">
+                  {key.replace(/_/g, ' ')}
+                </Label>
+                <Textarea
+                  id={key}
+                  value={selectedTaskInputs[key] || ''}
+                  onChange={(e) => handleInputChange(key, e.target.value)}
+                  placeholder={`Nhập ${key.replace(/_/g, ' ')}...`}
+                  className="font-mono text-sm bg-muted/50"
+                  rows={key.toLowerCase().includes('script') ? 4 : 2}
+                />
+              </div>
             ))}
         </CardContent>
         <CardFooter>

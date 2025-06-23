@@ -39,6 +39,7 @@ import DocsPage from '@/pages/Docs';
 import BlogPage from '@/pages/Blog';
 import AgentProfilePage from '@/pages/AgentProfilePage';
 import PromptTemplatesPage from '@/pages/PromptTemplates';
+import CredentialsPage from '@/pages/Credentials';
 
 const routes: RouteObject[] = [
   {
@@ -117,6 +118,10 @@ const routes: RouteObject[] = [
       {
         path: 'prompts',
         element: <PromptTemplatesPage />,
+      },
+      {
+        path: 'credentials',
+        element: <CredentialsPage />,
       },
     ],
   },

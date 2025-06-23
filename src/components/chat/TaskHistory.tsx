@@ -142,7 +142,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
     }
 
     // Nếu là markdown
-    if (typeof output === "string" && /[*_`#\[\]]/.test(output)) {
+    if (typeof output === "string" && /[*_`#[\]]/.test(output)) {
       return (
         <div className="prose max-w-none">
           <ReactMarkdown>{output}</ReactMarkdown>
@@ -277,11 +277,18 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
             <AccordionContent className="p-4 space-y-4 bg-muted/30 max-h-[60vh] overflow-y-auto no-scrollbar">
               
             {(run.status === 'error' || run.status === 'failed') && (
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center gap-2 text-red-500">
-                  <XCircle size={16} /> Chi tiết lỗi
-                </h4>
-                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs font-mono whitespace-pre-wrap break-all">
+              <div className="my-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <XCircle size={32} className="text-destructive" />
+                  <div>
+                    <h4 className="font-bold text-lg text-destructive flex items-center gap-2">Đã xảy ra lỗi khi thực thi Task</h4>
+                    <span className="text-xs text-muted-foreground">Mã lỗi: <span className="font-mono">{
+                      String((run.output_data && typeof run.output_data === 'object' && !Array.isArray(run.output_data) && (run.output_data.error_code || run.output_data.code)) || 'N/A')
+                    }</span></span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm font-mono whitespace-pre-wrap break-all select-all">
+                  {/* Hiển thị message lỗi chính */}
                   {run.error ||
                    run.error_message ||
                    (run.output_data && typeof run.output_data === 'object' && 'error_message' in run.output_data && String(run.output_data.error_message)) ||
@@ -290,21 +297,29 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                      JSON.stringify(run.output_data.error, null, 2))
                    ) ||
                    'Đã xảy ra lỗi không xác định'}
-                  {/* Nếu có raw_response thì cho phép xem/copy */}
-                  {run.output_data &&
-                    typeof run.output_data === 'object' &&
-                    !Array.isArray(run.output_data) &&
-                    'raw_response' in run.output_data &&
-                    run.output_data.raw_response && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Xem raw response</summary>
-                        <pre className="bg-muted rounded p-2 select-all max-h-60 overflow-auto">{String(run.output_data.raw_response)}</pre>
-                      </details>
-                  )}
                 </div>
+                {/* Nếu là lỗi Workflow Webhook Error thì gợi ý thêm */}
+                {(run.error || run.error_message || '').toLowerCase().includes('workflow webhook error') && (
+                  <div className="mt-3 p-3 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-900 text-xs">
+                    <b>Gợi ý:</b> Lỗi Workflow Webhook Error thường do webhook cấu hình sai hoặc server không phản hồi.<br/>
+                    - Kiểm tra lại URL webhook, xác thực và trạng thái server.<br/>
+                    - Nếu vẫn gặp lỗi, vui lòng liên hệ bộ phận hỗ trợ kỹ thuật.
+                  </div>
+                )}
+                {/* Nếu có raw_response thì cho phép xem/copy */}
+                {run.output_data &&
+                  typeof run.output_data === 'object' &&
+                  !Array.isArray(run.output_data) &&
+                  'raw_response' in run.output_data &&
+                  run.output_data.raw_response && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Xem raw response</summary>
+                      <pre className="bg-muted rounded p-2 select-all max-h-60 overflow-auto">{String(run.output_data.raw_response)}</pre>
+                    </details>
+                )}
                 <Button 
                   variant="outline"
-                  className="w-full mt-2"
+                  className="w-full mt-4"
                   onClick={() => onRetry(run)}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />

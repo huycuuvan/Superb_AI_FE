@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
   Home, 
@@ -10,21 +10,17 @@ import {
   Search, 
   ChevronRight,
   Plus,
-  Briefcase,
-  Palette,
-  ShoppingCart,
   Cpu,
-  TrendingUp,
   Folder,
   MoreVertical,
   Edit,
   Pin,
   Trash,
-  Book
+  Book,
+  Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { workspaces } from '@/services/mockData';
 import { AddFolderDialog } from '@/components/AddFolderDialog';
 import { useLanguage } from '@/hooks/useLanguage';
 import SettingsDropdown from '@/components/SettingsDropdown';
@@ -39,7 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { getFolders, updateFolder, deleteFolder } from '@/services/api';
+import { updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
@@ -67,7 +63,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const { user } = useAuth();
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
   const { toast } = useToast();
-  const { folders, loadingFolders, fetchFolders } = useFolders();
+  const { folders, loadingFolders } = useFolders();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -86,7 +82,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     if (workspace?.id) {
       // fetchFolders(workspace.id); // Remove this line
     }
-  }, [workspace?.id, fetchFolders]);
+  }, [workspace?.id]);
 
   // Handle Rename action
   const handleRenameClick = (folder: FolderType) => {
@@ -105,7 +101,6 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         title: t('success'),
         description: t('folderRenamed', { name: newFolderName.trim() }),
       });
-      fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi đổi tên
       setShowRenameDialog(false);
     } catch (error: any) {
       console.error('Lỗi khi đổi tên folder:', error);
@@ -135,7 +130,6 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         title: t('success'),
         description: t('folderDeleted', { name: folderToDelete.name }),
       });
-      fetchFolders(workspace?.id); // Cập nhật danh sách folder sau khi xóa
       setShowConfirmDeleteDialog(false);
        // Redirect if currently viewing the deleted folder's detail page
       if (location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
@@ -163,6 +157,11 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
       { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' }
     ] : []),
+    {
+      label: 'Credential',
+      icon: Key,
+      path: '/dashboard/credentials',
+    },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -274,14 +273,14 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
+                        <DropdownMenuItem onClick={() => handleRenameClick({id: folder.id, name: folder.name, workspace_id: workspace?.id})}>
                           <Edit className="sidebar-icon mr-2" /> {t('rename')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
                           <Pin className="sidebar-icon mr-2" /> {t('pin')}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => handleDeleteClick(folder)}
+                          onClick={() => handleDeleteClick({id: folder.id, name: folder.name, workspace_id: workspace?.id})}
                           className="text-red-500 focus:text-red-500"
                         >
                           <Trash className="sidebar-icon mr-2" /> {t('delete')}
@@ -302,32 +301,24 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         
         <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">
           <div className="border-b border-border p-2 space-y-1">
-            {filteredMenuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center px-3 py-2 rounded-md text-sm",
-                    "transition-colors",
-                    isActive 
-                      ? {
-                          [isDark ? 'button-gradient-dark' : 'button-gradient-light']: true,
-                          'text-white': true,
-                        }
-                      : {
-                          'text-muted-foreground': true,
-                          [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
-                          'hover:text-white': true,
-                        }
-                  )}
-                >
-                  <item.icon className="sidebar-icon mr-2" />
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
+            {filteredMenuItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center px-3 py-2 rounded-md text-sm transition-colors",
+                    isActive
+                      ? (isDark ? 'button-gradient-dark text-white' : 'button-gradient-light text-white')
+                      : 'text-muted-foreground ' + (isDark ? 'hover:button-gradient-dark hover:text-white' : 'hover:button-gradient-light hover:text-white')
+                  )
+                }
+              >
+                {item.icon && React.createElement(item.icon, { className: "sidebar-icon mr-2" })}
+                {!collapsed && <span>{item.label}</span>}
+              </NavLink>
+            ))}
           </div>
           <div className="p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -394,7 +385,7 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
         <AddFolderDialog 
           open={showAddFolderDialog} 
           onOpenChange={setShowAddFolderDialog} 
-          onSuccess={() => workspace?.id && fetchFolders(workspace.id)}
+          onSuccess={() => workspace?.id}
         />
       )}
 
