@@ -29,6 +29,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { createAvatar } from '@dicebear/core';
+import { avataaars } from '@dicebear/collection';
 
 interface TaskInput {
   id: string;
@@ -1053,12 +1055,13 @@ const handleSubmitTaskInputs = async () => {
             ) : (
               <>
                 <div className="p-4 border-b flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {currentAgent?.name?.charAt(0) || 'A'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="h-10 w-10 flex items-center justify-center">
+                    {currentAgent?.avatar ? (
+                      <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 40, height: 40 }} />
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                    )}
+                  </div>
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
                     <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
@@ -1110,12 +1113,13 @@ const handleSubmitTaskInputs = async () => {
         ) : (
           <>
             <div className="p-4 border-b flex items-center space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                <AvatarFallback className="bg-secondary text-secondary-foreground">
-                  {currentAgent?.name?.charAt(0) || 'A'}
-                </AvatarFallback>
-              </Avatar>
+              <div className="h-10 w-10 flex items-center justify-center">
+                {currentAgent?.avatar ? (
+                  <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 40, height: 40 }} />
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                )}
+              </div>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
                 <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
@@ -1217,23 +1221,24 @@ const handleSubmitTaskInputs = async () => {
               <div
                 key={msg.id}
                 className={cn(
-                  "flex items-end gap-2",
+                  "flex items-end gap-2 z-0",
                   msg.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 {msg.sender === 'agent' && (
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 ">
-                    <AvatarImage src={currentAgent?.avatar} alt={currentAgent?.name || 'Agent'} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {currentAgent?.name?.charAt(0) || 'A'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="h-9 w-9 flex items-center justify-center">
+                    {currentAgent?.avatar ? (
+                      <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
+                    )}
+                  </div>
                 )}
                 <div
                   className={cn(
                     "max-w-[75%] p-3 rounded-2xl shadow-sm whitespace-pre-line relative overflow-hidden mr-2",
                     msg.sender === 'user'
-                      ? 'button-gradient-light dark:button-gradient-dark text-white rounded-br-lg'
+                      ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
                       : 'bg-muted text-foreground rounded-bl-lg'
                   )}
                   style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}

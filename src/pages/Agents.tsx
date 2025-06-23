@@ -26,6 +26,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { createAvatar } from '@dicebear/core';
+import { avataaars } from '@dicebear/collection';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
@@ -453,6 +455,13 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
       {agents.map((agent: Agent) => (
         <Card key={agent.id} className="relative">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              {agent.avatar ? (
+                <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 64, height: 64 }} />
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 64, height: 64 }} />
+              )}
+            </div>
             <CardTitle>{agent.name}</CardTitle>
             <CardDescription>{agent.type}</CardDescription>
           </CardHeader>

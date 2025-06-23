@@ -27,6 +27,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AddSystemPromptDialog } from './AddSystemPromptDialog';
+import { createAvatar } from '@dicebear/core';
+import { avataaars } from '@dicebear/collection';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
@@ -62,6 +64,8 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const [avatarSvg, setAvatarSvg] = useState<string>('');
+
   // Xác định trạng thái mặc định dựa trên role của user
   useEffect(() => {
     if (user?.role === 'super_admin') {
@@ -94,6 +98,16 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
     }
   }, [open, workspace?.id, isLoadingWorkspace]);
 
+  useEffect(() => {
+    // Tạo avatar DiceBear mỗi khi tên agent thay đổi
+    if (agentName.trim()) {
+      const avatar = createAvatar(avataaars, { seed: agentName.trim() });
+      setAvatarSvg(avatar.toString());
+    } else {
+      setAvatarSvg('');
+    }
+  }, [agentName]);
+
   const handleCreateAgent = async () => {
     const targetFolderId = propFolderId || selectedFolderId;
 
@@ -123,7 +137,8 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
         model_config: modelConfig,
         status: status,
         folder_id: targetFolderId,
-        workspace_id: workspace.id
+        workspace_id: workspace.id,
+        avatar: avatarSvg
       };
 
       console.log('Attempting to create agent with data:', newAgentData);
@@ -209,7 +224,12 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
           <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
             <div className="grid gap-4 py-4">
               {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-              
+              {/* Avatar preview DiceBear */}
+              {avatarSvg && (
+                <div className="flex justify-center mb-4">
+                  <div dangerouslySetInnerHTML={{ __html: avatarSvg }} style={{ width: 64, height: 64 }} />
+                </div>
+              )}
               {/* Thông tin cơ bản */}
               <div className="space-y-4">
                 <h3 className="font-medium">Thông tin cơ bản</h3>

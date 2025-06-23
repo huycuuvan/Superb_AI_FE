@@ -28,6 +28,8 @@ import { useAuth } from '@/hooks/useAuth';
 import React from 'react';
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslation } from "react-i18next";
+import { createAvatar } from '@dicebear/core';
+import { avataaars } from '@dicebear/collection';
 
 
 
@@ -383,9 +385,11 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
           onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
         >
           <Avatar className="w-12 h-12">
-            <div className={`w-12 h-12 rounded-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white flex items-center justify-center text-lg font-medium`}>
-              {agent.name.charAt(0)}
-            </div>
+            {agent.avatar ? (
+              <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 48, height: 48 }} />
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
+            )}
           </Avatar>
           <div className="flex-1 overflow-hidden">
             <CardTitle className="text-lg truncate">{agent.name}</CardTitle>

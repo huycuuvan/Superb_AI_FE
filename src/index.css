@@ -93,6 +93,12 @@
   .button-gradient-dark {
     @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105;
   }
+  .bg-gradient-light {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700  hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all transform;
+  }
+  .bg-gradient-dark {
+    @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all transform ;
+  }
   .text-gradient-light {
       @apply bg-gradient-to-r from-violet-600 to-fuchsia-500 text-transparent bg-clip-text;
   }
@@ -136,4 +142,25 @@
 }
 .light .chat-message tbody tr:nth-child(even) {
   background-color: hsl(var(--secondary));
+}
+
+/* Fix màu chữ blockquote trong prose khi dark mode */
+.dark .prose blockquote {
+  color: #e5e7eb !important; /* text-gray-200 */
+  border-left-color: #6366f1 !important; /* tím nhạt, nổi bật hơn */
+}
+
+/* Fix màu link trong prose khi dark mode */
+.dark .prose a {
+  color: #60a5fa !important; /* text-blue-400 */
+  text-decoration: underline;
+  font-weight: 500;
+}
+.dark .prose a:hover {
+  color: #93c5fd !important; /* text-blue-300 */
+}
+
+/* Fix màu chữ tổng thể trong prose khi dark mode */
+.dark .prose {
+  color: #e5e7eb !important; /* text-gray-200 */
 }

@@ -144,7 +144,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
     // Nếu là markdown
     if (typeof output === "string" && /[*_`#[\]]/.test(output)) {
       return (
-        <div className="prose max-w-none">
+        <div className="prose max-w-none prose-invert whitespace-normal">
           <ReactMarkdown>{output}</ReactMarkdown>
         </div>
       );
@@ -238,7 +238,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
     }
 
     // Nếu là text thông thường
-    return <div className="text-gray-700">{String(output)}</div>;
+    return <div className="text-foreground whitespace-normal">{String(output)}</div>;
   };
 
   if (!runs || runs.length === 0) {
@@ -360,12 +360,12 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                     ) : (
                       <div className="space-y-1/2">
                         {/* Debug hiển thị cấu trúc output_data để phát hiện vấn đề */}
-                        <div className="text-xs text-muted-foreground mb-2">
-                          <code>Output type: {typeof run.output_data}</code>
+                        <div className="text-xs text-foreground mb-2">
+                          <code className="text-foreground">Output type: {typeof run.output_data}</code>
                         </div>
                         {/* Debug hiển thị dữ liệu gốc */}
                         <details className="text-xs mb-4">
-                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                          <summary className="cursor-pointer text-foreground hover:text-white">
                             Dữ liệu gốc
                           </summary>
                           <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">

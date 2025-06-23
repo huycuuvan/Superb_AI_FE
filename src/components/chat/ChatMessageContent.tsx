@@ -212,6 +212,31 @@ export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessag
         </div>
       );
     }
+    // Nếu là JSON object/array, render đẹp
+    try {
+      const json = JSON.parse(displayedContent);
+      if (typeof json === 'object' && json !== null) {
+        // Nếu là mảng
+        if (Array.isArray(json)) {
+          return (
+            <div className="bg-muted/60 rounded-lg p-4 text-sm font-mono whitespace-pre-wrap overflow-x-auto">
+              <pre>{JSON.stringify(json, null, 2)}</pre>
+            </div>
+          );
+        }
+        // Nếu là object
+        return (
+          <div className="bg-muted/60 rounded-lg p-4 text-sm">
+            {Object.entries(json).map(([key, value]) => (
+              <div key={key} className="mb-2 flex flex-col md:flex-row md:items-center md:gap-2">
+                <span className="font-semibold text-primary mr-2 min-w-[120px] inline-block">{key}:</span>
+                <span className="break-words flex-1">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    } catch (e) { /* Không phải JSON, render như cũ */ }
     // Mặc định như cũ
     if (isAgent) {
       return <ReactMarkdown {...commonMarkdownProps}>{displayedContent}</ReactMarkdown>;
@@ -219,12 +244,12 @@ export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessag
       const userContent = (isLongMessage && !isExpanded)
         ? content.split('\n').slice(0, 5).join('\n') + "\n..."
         : content;
-      return <p className="whitespace-pre-wrap break-all">{userContent}</p>;
+      return <p className="whitespace-pre-wrap">{userContent}</p>;
     }
   };
-  const containerClassName = cn( 'w-full', isAgent ? 'text-card-foreground' : 'text-primary-foreground' );
+  const containerClassName = cn( 'w-full', isAgent ? 'text-card-foreground' : 'text-white' );
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
-    <div className="absolute -top-3 right-1">
+    <div className="absolute -top-3 -right-2 z-10">
         <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -243,10 +268,10 @@ export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessag
   
   return (
     <div className="relative pt-2">
-        <div className={containerClassName}>
-            {renderContent()}
-        </div>
-        {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}
+      <div className={containerClassName}>
+        {renderContent()}
+      </div>
+      {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}
     </div>
   );
 });

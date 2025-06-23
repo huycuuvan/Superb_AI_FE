@@ -13,6 +13,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { AddAgentDialog } from '@/components/AddAgentDialog';
 import { getFolderDetail, FolderDetailResponse, getAgentsByFolder } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
+import { createAvatar } from '@dicebear/core';
+import { avataaars } from '@dicebear/collection';
 
 // Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
 interface FolderType {
@@ -203,13 +205,11 @@ const FolderDetail = () => {
               <CardHeader className="pb-2 md:pb-3 ">
                 <div className="flex items-center gap-2 md:gap-3">
                   <Avatar className="h-10 w-10 md:h-12 md:w-12 rounded-full overflow-hidden border bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center">
-                    <AvatarImage
-                      src={agent.avatar}
-                      alt={agent.name}
-                    />
-                    <AvatarFallback className=" font-bold text-lg md:text-xl bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
-                      {agent.name.charAt(0)}
-                    </AvatarFallback>
+                    {agent.avatar ? (
+                      <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 40, height: 40 }} />
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                    )}
                   </Avatar>
                   <div>
                     <CardTitle className="text-base md:text-lg font-semibold">{agent.name}</CardTitle>
