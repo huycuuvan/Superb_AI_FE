@@ -365,17 +365,14 @@ export const updateAgent = async (
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch(
-    `${API_BASE_URL}${API_ENDPOINTS.agents.list}/${agentId}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(agentData),
-    }
-  );
+  const response = await fetch(API_ENDPOINTS.agents.update(agentId), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(agentData),
+  });
 
   if (!response.ok) {
     await handleApiError(response);

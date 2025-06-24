@@ -1218,53 +1218,65 @@ const handleSubmitTaskInputs = async () => {
           >
             {/* 1. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
             {messages.slice(-50).map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex items-end gap-2 z-0",
-                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                )}
-              >
-                {msg.sender === 'agent' && (
-                  <div className="h-9 w-9 flex items-center justify-center">
-                    {currentAgent?.avatar ? (
-                      <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
-                    ) : (
-                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
-                    )}
-                  </div>
-                )}
+              <>
                 <div
+                  key={msg.id}
                   className={cn(
-                    "max-w-[75%] p-3 rounded-2xl shadow-sm whitespace-pre-line relative overflow-hidden mr-2",
-                    msg.sender === 'user'
-                      ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
-                      : 'bg-muted text-foreground rounded-bl-lg'
+                    "flex items-end gap-2 z-0",
+                    msg.sender === 'user' ? 'justify-end' : 'justify-start'
                   )}
-                  style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}
                 >
-                  <ChatMessageContent
-                    content={msg.content}
-                    isAgent={msg.sender === 'agent'}
-                    stream={msg.isStreaming ?? false}
-                  />
-                  {/* Hiển thị ảnh nếu có image_url hoặc file_url */}
-                  {(msg.image_url || msg.file_url) && (
-                    <div style={{ marginTop: 8 }}>
-                      <img
-                        src={msg.image_url || msg.file_url}
-                        alt="uploaded"
-                        style={{ maxWidth: 300, borderRadius: 8 }}
-                      />
+                  {msg.sender === 'agent' && (
+                    <div className="h-9 w-9 flex items-center justify-center">
+                      {currentAgent?.avatar ? (
+                        <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
+                      )}
                     </div>
                   )}
+                  <div
+                    className={cn(
+                      "max-w-[75%] p-3 rounded-2xl shadow-sm whitespace-pre-line relative overflow-hidden mr-2",
+                      msg.sender === 'user'
+                        ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
+                        : 'bg-muted text-foreground rounded-bl-lg'
+                    )}
+                    style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}
+                  >
+                    <ChatMessageContent
+                      content={msg.content}
+                      isAgent={msg.sender === 'agent'}
+                      stream={msg.isStreaming ?? false}
+                    />
+                    {/* Hiển thị ảnh nếu có image_url hoặc file_url */}
+                    {(msg.image_url || msg.file_url) && (
+                      <div style={{ marginTop: 8 }}>
+                        <img
+                          src={msg.image_url || msg.file_url}
+                          alt="uploaded"
+                          style={{ maxWidth: 300, borderRadius: 8 }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {msg.sender === 'user' && (
+                    <Avatar className="h-9 w-9 flex-shrink-0">
+                      <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
-                {msg.sender === 'user' && (
-                                <Avatar className="h-9 w-9 flex-shrink-0">
-                                    <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
-                                </Avatar>
-                            )}
-              </div>
+                <div
+                  className={cn(
+                    "w-full px-2 mt-1",
+                    msg.sender === 'agent' ? 'text-left' : 'text-right'
+                  )}
+                >
+                  <span className="text-xs text-muted-foreground select-none">
+                    {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </span>
+                </div>
+              </>
             ))}
 
           

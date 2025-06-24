@@ -20,6 +20,7 @@ interface ChatMessageContentProps {
   content: string;
   isAgent: boolean;
   stream: boolean;
+  timestamp?: string;
 }
 
 const STREAMING_SPEED = 15;
@@ -105,7 +106,7 @@ const TableRenderer = ({ node, ...props }: any) => {
 const isVideoUrl = (url: string) =>
   /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
 
-export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessageContentProps) => {
+export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }: ChatMessageContentProps) => {
   
   // ================================================================
   // ===== ĐÂY LÀ SỰ THAY ĐỔI QUAN TRỌNG NHẤT ========================
@@ -271,6 +272,11 @@ export const ChatMessageContent = memo(({ content, isAgent, stream }: ChatMessag
       <div className={containerClassName}>
         {renderContent()}
       </div>
+      {timestamp && (
+        <div className={`absolute ${isAgent ? 'right-2' : 'left-2'} -bottom-2 text-xs text-muted-foreground select-none`}>
+          {new Date(timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+        </div>
+      )}
       {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}
     </div>
   );

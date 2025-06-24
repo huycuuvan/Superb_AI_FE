@@ -100,13 +100,13 @@ export const PromptTemplatesModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0f1116] border-gray-800 text-white max-w-[700px] p-0">
-        <DialogHeader className="p-4 border-b border-gray-800">
+      <DialogContent className="max-w-[700px] p-0 border border-border">
+        <DialogHeader className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-white text-lg">Mẫu prompt gợi ý</DialogTitle>
+            <DialogTitle className="text-lg">Mẫu prompt gợi ý</DialogTitle>
         
           </div>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Chọn một mẫu prompt để sử dụng với agent "{agent?.name}".
           </p>
         </DialogHeader>

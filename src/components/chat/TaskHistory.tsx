@@ -131,6 +131,25 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
 
   // Hàm render output custom UI cho từng loại dữ liệu
   const renderOutput = (output: any) => {
+    // Nếu là link Google Drive
+    if (typeof output === "string" && output.includes("drive.google.com")) {
+      return (
+        <a
+          href={output}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-green-600 font-semibold underline hover:text-green-800"
+        >
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.44 8L4 28.02L9.56 37.98H22.01L16.44 28.02H9.56L16.44 8Z" fill="#2196F3"/>
+            <path d="M31.56 8L44 28.02L38.44 37.98H25.99L31.56 28.02H38.44L31.56 8Z" fill="#FFC107"/>
+            <path d="M22.01 37.98H25.99L31.56 28.02H16.44L22.01 37.98Z" fill="#4CAF50"/>
+          </svg>
+          Mở file Google Drive
+        </a>
+      );
+    }
+
     // Nếu là HTML
     if (typeof output === "string" && output.trim().startsWith("<") && output.trim().endsWith(">")) {
       return (
@@ -229,7 +248,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
             {entries.map(([key, value]) => (
               <tr key={key}>
                 <td className="font-semibold pr-2">{key}</td>
-                <td>{typeof value === "object" ? renderOutput(value) : String(value)}</td>
+                <td>{renderOutput(value)}</td>
               </tr>
             ))}
           </tbody>
