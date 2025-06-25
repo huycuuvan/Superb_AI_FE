@@ -29,7 +29,7 @@ import React from 'react';
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslation } from "react-i18next";
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 
 
@@ -381,14 +381,14 @@ const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.mem
       {agents.map((agent: Agent) => (
         <Card
           key={agent.id}
-          className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
+          className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 card-gradient-white ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
           onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
         >
           <Avatar className="w-12 h-12">
             {agent.avatar ? (
               <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 48, height: 48 }} />
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
+              <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
             )}
           </Avatar>
           <div className="flex-1 overflow-hidden">

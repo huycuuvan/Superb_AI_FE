@@ -25,7 +25,7 @@ interface ChatMessageContentProps {
 
 const STREAMING_SPEED = 15;
 
-// ... Các component CopyButton, CodeBlockRenderer, TableRenderer không thay đổi ...
+// --- CÁC COMPONENT PHỤ (KHÔNG THAY ĐỔI) ---
 const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }) => {
   const [copied, setCopied] = useState(false);
 
@@ -82,6 +82,7 @@ const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }
     </TooltipProvider>
   );
 };
+
 const CodeBlockRenderer = ({ node, children, ...props }: any) => {
   const preRef = useRef<HTMLPreElement>(null);
   return (
@@ -93,6 +94,7 @@ const CodeBlockRenderer = ({ node, children, ...props }: any) => {
     </div>
   );
 };
+
 const TableRenderer = ({ node, ...props }: any) => {
   const tableRef = useRef<HTMLTableElement>(null);
   return (
@@ -106,64 +108,60 @@ const TableRenderer = ({ node, ...props }: any) => {
 const isVideoUrl = (url: string) =>
   /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
 
+// --- COMPONENT CHÍNH ĐÃ ĐƯỢC SỬA LỖI ---
 export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }: ChatMessageContentProps) => {
-  
-  // ================================================================
-  // ===== ĐÂY LÀ SỰ THAY ĐỔI QUAN TRỌNG NHẤT ========================
-  // ================================================================
-  // Khởi tạo state một cách thông minh:
-  // - Nếu là tin nhắn cần stream, bắt đầu với chuỗi rỗng "".
-  // - Nếu không, hiển thị toàn bộ nội dung ngay lập tức.
-  const [displayedContent, setDisplayedContent] = useState(() => 
-    (isAgent && stream) ? "" : content
+
+  // FIX: State `animatedContent` chỉ dùng cho hiệu ứng animation.
+  // Nếu không stream, nó sẽ bằng `content` ngay lập tức.
+  const [animatedContent, setAnimatedContent] = useState(() =>
+    stream && isAgent ? '' : content
   );
 
+  // FIX: `useEffect` được viết lại hoàn toàn để ổn định hơn.
+  // Nó chỉ chạy lại khi `content`, `stream`, hoặc `isAgent` thay đổi.
+  // Nó không còn phụ thuộc vào state `animatedContent` của chính nó.
   useEffect(() => {
-    // Nếu không cần stream, chỉ cần đảm bảo nội dung cuối cùng được hiển thị.
-    if (!stream || !isAgent) {
-      if (displayedContent !== content) {
-        setDisplayedContent(content);
-      }
-      return;
-    }
-    
-    // Nếu nội dung đã hiển thị đầy đủ, không cần làm gì thêm.
-    if (displayedContent.length === content.length) {
+    // Nếu không phải tin nhắn agent cần stream, hiển thị toàn bộ nội dung và dừng.
+    if (!isAgent || !stream) {
+      setAnimatedContent(content);
       return;
     }
 
-    // Logic animation dùng setTimeout, đảm bảo luôn tiếp tục từ vị trí hiện tại.
-    const timerId = setTimeout(() => {
-      // Nếu nội dung mới không phải là phần tiếp theo của nội dung cũ 
-      // (ví dụ: một tin nhắn agent mới hoàn toàn chen vào), hãy reset.
-      if (!content.startsWith(displayedContent)) {
-        setDisplayedContent(content.substring(0, 1));
-      } else {
-        // Ngược lại, tiếp tục "gõ" ký tự tiếp theo.
-        const nextCharIndex = displayedContent.length + 1;
-        setDisplayedContent(content.substring(0, nextCharIndex));
+    // Nếu nội dung đã hiển thị xong, không cần làm gì thêm.
+    if (animatedContent === content) {
+      return;
+    }
+    
+    setAnimatedContent(''); // Reset khi có content mới đến
+    let currentLength = 0;
+    const timer = setInterval(() => {
+      currentLength++;
+      setAnimatedContent(content.substring(0, currentLength));
+
+      if (currentLength >= content.length) {
+        clearInterval(timer); // Dừng animation khi đã hiển thị hết
       }
     }, STREAMING_SPEED);
-    
-    // Dọn dẹp timer
-    return () => clearTimeout(timerId);
 
-  }, [content, stream, isAgent, displayedContent]);
+    // Hàm dọn dẹp: Rất quan trọng để tránh memory leak.
+    // Sẽ được gọi khi component unmount hoặc khi effect chạy lại.
+    return () => clearInterval(timer);
 
+  }, [content, isAgent, stream]); // Chỉ phụ thuộc vào props
 
-  // Logic thu gọn/mở rộng cho tin nhắn user (không đổi)
+  // --- Logic thu gọn/mở rộng cho tin nhắn user (không đổi) ---
   const [isExpanded, setIsExpanded] = useState(false);
   const isLongMessage = useMemo(() => {
-      if (isAgent) return false;
-      const lineCount = (content.match(/\n/g) || []).length + 1;
-      return lineCount > 5 || content.length > 500;
+    if (isAgent) return false;
+    const lineCount = (content.match(/\n/g) || []).length + 1;
+    return lineCount > 5 || content.length > 500;
   }, [content, isAgent]);
-  
-  // Các hàm và JSX render khác không thay đổi...
+
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsExpanded(!isExpanded);
   };
+
   const commonMarkdownProps = {
     remarkPlugins: [remarkGfm],
     rehypePlugins: [rehypeRaw],
@@ -171,7 +169,7 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
       p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0" {...props} />,
       pre: CodeBlockRenderer,
       code: ({ node, ...props }: any) => <code className="bg-black/20 text-red-400 rounded px-1 py-0.5 mx-0.5" {...props} />,
-      a: ({node, ...props}: any) => <a className="text-blue-500 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+      a: ({ node, ...props }: any) => <a className="text-blue-500 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
       ul: ({ node, ...props }: any) => <ul className="list-disc list-outside pl-5 my-2 space-y-1" {...props} />,
       ol: ({ node, ...props }: any) => <ol className="list-decimal list-outside pl-5 my-2 space-y-1" {...props} />,
       li: ({ node, ...props }: any) => <li className="pl-1 [&>p:first-of-type]:inline" {...props} />,
@@ -181,74 +179,80 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
       td: ({ node, ...props }: any) => <td className="border border-slate-300 dark:border-slate-700 p-2" {...props} />,
     }
   };
+
+  // --- FIX: Logic render nội dung được tối ưu ---
   const renderContent = () => {
-    // Nếu là agent và nội dung là 1 link video duy nhất
-    if (isAgent && isVideoUrl(displayedContent.trim())) {
-      return (
-        <video
-          src={displayedContent.trim()}
-          controls
-          className="max-w-xs rounded shadow mx-auto my-2"
-          style={{ maxHeight: 320 }}
-        />
-      );
-    }
-    // Nếu là agent và nội dung chứa nhiều link video, tách từng dòng
-    if (isAgent && displayedContent.split('\n').some(line => isVideoUrl(line))) {
+    // FIX: Các điều kiện kiểm tra (isVideoUrl, JSON.parse) phải dùng `content` (chuỗi đầy đủ).
+    // Nhưng component render ra thì dùng `animatedContent` để có hiệu ứng typing.
+
+    // 1. Kiểm tra Video
+    // Tách các dòng và kiểm tra xem có dòng nào là link video không
+    const contentLines = content.trim().split('\n');
+    const isPotentiallyVideo = contentLines.some(line => isVideoUrl(line));
+
+    if (isAgent && isPotentiallyVideo) {
+      const animatedLines = animatedContent.split('\n');
       return (
         <div className="space-y-2">
-          {displayedContent.split('\n').map((line, idx) =>
-            isVideoUrl(line) ? (
+          {animatedLines.map((line, idx) =>
+            // Chỉ render video nếu dòng đó (trong content đầy đủ) LÀ link video
+            isVideoUrl(contentLines[idx] || '') ? (
               <video
                 key={idx}
-                src={line.trim()}
+                src={line.trim()} // src dùng line đang được stream
                 controls
                 className="max-w-xs rounded shadow mx-auto my-2"
                 style={{ maxHeight: 320 }}
               />
             ) : (
+              // Ngược lại, render dưới dạng markdown
               <ReactMarkdown key={idx} {...commonMarkdownProps}>{line}</ReactMarkdown>
             )
           )}
         </div>
       );
     }
-    // Nếu là JSON object/array, render đẹp
+    
+    // 2. Kiểm tra JSON
+    let parsedJson = null;
     try {
-      const json = JSON.parse(displayedContent);
-      if (typeof json === 'object' && json !== null) {
-        // Nếu là mảng
-        if (Array.isArray(json)) {
-          return (
-            <div className="bg-muted/60 rounded-lg p-4 text-sm font-mono whitespace-pre-wrap overflow-x-auto">
-              <pre>{JSON.stringify(json, null, 2)}</pre>
-            </div>
-          );
+        // Chỉ thử parse khi không còn stream để đảm bảo chuỗi JSON hoàn chỉnh
+        if (!stream) {
+           parsedJson = JSON.parse(content);
         }
-        // Nếu là object
-        return (
-          <div className="bg-muted/60 rounded-lg p-4 text-sm">
-            {Object.entries(json).map(([key, value]) => (
-              <div key={key} className="mb-2 flex flex-col md:flex-row md:items-center md:gap-2">
-                <span className="font-semibold text-primary mr-2 min-w-[120px] inline-block">{key}:</span>
-                <span className="break-words flex-1">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
-              </div>
-            ))}
-          </div>
-        );
-      }
-    } catch (e) { /* Không phải JSON, render như cũ */ }
-    // Mặc định như cũ
-    if (isAgent) {
-      return <ReactMarkdown {...commonMarkdownProps}>{displayedContent}</ReactMarkdown>;
-    } else {
-      const userContent = (isLongMessage && !isExpanded)
-        ? content.split('\n').slice(0, 5).join('\n') + "\n..."
-        : content;
-      return <p className="whitespace-pre-wrap">{userContent}</p>;
+    } catch (e) { /* Không phải JSON, bỏ qua */ }
+
+    if (isAgent && parsedJson && typeof parsedJson === 'object' && parsedJson !== null) {
+      // Nếu là JSON, không stream từng ký tự mà hiển thị luôn khi xong
+       if (stream) {
+         // Trong lúc stream, có thể hiện ... hoặc để trống
+         return <p>...</p>;
+       }
+       // Khi stream xong, hiển thị JSON đã format
+       return (
+         <div className="relative">
+            <CodeBlockRenderer>
+              {JSON.stringify(parsedJson, null, 2)}
+            </CodeBlockRenderer>
+         </div>
+       );
     }
+
+    // 3. Mặc định render Markdown
+    if (isAgent) {
+      // Luôn dùng animatedContent để có hiệu ứng typing
+      return <ReactMarkdown {...commonMarkdownProps}>{animatedContent}</ReactMarkdown>;
+    }
+
+    // 4. Tin nhắn của User (logic cũ không đổi)
+    const userContent = (isLongMessage && !isExpanded)
+      ? content.split('\n').slice(0, 5).join('\n') + "\n..."
+      : content;
+    return <p className="whitespace-pre-wrap">{userContent}</p>;
   };
-  const containerClassName = cn( 'w-full', isAgent ? 'text-card-foreground' : 'text-white' );
+
+  const containerClassName = cn('w-full', isAgent ? 'text-card-foreground' : 'text-white');
+  
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
     <div className="absolute -top-3 -right-2 z-10">
         <TooltipProvider delayDuration={100}>
@@ -266,18 +270,17 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
         </TooltipProvider>
     </div>
   );
-  
+
   return (
     <div className="relative pt-2">
       <div className={containerClassName}>
         {renderContent()}
       </div>
-      {timestamp && (
-        <div className={`absolute ${isAgent ? 'right-2' : 'left-2'} -bottom-2 text-xs text-muted-foreground select-none`}>
-          {new Date(timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
-        </div>
-      )}
+      {/* Timestamp và Toggle Button không thay đổi */}
       {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}
     </div>
   );
 });
+
+// Loại bỏ timestamp khỏi đây, vì nó sẽ được render riêng bên ngoài
+// để không bị ảnh hưởng bởi logic re-render của content

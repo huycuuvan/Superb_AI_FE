@@ -43,8 +43,8 @@ import {
               {tasks.map((task) => (
                 
                 <Card 
-                  key={task.id} 
-                  className="cursor-pointer hover:border-primary transition-all group flex flex-col"
+                  key={task.id}
+                  className="cursor-pointer hover:border-primary transition-all group flex flex-col hover:bg-primary/10"
                   onClick={() => handleSelectTask(task)}
                 >
                   <CardHeader className="p-0">
@@ -56,8 +56,8 @@ import {
                     />
                   </CardHeader>
                   <CardContent className="p-4 flex flex-col flex-1">
-                      <h3 className="font-semibold mb-2 group-hover:text-primary">{task.name}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-3 flex-1">
+                      <h3 className="font-semibold mb-2 group-hover:text-primary dark:group-hover:text-white transition-colors">{task.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-3 flex-1 group-hover:text-primary dark:group-hover:text-white transition-colors">
                           {task.description || "Không có mô tả cho tác vụ này."}
                       </p>
                   </CardContent>

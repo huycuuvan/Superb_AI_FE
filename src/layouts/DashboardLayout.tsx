@@ -13,13 +13,13 @@ const DashboardLayout = () => {
     <ProtectedRoute>
       <ThemeProvider>
         {/* 1. Thay thế gradient bằng màu nền động */}
-        <div className="flex h-screen bg-background">
+        <div className="flex h-screen bg-background background-gradient-white">
           {/* 2. Gỡ bỏ các class dark:* thủ công */}
           <Sidebar className="hidden md:block" />
           <div className="flex flex-col flex-1 w-full overflow-hidden">
             <Header />
             {/* 3. Đảm bảo main content cũng dùng màu nền động */}
-            <main className={`flex-1 overflow-y-auto bg-background ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'} dark:bg-slate-900`}>
+            <main className={`flex-1 overflow-y-auto bg-background ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
               <Outlet />
             </main>
           </div>

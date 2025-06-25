@@ -28,7 +28,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AddSystemPromptDialog } from './AddSystemPromptDialog';
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
@@ -101,7 +101,7 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
   useEffect(() => {
     // Tạo avatar DiceBear mỗi khi tên agent thay đổi
     if (agentName.trim()) {
-      const avatar = createAvatar(avataaars, { seed: agentName.trim() });
+      const avatar = createAvatar(adventurer , { seed: agentName.trim() });
       setAvatarSvg(avatar.toString());
     } else {
       setAvatarSvg('');
@@ -248,14 +248,14 @@ export const AddAgentDialog = ({ open: openProp, onOpenChange, folderId: propFol
 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="role-description" className="text-right">
-                    Mô tả vai trò
+                    Chức danh 
                   </Label>
                   <Input
                     id="role-description"
                     className="col-span-3"
                     value={roleDescription}
                     onChange={(e) => setRoleDescription(e.target.value)}
-                    placeholder="Nhập mô tả vai trò của agent"
+                    placeholder="Nhập chức danh của agent"
                   />
                 </div>
 

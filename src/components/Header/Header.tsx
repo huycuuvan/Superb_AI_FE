@@ -146,7 +146,7 @@ const Header = React.memo(() => {
 
   return (
     // CLEANED: Using `bg-background` for the header to match the layout.
-    <header className="bg-background border-b border-border relative z-10">
+    <header className="bg-background border-b border-border relative z-10 background-gradient-white">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
         {/* --- LEFT SECTION --- */}
         <div className="flex items-center gap-4">
@@ -223,7 +223,7 @@ const Header = React.memo(() => {
           <LanguageToggle />
           
           {/* FIXED: Applied gradient classes as requested */}
-          <Button className="hidden md:inline-flex button-gradient-light dark:button-gradient-dark text-white font-semibold" size="sm">
+          <Button variant="outline" size="sm" className="hidden md:inline-flex dark:hover:bg-primary hover:bg-gradient-to-r from-purple-600 to-indigo-600">
             {t('common.editBrand')}
           </Button>
 
@@ -237,7 +237,7 @@ const Header = React.memo(() => {
                     <span className="font-bold text-sm">{workspace.name?.charAt(0).toUpperCase() || 'W'}</span>
                   </Avatar>
                   <span className="font-semibold hidden md:inline-flex md:text-sm text-foreground">
-                    {workspace.name}'s ws
+                    {workspace.name}
                   </span>
                 </div>
               </DropdownMenuTrigger>
@@ -260,7 +260,7 @@ const Header = React.memo(() => {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button className="hidden md:inline-flex button-gradient-light dark:button-gradient-dark text-white font-semibold" size="sm"  onClick={handleLogout} aria-label="Logout">
+           <Button variant="secondary" size="icon" className="hidden md:inline-flex" onClick={handleLogout} aria-label="Logout">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>

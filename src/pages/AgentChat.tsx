@@ -4,7 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, X, Plus, Paperclip, 
   ListPlus, Book, Clock,
-  Rocket, Lightbulb
+  Rocket, Lightbulb,
+  ChevronsDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 interface TaskInput {
   id: string;
@@ -98,7 +99,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isCreatingThread, setIsCreatingThread] = useState(false);
-
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   // Agent and workspace info
   const [currentThread, setCurrentThread] = useState<string | null>(threadFromUrl || null);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
@@ -153,6 +154,24 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     },
     enabled: !!currentThread && !!currentAgent?.id && showTaskHistory,
   });
+
+  const handleScroll = () => {
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      const isScrolledUp = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight > 300; // 300px là ngưỡng, có thể tùy chỉnh
+      setShowScrollToBottom(isScrolledUp);
+    }
+  };
+
+  // ADDED: Hàm để cuộn xuống tin nhắn mới nhất
+  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: behavior,
+      });
+    }
+  };
 
   // State cho credential
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -500,34 +519,38 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
       const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 150;
-  
-      // Luôn cuộn xuống nếu agent vừa trả lời xong (isAgentThinking chuyển từ true -> false)
-      // Hoặc nếu người dùng đang ở cuối
+      
       if (isAtBottom || !isAgentThinking) {
+        // Sử dụng requestAnimationFrame để đợi DOM update xong rồi mới cuộn
         requestAnimationFrame(() => {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+          scrollToBottom('auto'); // Cuộn ngay lập tức khi có tin nhắn mới
         });
       }
     }
-    // THÊM `isAgentThinking` VÀO ĐÂY
-  }, [messages, messages[messages.length - 1]?.content, isAgentThinking]);
+  }, [messages, isAgentThinking]);
 
   useEffect(() => {
-    const chatContainer = chatContainerRef.current;
-    
-    // Chỉ thực hiện sau khi đã tải xong dữ liệu (isLoading = false)
-    if (!isLoading && chatContainer) {
-      // Dùng setTimeout để đảm bảo DOM đã được render đầy đủ trước khi cuộn.
-      // Đây là một kỹ thuật phổ biến để tăng độ ổn định.
+    if (!isLoading) {
       const timer = setTimeout(() => {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }, 100); // Đợi 100ms
-
-      // Dọn dẹp timer khi component bị unmount
+        scrollToBottom('auto');
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [isLoading]);
-
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    // Gắn listener sau khi loading xong
+    if (chatContainer && !isLoading) {
+      chatContainer.addEventListener('scroll', handleScroll);
+    }
+    
+    // Dọn dẹp listener khi component unmount
+    return () => {
+      if (chatContainer) {
+        chatContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [isLoading]); // Chạy lại khi trạng thái loading thay đổi
   const handleSendMessage = () => {
     // Cho phép gửi nếu có text hoặc có ảnh
     if ((message.trim() || imageFile) && currentThread) {
@@ -1017,6 +1040,14 @@ const handleSubmitTaskInputs = async () => {
     }
   }, [aboveInputContent]);
 
+  console.log("currentAgent", currentAgent);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1059,12 +1090,12 @@ const handleSubmitTaskInputs = async () => {
                     {currentAgent?.avatar ? (
                       <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 40, height: 40 }} />
                     ) : (
-                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                      <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
                     )}
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
-                    <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+                    <p className="text-xs text-muted-foreground">{currentAgent?.role_description || 'AI Assistant'}</p>
                   </div>
                 </div>
                 <div className="p-4 border-b hover:primary-gradient ">
@@ -1094,7 +1125,7 @@ const handleSubmitTaskInputs = async () => {
       )}
 
       {/* Sidebar luôn hiện ở PC */}
-      <aside className="w-64 flex-shrink-0 border-r primary-gradient  flex flex-col hidden md:flex">
+      <aside className="w-64 flex-shrink-0 border-r dark:bg-primary-white  flex flex-col hidden md:flex">
         {isLoading ? (
           <div className="p-4 space-y-4">
             <div className="flex items-center space-x-3">
@@ -1117,12 +1148,12 @@ const handleSubmitTaskInputs = async () => {
                 {currentAgent?.avatar ? (
                   <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 40, height: 40 }} />
                 ) : (
-                  <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                  <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
                 )}
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{currentAgent?.name || 'Agent'}</h2>
-                <p className="text-xs text-muted-foreground">{currentAgent?.type || 'AI Assistant'}</p>
+                <p className="text-xs text-muted-foreground">{currentAgent?.role_description}</p>
               </div>
             </div>
             <div className="p-4 border-b">
@@ -1218,66 +1249,69 @@ const handleSubmitTaskInputs = async () => {
           >
             {/* 1. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
             {messages.slice(-50).map((msg) => (
-              <>
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex items-end gap-2 z-0",
-                    msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  {msg.sender === 'agent' && (
-                    <div className="h-9 w-9 flex items-center justify-center">
-                      {currentAgent?.avatar ? (
-                        <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
-                      ) : (
-                        <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
-                      )}
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      "max-w-[75%] p-3 rounded-2xl shadow-sm whitespace-pre-line relative overflow-hidden mr-2",
-                      msg.sender === 'user'
-                        ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
-                        : 'bg-muted text-foreground rounded-bl-lg'
-                    )}
-                    style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}
-                  >
-                    <ChatMessageContent
-                      content={msg.content}
-                      isAgent={msg.sender === 'agent'}
-                      stream={msg.isStreaming ?? false}
-                    />
-                    {/* Hiển thị ảnh nếu có image_url hoặc file_url */}
-                    {(msg.image_url || msg.file_url) && (
-                      <div style={{ marginTop: 8 }}>
-                        <img
-                          src={msg.image_url || msg.file_url}
-                          alt="uploaded"
-                          style={{ maxWidth: 300, borderRadius: 8 }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {msg.sender === 'user' && (
-                    <Avatar className="h-9 w-9 flex-shrink-0">
-                      <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-                <div
-                  className={cn(
-                    "w-full px-2 mt-1",
-                    msg.sender === 'agent' ? 'text-left' : 'text-right'
-                  )}
-                >
-                  <span className="text-xs text-muted-foreground select-none">
-                    {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                  </span>
-                </div>
-              </>
-            ))}
+    // Sử dụng React.Fragment để bọc message và timestamp
+    <div key={msg.id} className="flex flex-col">
+      <div
+        className={cn(
+          "flex items-end gap-2",
+          msg.sender === 'user' ? 'justify-end' : 'justify-start'
+        )}
+      >
+        {msg.sender === 'agent' && (
+          <div className="h-9 w-9 flex-shrink-0 self-start mt-1"> {/* Căn chỉnh avatar */}
+            {currentAgent?.avatar ? (
+              <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
+            )}
+          </div>
+        )}
+        <div
+          className={cn(
+            "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative", // Tăng max-width
+            msg.sender === 'user'
+              ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
+              : 'dark:bg-[#23272f] light:bg-gradient-light text-foreground rounded-bl-lg',
+            'whitespace-normal' // Đảm bảo whitespace được xử lý đúng
+          )}
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} // CSS để xuống dòng tốt hơn
+        >
+          {/* FIX: Bỏ prop timestamp khỏi đây */}
+          <ChatMessageContent
+            content={msg.content}
+            isAgent={msg.sender === 'agent'}
+            stream={msg.isStreaming ?? false}
+          />
+          {/* Hiển thị ảnh nếu có */}
+          {(msg.image_url || msg.file_url) && (
+            <div className="mt-2">
+              <img
+                src={msg.image_url || msg.file_url}
+                alt="uploaded content"
+                className="max-w-xs rounded-lg"
+              />
+            </div>
+          )}
+        </div>
+        {msg.sender === 'user' && (
+           <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1"> {/* Căn chỉnh avatar */}
+            <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
+          </Avatar>
+        )}
+      </div>
+      {/* FIX: Hiển thị timestamp ở đây, bên ngoài message bubble */}
+      <div
+        className={cn(
+          "px-12 text-xs text-muted-foreground select-none mt-1",
+          msg.sender === 'user' ? 'text-right' : 'text-left'
+        )}
+      >
+        <span>
+          {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+        </span>
+      </div>
+    </div>
+  ))}
 
           
 
@@ -1424,8 +1458,20 @@ const handleSubmitTaskInputs = async () => {
   // Trả về null trong các trường hợp khác
   return null;
 })()}
+{showScrollToBottom && (
+              <div className="absolute bottom-28 md:bottom-32 right-6 z-40">
+                <Button
+                  size="icon"
+                  className="rounded-full h-11 w-11 bg-background/70 backdrop-blur-sm border-2 border-border shadow-lg hover:scale-110 hover:bg-muted/90 transition-all duration-200 animate-in fade-in-50"
+                  onClick={() => scrollToBottom('smooth')}
+                  aria-label="Cuộn xuống cuối"
+                >
+                  <ChevronsDown className="h-6 w-6 text-muted-foreground" />
+                </Button>
+              </div>
+            )}
 
-              <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
+              <div className="p-4 bg-background border-t border-border">
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
                             {/* Preview ảnh phía trên input chat */}
@@ -1441,7 +1487,7 @@ const handleSubmitTaskInputs = async () => {
                             <Textarea
                                 ref={textareaRef}
                                 placeholder={t('common.askAI')}
-                                className="w-full no-scrollbar rounded-xl border-border bg-card p-4 pr-14 resize-none text-base shadow-sm"
+                                className="w-full no-scrollbar rounded-xl border-border bg-background p-4 pr-14 resize-none text-base shadow-sm"
                                 value={message}
                                 onChange={(e) => { setMessage(e.target.value); handleInputAutoGrow(e); }}
                                 onInput={handleInputAutoGrow}

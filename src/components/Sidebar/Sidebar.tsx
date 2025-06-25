@@ -180,12 +180,15 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
     <>
       <aside 
         className={cn(
-          "relative flex flex-col h-full bg-white border-r border-border transition-all duration-300 dark:bg-slate-900 dark:border-slate-800",
+          "relative flex flex-col h-full dark:bg-primary-white border-r border-border transition-all duration-300",
           collapsed ? "w-16" : "w-64",
           className
         )}
       >
-        <div className="flex items-center p-[14px] border-b border-border dark:border-slate-800">
+        <div className={cn(
+          "flex items-center p-[14px]",
+          !collapsed && "border-b border-border dark:border-slate-800"
+        )}>
           <div className="flex items-center space-x-2">
             
             {!collapsed && (
@@ -200,20 +203,24 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           </button>
         </div>
         
-        {!collapsed && (
+        {/* SEARCH BAR */}
+        {!collapsed ? (
           <div className="p-3">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
               <Input 
                 type="search" 
                 placeholder={t('search')}
-                className="pl-8 bg-muted/50 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400"
+                className="pl-8 bg-muted/50 dark:bg-muted dark:text-white dark:placeholder-gray-400"
               />
             </div>
           </div>
-        )}
+        ) : null}
 
-        <div className="flex items-center justify-between px-3 py-2 border-t border-b border-border dark:border-slate-800">
+        <div className={cn(
+          "flex items-center justify-between px-3 py-2",
+          !collapsed && "border-t border-b border-border dark:border-slate-800"
+        )}>
           <div className="flex items-center space-x-2 max-w-[140px]">
             {workspace?.name.startsWith('AI') && (
               <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
@@ -221,7 +228,9 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
               </div>
             )}
             {!collapsed && (
-              <div className="text-lg font-bold truncate max-w-[100px] text-foreground dark:text-white">{workspace?.name}'s workspace</div>
+              <div className="text-lg font-bold truncate max-w-[15ch] pl-1 pr-1 text-foreground dark:text-white" title={workspace?.name}>
+                {workspace?.name}
+              </div>
             )}
           </div>
           {!collapsed && (

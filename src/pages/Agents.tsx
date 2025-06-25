@@ -27,7 +27,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
@@ -189,7 +189,7 @@ export const Agents = () => {
    }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 background-gradient-white">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Agents</h1>
@@ -278,7 +278,7 @@ export const Agents = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-role" className="text-right">Mô tả vai trò</Label>
+              <Label htmlFor="edit-agent-role" className="text-right">Chức danh</Label>
               <Input 
                 id="edit-agent-role"
                 className="col-span-3"
@@ -287,7 +287,7 @@ export const Agents = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-instructions" className="text-right">Instructions</Label>
+              <Label htmlFor="edit-agent-instructions" className="text-right">Mô tả vai trò</Label>
               <Textarea 
                 id="edit-agent-instructions"
                 className="col-span-3"
@@ -453,32 +453,40 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {agents.map((agent: Agent) => (
-        <Card key={agent.id} className="relative">
-          <CardHeader>
-            <div className="flex justify-center mb-2">
+        <Card key={agent.id} className="relative card-gradient-white p-4 flex flex-col gap-3">
+          {/* Hàng 1: Avatar + Tên */}
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center  overflow-hidden">
               {agent.avatar ? (
                 <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 64, height: 64 }} />
               ) : (
-                <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 64, height: 64 }} />
+                <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 64, height: 64 }} />
               )}
             </div>
-            <CardTitle>{agent.name}</CardTitle>
-            <CardDescription>{agent.type}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{agent.role_description}</p>
-            <div className="flex justify-between items-center">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
-                className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:from-cyan-500 dark:hover:to-blue-600 hover:text-white"
-              >
-                Chat
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)} className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:from-cyan-500 dark:hover:to-blue-600 hover:text-white">View Profile</Button>
+            <div className="flex-1">
+              <div className="font-bold text-lg">{agent.name}</div>
             </div>
-          </CardContent>
+          </div>
+          {/* Hàng 2: Chức danh */}
+          <div>
+            <div className="font-semibold text-base">{agent.type}</div>
+          </div>
+          {/* Hàng 3: Mô tả vai trò */}
+          <div>
+            <div className="text-sm text-muted-foreground">{agent.role_description}</div>
+          </div>
+          {/* Các nút chức năng giữ nguyên */}
+          <div className="flex justify-between items-center mt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
+              className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:bg-primary hover:text-white"
+            >
+              Chat
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)} className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:bg-primary hover:text-white">View Profile</Button>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="absolute top-2 right-2">

@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useFolders } from '@/contexts/FolderContext';
+import EditAgentDialog from '@/components/EditAgentDialog';
 
 const AgentProfilePage = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -263,8 +264,8 @@ const AgentProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-        <Card className="w-full max-w-2xl">
+      <div className="min-h-[calc(100vh-64px)] bg-background p-6 md:p-10">
+        <Card className="w-full max-w-4xl mx-auto bg-card text-card-foreground shadow-xl rounded-2xl p-0 md:p-0">
           <CardHeader className="flex items-center space-x-4">
             <Skeleton className="h-24 w-24 rounded-full" />
             <div className="space-y-2 flex-1">
@@ -307,8 +308,8 @@ const AgentProfilePage = () => {
   const taskStatusOptions = ['todo', 'in-progress', 'completed'];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-background">
-      <Card className="w-full max-w-2xl bg-card text-card-foreground shadow-lg rounded-xl">
+    <div className="min-h-[calc(100vh-64px)] bg-background p-6 md:p-10">
+      <Card className="w-full max-w-4xl mx-auto bg-card text-card-foreground shadow-xl rounded-2xl p-0 md:p-0">
         <CardHeader className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 p-6 border-b border-border">
           <Avatar className="h-28 w-28">
             {agent.avatar ? (
@@ -464,99 +465,21 @@ const AgentProfilePage = () => {
       </Card>
 
       {/* Edit Agent Dialog */}
-      <Dialog open={isEditAgentDialogOpen} onOpenChange={setIsEditAgentDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Agent</DialogTitle>
-            <DialogDescription>
-              Make changes to your agent profile here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input
-                id="name"
-                value={editedAgentData.name || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, name: e.target.value })}
-                className="col-span-3 rounded-md"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role_description" className="text-right">Role Description</Label>
-              <Textarea
-                id="role_description"
-                value={editedAgentData.role_description || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, role_description: e.target.value })}
-                className="col-span-3 rounded-md"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="instructions" className="text-right">Instructions</Label>
-              <Textarea
-                id="instructions"
-                value={editedAgentData.instructions || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, instructions: e.target.value })}
-                className="col-span-3 rounded-md"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">Type</Label>
-              <Select
-                value={editedAgentData.type || ''}
-                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, type: value })}
-              >
-                <SelectTrigger className="col-span-3 rounded-md">
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentTypeOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="category" className="text-right">Category</Label>
-              <Select
-                value={editedAgentData.category || ''}
-                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, category: value })}
-              >
-                <SelectTrigger className="col-span-3 rounded-md">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentCategoryOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">Status</Label>
-              <Select
-                value={editedAgentData.status || ''}
-                onValueChange={(value) => setEditedAgentData({ ...editedAgentData, status: value })}
-              >
-                <SelectTrigger className="col-span-3 rounded-md">
-                  <SelectValue placeholder="Select a status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agentStatusOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditAgentDialogOpen(false)} disabled={isSavingAgent}>Cancel</Button>
-            <Button onClick={handleSaveAgent} disabled={isSavingAgent || !editedAgentData.name}>
-              {isSavingAgent ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditAgentDialog
+        open={isEditAgentDialogOpen}
+        onOpenChange={setIsEditAgentDialogOpen}
+        agentToEdit={agent}
+        editedAgentData={editedAgentData}
+        setEditedAgentData={setEditedAgentData}
+        isSaving={isSavingAgent}
+        onSave={handleSaveAgent}
+        onCancel={() => setIsEditAgentDialogOpen(false)}
+        editedTemperature={agent.model_config?.temperature?.toString() || '0'}
+        setEditedTemperature={(val) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, temperature: parseFloat(val) } })}
+        agentTypeOptions={agentTypeOptions}
+        agentCategoryOptions={agentCategoryOptions}
+        agentStatusOptions={agentStatusOptions}
+      />
 
       {/* Delete Agent Confirmation Dialog */}
       <Dialog open={isDeleteAgentDialogOpen} onOpenChange={setIsDeleteAgentDialogOpen}>

@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, BrainCircuit, Hourglass } from 'lucide-react';
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 interface AgentTypingIndicatorProps {
   agentName?: string | null;
@@ -57,7 +57,7 @@ export const AgentTypingIndicator = ({ agentName, agentAvatar, stage }: AgentTyp
         {agentAvatar ? (
           <div dangerouslySetInnerHTML={{ __html: agentAvatar }} style={{ width: 36, height: 36 }} />
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agentName || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
+          <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agentName || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
         )}
       </div>
       <div className="max-w-[75%] p-3 rounded-2xl shadow-sm bg-muted rounded-bl-lg">

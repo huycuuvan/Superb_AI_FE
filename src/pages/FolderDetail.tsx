@@ -14,7 +14,7 @@ import { AddAgentDialog } from '@/components/AddAgentDialog';
 import { getFolderDetail, FolderDetailResponse, getAgentsByFolder } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 import { createAvatar } from '@dicebear/core';
-import { avataaars } from '@dicebear/collection';
+import { adventurer  } from '@dicebear/collection';
 
 // Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
 interface FolderType {
@@ -208,7 +208,7 @@ const FolderDetail = () => {
                     {agent.avatar ? (
                       <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 40, height: 40 }} />
                     ) : (
-                      <div dangerouslySetInnerHTML={{ __html: createAvatar(avataaars, { seed: agent.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
+                      <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
                     )}
                   </Avatar>
                   <div>

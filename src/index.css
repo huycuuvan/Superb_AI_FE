@@ -6,72 +6,52 @@
 @tailwind utilities;
 
 @layer base {
-  /* --- THEME SÁNG --- */
+  /* --- THEME SÁNG (Không thay đổi) --- */
   :root {
-    --background: 0 0% 100%; /* Màu nền trắng: #FFFFFF */
-    --foreground: 224 71% 4%; /* Màu chữ đen đậm: #020817 */
-
+    --background: 0 0% 100%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    
-    /* Màu chủ đạo của theme sáng là màu Tím */
-    --primary: 262 83% 58%; /* #7C3AED */
-    --primary-foreground: 0 0% 100%; /* Chữ trên nền primary: màu trắng */
-
-    --secondary: 240 5% 96%; /* #F4F4F5 */
-    --secondary-foreground: 240 10% 3.9%; /* #0A0A0A */
-
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 3.9%;
     --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%; /* #6F6F7A */
-
-    /* Màu nhấn của theme sáng là màu Hồng */
-    --accent: 289 81% 58%; /* #D946EF */
-    --accent-foreground: 0 0% 100%; /* Chữ trên nền accent: màu trắng */
-
-    --destructive: 0 84% 60%; /* #F87171 */
+    --muted-foreground: 240 4% 46%;
+    --accent: 289 81% 58%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 240 6% 90%; /* #E4E4E7 */
+    --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 262 83% 58%; /* #7C3AED */
-
+    --ring: 262 83% 58%;
     --radius: 0.5rem;
   }
 
-  /* --- THEME TỐI --- */
+  /* --- THEME TỐI (Đã chuẩn) --- */
   .dark {
-    --background: 224 71% 4%; /* Màu nền đen tuyền: #020817 */
-    --foreground: 210 20% 98%; /* Màu chữ trắng ngà: #FAFAFA */
-
-    --card: 224 71% 4%;
-    --card-foreground: 210 20% 98%;
-
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 20% 98%;
-
-    /* Màu chủ đạo của theme tối là màu Xanh Cyan */
-    --primary: 195 89% 48%; /* #22D3EE */
-    --primary-foreground: 224 71% 4%; /* Chữ trên nền primary: màu đen */
-
-    --secondary: 215 28% 17%; /* #1E293B */
-    --secondary-foreground: 210 20% 98%;
-
-    --muted: 215 28% 17%;
-    --muted-foreground: 215 16% 57%; /* #828A9A */
-    
-    /* Màu nhấn của theme tối cũng là Xanh Cyan */
-    --accent: 215 28% 17%;
-    --accent-foreground: 210 20% 98%;
-
-    --destructive: 0 63% 31%; /* #991B1B */
-    --destructive-foreground: 210 20% 98%;
-
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 195 89% 48%; /* #22D3EE */
+    --background: 0 0% 9%; /* Gần đúng #161616 */
+    --foreground: 0 0% 95%;
+    --card: 0 0% 13%;
+    --card-hover: 0 0% 16%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 8.6%;
+    --popover-foreground: 0 0% 95%;
+    --secondary: 0 0% 12%;      /* Màu nền sidebar */
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --border: 0 0% 20%;       /* Màu nút "New chat" */
+    --input: 0 0% 15%;
+    --ring: 0 0% 95%;
+    --primary: 0 0% 20%;      /* Màu chính của nút bấm */
+    --primary-foreground: 0 0% 95%; /* Chữ trên nền primary */
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
   }
 }
 
@@ -85,39 +65,60 @@
   }
 }
 
-/* --- Lớp tiện ích cho Gradient --- */
+/* ====================================================================== */
+/* =================== FIX QUYẾT ĐỊNH CHO CÁC LỚP CSS =================== */
+/* ====================================================================== */
+
 @layer utilities {
-  .button-gradient-light {
-    @apply bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105;
+  /* Lớp này chịu trách nhiệm cho màu của sidebar */
+  .primary-gradient {
+    /* FIX: Ghi đè cả background-image và background-color */
+    background-image: none !important;
+    @apply bg-[hsl(var(--secondary))]; 
   }
-  .button-gradient-dark {
-    @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105;
-  }
-  .bg-gradient-light {
-    @apply bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700  hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all transform;
-  }
+
+  /* Gradient cho bong bóng chat của user (đã hoạt động tốt) */
   .bg-gradient-dark {
-    @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all transform ;
+    @apply bg-gradient-to-br from-[#2D2D2D] to-[#1C1C1C] text-white;
+  }
+
+  /* (Các lớp gradient khác không cần thiết nữa hoặc giữ nguyên cho theme sáng) */
+  .button-gradient-light, .bg-gradient-light {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 text-white;
   }
   .text-gradient-light {
       @apply bg-gradient-to-r from-violet-600 to-fuchsia-500 text-transparent bg-clip-text;
   }
   .text-gradient-dark {
-      @apply text-cyan-400;
-  }
-  .no-scrollbar {
-    /* Cho Firefox */
-    scrollbar-width: none;
-    
-    /* Cho Internet Explorer, Edge */
-    -ms-overflow-style: none;
+      @apply text-white;
   }
   
-  /* Cho Chrome, Safari và các trình duyệt dựa trên WebKit */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 }
+
+@layer components {
+  /* FIX: Ghi đè trực tiếp style của Button variant="primary" trong dark mode */
+  .dark .bg-primary {
+    background-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+  .dark .hover\:bg-primary\/90:hover {
+    background-color: hsl(var(--foreground)) !important;
+    color: hsl(var(--background)) !important;
+  }
+}
+
+/* ====================================================================== */
+/* ====================================================================== */
+
+/* --- CSS cho bảng và các thành phần khác (Không thay đổi) --- */
+/* ... (phần còn lại của file giữ nguyên) ... */
 
 /* --- CSS cho bảng trong tin nhắn chat (giữ nguyên) --- */
 .chat-message table {
@@ -163,4 +164,55 @@
 /* Fix màu chữ tổng thể trong prose khi dark mode */
 .dark .prose {
   color: #e5e7eb !important; /* text-gray-200 */
+}
+
+/* Card hover cho dark mode */
+.dark .bg-card:hover, .dark .card:hover {
+  background-color: hsl(var(--card-hover));
+  transition: background-color 0.2s;
+}
+
+/* Overlay gradient trắng nhẹ cho card khi dark mode */
+.dark .card-gradient-white,
+.dark .bg-card.card-gradient-white {
+  position: relative;
+  overflow: hidden;
+}
+.dark .card-gradient-white::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* Overlay gradient trắng nhẹ cho nền khi dark mode */
+.dark .background-gradient-white {
+  position: relative;
+  overflow: hidden;
+}
+.dark .background-gradient-white::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);
+  z-index: 0;
+}
+
+/* Overlay gradient trắng nhẹ cho button khi dark mode */
+.dark .button-gradient-white {
+  position: relative;
+  overflow: hidden;
+}
+.dark .button-gradient-white::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 100%);
+  z-index: 1;
+  border-radius: inherit;
 }

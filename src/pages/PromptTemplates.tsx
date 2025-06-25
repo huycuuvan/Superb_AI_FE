@@ -21,6 +21,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sparkles } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 
 // Danh sách biến động và mô tả
 const PROMPT_VARIABLES = [
@@ -109,13 +118,17 @@ export default function PromptTemplatesPage() {
   const addPromptTextareaRef = useRef(null);
   const editPromptTextareaRef = useRef(null);
 
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
+
   useEffect(() => {
     if (user && workspace?.id && (user.role === 'admin' || user.role === 'super_admin')) {
       fetchTemplates();
       fetchAgents();
     }
     // eslint-disable-next-line
-  }, [user, workspace?.id]);
+  }, [user, workspace?.id, page]);
 
   // Chỉ cho phép admin
   if (user?.role !== 'admin' && user?.role !== 'super_admin') {
@@ -125,8 +138,10 @@ export default function PromptTemplatesPage() {
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const res = await getAllPromptTemplates(100, 0);
-      setTemplates(Array.isArray(res) ? res : (res.data || []));
+      const offset = (page - 1) * pageSize;
+      const res = await getAllPromptTemplates(pageSize, offset);
+      setTemplates(Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []));
+      setTotalPages(res.total_pages || 1);
     } catch (e) {
       toast({ title: 'Lỗi', description: 'Không thể tải danh sách prompt', variant: 'destructive' });
     } finally {
@@ -234,37 +249,81 @@ export default function PromptTemplatesPage() {
         ) : templates.length === 0 ? (
           <div className="text-muted-foreground">Chưa có prompt nào.</div>
         ) : (
+          <>
           <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
+            <table className="min-w-full text-xs md:text-sm rounded-xl overflow-hidden">
               <thead>
-                <tr className="bg-muted">
-                  <th className="p-2 border">Tên</th>
-                  <th className="p-2 border">Agent</th>
-                  <th className="p-2 border">Loại</th>
-                  <th className="p-2 border">Category</th>
-                  <th className="p-2 border">Ngày tạo</th>
-                  <th className="p-2 border">Ngày cập nhật</th>
-                  <th className="p-2 border">Thao tác</th>
+                <tr className="bg-primary/90 text-white font-bold text-sm rounded-t-xl">
+                  <th className="px-3 py-2 text-left">Tên</th>
+                  <th className="px-3 py-2 text-left">Agent</th>
+                  <th className="px-3 py-2 text-left">Loại</th>
+                  <th className="px-3 py-2 text-left">Category</th>
+                  <th className="px-3 py-2 text-left">Ngày tạo</th>
+                  <th className="px-3 py-2 text-left">Ngày cập nhật</th>
+                  <th className="px-3 py-2 text-center">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {templates.map((template) => (
-                  <tr key={template.id} className="border-b">
-                    <td className="p-2 border font-semibold">{template.name}</td>
-                    <td className="p-2 border">{getAgentName(template.agent_id)}</td>
-                    <td className="p-2 border">{getTemplateTypeLabel(template.template_type)}</td>
-                    <td className="p-2 border">{template.category}</td>
-                    <td className="p-2 border">{new Date(template.created_at).toLocaleString()}</td>
-                    <td className="p-2 border">{new Date(template.updated_at).toLocaleString()}</td>
-                    <td className="p-2 border">
-                      <Button size="sm" variant="outline" className="mr-2" onClick={() => openEditModal(template)}>Sửa</Button>
-                      <Button size="sm" variant="destructive" onClick={() => openDeleteModal(template.id)}>Xóa</Button>
+                {templates.map((template, idx) => (
+                  <tr
+                    key={template.id}
+                    className={
+                      `border-b border-border transition-colors ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/60'} hover:bg-primary/10`
+                    }
+                  >
+                    <td className="px-3 py-2 font-semibold max-w-[180px] truncate">{template.name}</td>
+                    <td className="px-3 py-2 max-w-[140px] truncate">{getAgentName(template.agent_id)}</td>
+                    <td className="px-3 py-2">{getTemplateTypeLabel(template.template_type)}</td>
+                    <td className="px-3 py-2 max-w-[120px] truncate">{template.category}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{new Date(template.created_at).toLocaleString()}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{new Date(template.updated_at).toLocaleString()}</td>
+                    <td className="px-3 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => openEditModal(template)} title="Sửa">
+                          <span className="sr-only">Sửa</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" /></svg>
+                        </Button>
+                        <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => openDeleteModal(template.id)} title="Xóa">
+                          <span className="sr-only">Xóa</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={e => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
+                  className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }).map((_, idx) => (
+                <PaginationItem key={idx}>
+                  <PaginationLink
+                    href="#"
+                    isActive={page === idx + 1}
+                    onClick={e => { e.preventDefault(); setPage(idx + 1); }}
+                  >
+                    {idx + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={e => { e.preventDefault(); if (page < totalPages) setPage(page + 1); }}
+                  className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          </>
         )}
       </div>
 
