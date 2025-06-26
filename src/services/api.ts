@@ -1352,3 +1352,23 @@ export const deleteCredential = async (id: string) => {
   }
   return { success: res.ok };
 };
+
+// Lấy agents theo nhiều folder
+export const getAgentsByFolders = async (
+  folderIds: string[]
+): Promise<{ data: Agent[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(`${API_BASE_URL}/agents/by-folders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ folder_ids: folderIds }),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};

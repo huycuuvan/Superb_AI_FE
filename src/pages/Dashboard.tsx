@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { updateFolder, deleteFolder, getAgentsByFolder } from '@/services/api';
+import { updateFolder, deleteFolder, getAgentsByFolders } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -30,8 +30,14 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslation } from "react-i18next";
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
+import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 
-
+// Định nghĩa type cho response mới từ API by-folders
+interface FolderWithAgents {
+  id: string;
+  name: string;
+  agents: Agent[];
+}
 
 const Dashboard = () => {
   console.log('Dashboard rendered');
@@ -62,95 +68,107 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage();
 
-  useEffect(() => {
-    if (workspace?.id) {
-      console.log('useEffect fetchFolders running for workspace ID:', workspace.id);
-      fetchFolders(workspace.id);
-    } else {
-      console.log('useEffect fetchFolders: workspace ID is not available.', workspace?.id);
+  const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
+  const { data: agentsByFoldersData, isLoading: isLoadingAgents, error: agentsError } = useAgentsByFolders(folderIds);
+  let foldersWithAgents: FolderWithAgents[] = [];
+  if (Array.isArray(agentsByFoldersData?.data) && agentsByFoldersData.data.length > 0 && Array.isArray(agentsByFoldersData.data[0].agents)) {
+    foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];
+  }
+
+  const AgentsForFolder: React.FC<{ folderName: string, agents: any[], navigate: any }> = React.memo(({ folderName, agents, navigate }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    const { t } = useTranslation();
+    if (isLoadingAgents) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <div key={idx} className="flex items-center p-2 rounded-md">
+              <Skeleton className="w-12 h-12 mr-4 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
     }
-  }, [workspace?.id, fetchFolders]);
-
-  useEffect(() => {
-    if (editingFolder && inputRef.current) {
-      inputRef.current.focus();
+    if (agentsError) {
+      return <div className="text-sm text-red-500">{t('agent.errorLoadingAgents')}</div>;
     }
-  }, [editingFolder]);
+    if (!agents || agents.length === 0) {
+      return <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>;
+    }
+    return (
+      <>
+        {agents.map((agent) => (
+          <Card
+            key={agent.id}
+            className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 card-gradient-white ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
+            onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+          >
+            <Avatar className="w-12 h-12">
+              {agent.avatar ? (
+                <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 48, height: 48 }} />
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
+              )}
+            </Avatar>
+            <div className="flex-1 overflow-hidden">
+              <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground line-clamp-2">{agent.role_description}</CardDescription>
+            </div>
+          </Card>
+        ))}
+      </>
+    );
+  });
 
-  const handleRenameClick = (folder: Folder) => {
-    setFolderToRename(folder);
-    setNewFolderName(folder.name);
-    setShowRenameDialog(true);
-  };
-
+  // Xử lý đổi tên folder
   const handleRenameFolder = async () => {
     if (!folderToRename || !newFolderName.trim()) return;
-
     setIsRenaming(true);
     try {
       await updateFolder(folderToRename.id, { name: newFolderName.trim() });
       toast({
         title: t('common.success'),
-        description: t('common.folderRenameSuccess', { name: newFolderName.trim() }),
+        description: t('folderRenamed', { name: newFolderName.trim() }),
       });
-      if (workspace?.id) {
-        fetchFolders(workspace.id);
-      }
       setShowRenameDialog(false);
+      if (workspace?.id) fetchFolders(workspace.id);
     } catch (error: any) {
-      console.error('Lỗi khi đổi tên folder:', error);
       toast({
         title: t('common.error'),
-        description: t('common.folderRenameFailed', { name: folderToRename.name }),
-        variant: "destructive",
+        description: t('folderRenameFailed', { name: newFolderName.trim() }),
+        variant: 'destructive',
       });
     } finally {
       setIsRenaming(false);
     }
   };
 
-  const handleDeleteClick = (folder: Folder) => {
-    setFolderToDelete(folder);
-    setShowConfirmDeleteDialog(true);
-  };
-
+  // Xử lý xóa folder
   const handleDeleteFolder = async () => {
     if (!folderToDelete) return;
-
     setIsDeleting(true);
     try {
       await deleteFolder(folderToDelete.id);
       toast({
         title: t('common.success'),
-        description: t('common.folderDeleteSuccess', { name: folderToDelete.name }),
+        description: t('folderDeleted', { name: folderToDelete.name }),
       });
-      if (workspace?.id) {
-        fetchFolders(workspace.id);
-      }
       setShowConfirmDeleteDialog(false);
-      if (navigate && location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
-        navigate('/dashboard');
-      }
+      if (workspace?.id) fetchFolders(workspace.id);
     } catch (error: any) {
-      console.error('Lỗi khi xóa folder:', error);
       toast({
         title: t('common.error'),
-        description: t('common.folderDeleteFailed', { name: folderToDelete.name }),
-        variant: "destructive",
+        description: t('folderDeleteFailed', { name: folderToDelete.name }),
+        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);
     }
-  };
-
-
-  const handlePin = (name: string) => {
-    setFolders(prev => {
-      const idx = prev.findIndex(f => f.name === name);
-      if (idx === -1) return prev;
-      const pinned = prev[idx];
-      return [pinned, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
-    });
   };
 
   return (
@@ -191,59 +209,37 @@ const Dashboard = () => {
           </div>
         ) : errorFolders ? (
           <div className="text-sm text-red-500">Lỗi khi tải thư mục: {errorFolders.message}</div>
-        ) : folders.length > 0 ? (
-          folders.map((folder) => (
-            <div key={folder.id} className="mb-8 md:mb-10">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <FolderIcon className="h-5 w-5 text-gradient" />
-                  <h2 
-                    className="text-lg md:text-xl font-bold cursor-pointer hover:underline"
-                    onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
-                  >
-                    {folder.name}
-                  </h2>
+        ) : foldersWithAgents.length > 0 ? (
+          foldersWithAgents.map((folder) => {
+            const folderWithAgents = folder as FolderWithAgents;
+            return (
+              <div key={folderWithAgents.id} className="mb-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <FolderIcon className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-lg text-foreground">{folderWithAgents.name}</span>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="rounded-full p-1.5 focus:outline-none">
-                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleRenameClick(folder)}>
-                      <Edit className="h-4 w-4 mr-2" /> {t('common.rename')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handlePin(folder.name)}>
-                      <Pin className="h-4 w-4 mr-2" /> {t('common.pin')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDeleteClick(folder)} className="text-destructive focus:text-destructive">
-                      <Trash className="h-4 w-4 mr-2" /> {t('common.delete')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                  {user?.role !== 'user' && (
+                  <Card
+                    className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
+                    onClick={() => {
+                      setSelectedFolderId(folderWithAgents.id);
+                      setShowAddAgentDialog(true);
+                    }}
+                  >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
+                      <Plus className="h-6 w-6 text-primary " />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{t('agent.createAgent')}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t('agent.noAgents')}</p>
+                  </Card>
+                  )}
+                  {/* Render AgentsForFolder component cho folder này */}
+                  <AgentsForFolder folderName={folderWithAgents.name} agents={folderWithAgents.agents} navigate={navigate} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {user?.role !== 'user' && (
-                <Card
-                  className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
-                  onClick={() => {
-                    setSelectedFolderId(folder.id);
-                    setShowAddAgentDialog(true);
-                  }}
-                >
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
-                    <Plus className="h-6 w-6 text-primary " />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{t('agent.createAgent')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t('agent.noAgents')}</p>
-                </Card>
-                )}
-                {/* Render AgentsForFolder component for this folder */}
-                <AgentsForFolder folderId={folder.id} navigate={navigate} />
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-sm text-muted-foreground text-center py-10">{t('folder.noFolders')}</div>
         )}
@@ -342,62 +338,6 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
         />
       </div>
     </div>
-  );
-});
-
-// New component to fetch and display agents for a folder
-const AgentsForFolder: React.FC<{ folderId: string, navigate: any }> = React.memo(({ folderId, navigate }) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const { t } = useTranslation();
-  const { data: agentsData, isLoading: isLoadingAgents, error: agentsError } = useQuery({
-    queryKey: ['agentsByFolder', folderId],
-    queryFn: () => {
-      console.log('Fetching agents for folder:', folderId);
-      return getAgentsByFolder(folderId);
-    },
-    enabled: !!folderId,
-    staleTime: 300000, // Keep data fresh for 5 minutes
-  });
-
-  if (isLoadingAgents) {
-    return <Skeleton className="h-32 w-full" />;
-  }
-
-  if (agentsError) {
-    console.error('Lỗi khi tải agents cho folder', folderId, ':', agentsError);
-    return <div className="text-sm text-red-500">{t('agent.errorLoadingAgents')}</div>;
-  }
-
-  const agents = agentsData?.data || [];
-
-  // Hiển thị thông báo nếu không có agent nào trong thư mục
-  if (agents.length === 0) {
-    return <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>;
-  }
-
-  return (
-    <>
-      {agents.map((agent: Agent) => (
-        <Card
-          key={agent.id}
-          className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 card-gradient-white ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
-          onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
-        >
-          <Avatar className="w-12 h-12">
-            {agent.avatar ? (
-              <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 48, height: 48 }} />
-            ) : (
-              <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
-            )}
-          </Avatar>
-          <div className="flex-1 overflow-hidden">
-            <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
-            <CardDescription className="text-sm text-muted-foreground line-clamp-2">{agent.role_description}</CardDescription>
-          </div>
-        </Card>
-      ))}
-    </>
   );
 });
 

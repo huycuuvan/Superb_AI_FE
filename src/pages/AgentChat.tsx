@@ -383,7 +383,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     };
   }, [isAgentThinking]);
   useEffect(() => {
-    if (agentId && !hasInitializedRef.current && !isInitializingRef.current && workspace?.id) {
+    if (agentId && !isInitializingRef.current && workspace?.id) {
       const initializeChat = async () => {
         if (isInitializingRef.current) return;
         isInitializingRef.current = true;
@@ -503,7 +503,6 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
 
           setCurrentThread(threadId);
           setMessages(initialMessages);
-          hasInitializedRef.current = true;
         } catch (error) {
           console.error('Error initializing chat:', error);
         } finally {
@@ -1047,6 +1046,34 @@ const handleSubmitTaskInputs = async () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Reset toàn bộ state và ref khi đổi agent
+  useEffect(() => {
+    setCurrentAgent(null);
+    setMessages([]);
+    setCurrentThread(null);
+    setTasks([]);
+    setIsLoading(true);
+    setIsSending(false);
+    setIsCreatingThread(false);
+    setShowScrollToBottom(false);
+    setShowMobileSidebar(false);
+    setIsAgentThinking(false);
+    setAboveInputContent('none');
+    setSelectedTaskId(null);
+    setSelectedTaskInputs({});
+    setTaskExecutionStatus({});
+    setTaskRunItems([]);
+    setCredentials([]);
+    setSelectedCredentialId('');
+    setLoadingCredentials(false);
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (textareaRef.current) textareaRef.current.style.height = '40px';
+    hasInitializedRef.current = false;
+    isInitializingRef.current = false;
+  }, [agentId]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">

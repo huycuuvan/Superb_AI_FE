@@ -449,7 +449,7 @@ export const Agents = () => {
 // Separate component for displaying the agent grid
 const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (agent: Agent) => void, onDelete: (agent: Agent) => void }) => {
   const navigate = useNavigate();
-
+  console.log("agents", agents);
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ">
       {agents.map((agent: Agent) => (
@@ -465,15 +465,16 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
             </div>
             <div className="flex-1">
               <div className="font-bold text-lg">{agent.name}</div>
+              
             </div>
           </div>
           {/* Hàng 2: Chức danh */}
           <div>
-            <div className="font-semibold text-base">{agent.type}</div>
+            <div className="font-semibold text-base">{agent.position}</div>
           </div>
           {/* Hàng 3: Mô tả vai trò */}
           <div>
-            <div className="text-sm text-muted-foreground">{agent.role_description}</div>
+            <div className="text-sm text-muted-foreground">{agent.job_brief}</div>
           </div>
           {/* Các nút chức năng giữ nguyên */}
           <div className="flex justify-between items-center mt-2">

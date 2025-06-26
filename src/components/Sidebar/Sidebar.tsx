@@ -33,7 +33,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder, getAgents } from '@/services/api';
+import { updateFolder, deleteFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
@@ -44,6 +44,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
 import gsap from 'gsap';
+import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 
 
 interface SidebarProps {
@@ -81,13 +82,28 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Lấy danh sách agent thật từ API
-  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useQuery({
-    queryKey: ['agents', workspace?.id],
-    queryFn: () => getAgents(workspace?.id || ''),
-    enabled: !!workspace?.id,
-  });
-  const agents = Array.isArray(agentsData?.data) ? agentsData.data : [];
+  // Lấy danh sách agent theo folder_ids (by-folders)
+  const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
+  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds);
+  // Chỉ hiển thị mỗi agent 1 lần duy nhất (theo agent.id)
+  const agents = Array.isArray(agentsData?.data)
+    ? Array.from(
+        new Map(
+          agentsData.data
+            .flatMap(folder =>
+              Array.isArray(folder.agents)
+                ? folder.agents.map(agent => ({
+                    ...agent,
+                    folderName: folder.name,
+                    folderId: folder.id
+                  }))
+                : []
+            )
+            .filter(agent => agent && agent.id)
+            .map(agent => [agent.id, agent])
+        ).values()
+      )
+    : [];
 
   const asideRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +216,8 @@ console.error('Lỗi khi đổi tên folder:', error);
     return true;
   });
 
+console.log(agents);
+
   return (
     <>
       <aside
@@ -268,7 +286,7 @@ console.error('Lỗi khi đổi tên folder:', error);
         {/* === DANH SÁCH AGENT (CÓ THỂ CUỘN) === */}
         <div className="flex-1 min-h-0 flex flex-col">
           {!collapsed && (
-            <div className="px-2 pt-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10">
+            <div className="px-2 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10">
               Agents
             </div>
           )}
@@ -286,31 +304,32 @@ console.error('Lỗi khi đổi tên folder:', error);
             ) : agents.length === 0 ? (
               <div className="text-xs text-muted-foreground px-2">Chưa có agent nào</div>
             ) : (
-              agents.map(agent => (
-                <div
-                  key={agent.id}
-                  className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
-                  onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
-                >
-                  {agent.avatar ? (
-                    <div
-                      className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
-                      style={{ width: 32, height: 32 }}
-                      dangerouslySetInnerHTML={{ __html: agent.avatar }}
-                    />
-                  ) : (
-                    <div
-                      className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
-                      style={{ width: 32, height: 32 }}
-                      dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
-                    />
-                  )}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
-                    <span className="text-xs font-medium text-foreground truncate">{agent.position}</span>
+              agents
+                .map(agent => (
+                  <div
+                    key={agent.id}
+                    className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
+                    onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+                  >
+                    {agent?.avatar ? (
+                      <div
+                        className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
+                        style={{ width: 32, height: 32 }}
+                        dangerouslySetInnerHTML={{ __html: agent?.avatar }}
+                      />
+                    ) : (
+                      <div
+                        className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+                        style={{ width: 32, height: 32 }}
+                        dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
+                      />
+                    )}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
+                      <span className="text-xs font-medium text-foreground truncate">{agent.role_description}</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </div>
         </div>
