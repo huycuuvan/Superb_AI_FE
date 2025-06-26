@@ -117,4 +117,23 @@ export default {
   enter_agent_name: "Nhập tên agent",
   english: "Tiếng Anh",
   vietnamese: "Tiếng Việt",
+  folder: {
+    renameFolderTitle: "Đổi tên thư mục",
+    renameFolderDescription: "Đổi tên thư mục {name}",
+    newFolderName: "Tên thư mục mới",
+    renameFolder: "Đổi tên thư mục",
+    deleteFolderConfirmation: "Bạn có chắc chắn muốn xóa thư mục này không?",
+    deleteFolderConfirmationDescription:
+      "Thao tác này không thể được hoàn tác.",
+    deleteFolderConfirmationButton: "Xóa thư mục",
+    createFolderDescription: "Tạo mới thư mục",
+    departments: "Phòng ban",
+    success: "Thành công",
+    error: "Lỗi",
+    warning: "Cảnh báo",
+    info: "Thông tin",
+    folderRenamed: "Đổi tên thư mục thành công",
+    folderRenameFailed: "Đổi tên thư mục thất bại",
+    folderDeleted: "Xóa thư mục thành công",
+  },
 };

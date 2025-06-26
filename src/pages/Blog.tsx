@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
-import PageLayout from '@/components/layout/PageLayout';
+import PageLayout from '@/components/shared/PageLayout';
 import { Button } from '@/components/ui/button';
 
 interface BlogPostCardProps {

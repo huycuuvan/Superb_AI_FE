@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createFolder } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AddFolderDialogProps {
   open?: boolean;
@@ -30,20 +31,30 @@ export const AddFolderDialog = ({ open: openProp, onOpenChange, onSuccess }: Add
   const open = openProp !== undefined ? openProp : internalOpen;
   const setOpen = onOpenChange ? onOpenChange : setInternalOpen;
   const { workspace } = useSelectedWorkspace();
+  const { user } = useAuth();
 
   const handleCreateFolder = async () => {
-    if (!folderName.trim() || !workspace?.id) return;
-    
+    if (!folderName.trim()) return;
+    if (!user?.role) return;
     try {
       setIsLoading(true);
-      await createFolder({
-        workspace_id: workspace.id,
-        name: folderName.trim(),
-        description: '',
-        folder_type: 'custom',
-        status: 'workspace_shared'
-      });
-      
+      if (user.role === 'super_admin') {
+        await createFolder({
+          name: folderName.trim(),
+          description: '',
+          folder_type: 'custom',
+          status: 'system_shared',
+        });
+      } else {
+        if (!workspace?.id) return;
+        await createFolder({
+          workspace_id: workspace.id,
+          name: folderName.trim(),
+          description: '',
+          folder_type: 'custom',
+          status: 'workspace_shared',
+        });
+      }
       setFolderName('');
       setOpen(false);
       onSuccess?.();
@@ -58,15 +69,15 @@ export const AddFolderDialog = ({ open: openProp, onOpenChange, onSuccess }: Add
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{t('addFolder')}</DialogTitle>
+          <DialogTitle>{t('folder.createFolder')}</DialogTitle>
           <DialogDescription>
-            {t('createWorkspace')}
+            {t('folder.createFolderDescription')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
-              {t('folderName')}
+              {t('folder.nameFolder')}
             </Label>
             <Input
               id="name"
@@ -79,10 +90,10 @@ export const AddFolderDialog = ({ open: openProp, onOpenChange, onSuccess }: Add
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            {t('cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleCreateFolder} disabled={!folderName.trim() || isLoading}>
-            {isLoading ? 'Đang tạo...' : t('create')}
+            {isLoading ? t('common.loading') : t('common.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

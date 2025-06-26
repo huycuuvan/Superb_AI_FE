@@ -308,7 +308,7 @@ const WorkspacePage = () => {
                               <div className="font-semibold text-base text-slate-800 dark:text-white leading-tight flex items-center gap-2">
                                 <span className="truncate">{workspace.name}</span>
                                 {user && (
-                                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50">
+                                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 whitespace-nowrap">
                                     {workspace.owner_id === user.id ? 'Sở hữu' : 'Thành viên'}
                                   </span>
                                 )}

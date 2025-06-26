@@ -101,14 +101,14 @@ const Settings = () => {
                       className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'light' ? 'border-primary' : 'border-transparent'}`}
                       onClick={() => setSelectedTheme('light')}
                     >
-                      <div className="w-16 h-16 rounded-md border shadow-md bg-background"></div>
+                      <div className="w-16 h-16 rounded-md border shadow-md bg-white"></div>
                       <span className="text-sm text-muted-foreground mt-1">Light Theme</span>
                     </div>
                     <div
                       className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'dark' ? 'border-primary' : 'border-transparent'}`}
                       onClick={() => setSelectedTheme('dark')}
                     >
-                      <div className="w-16 h-16 rounded-md border shadow-md bg-foreground border-border"></div>
+                      <div className="w-16 h-16 rounded-md border shadow-md bg-black"></div>
                       <span className="text-sm text-muted-foreground mt-1">Dark Theme</span>
                     </div>
                   </div>

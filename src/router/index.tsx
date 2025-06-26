@@ -40,6 +40,7 @@ import BlogPage from '@/pages/Blog';
 import AgentProfilePage from '@/pages/AgentProfilePage';
 import PromptTemplatesPage from '@/pages/PromptTemplates';
 import CredentialsPage from '@/pages/Credentials';
+import DepartmentsPage from '@/pages/Departments';
 
 const routes: RouteObject[] = [
   {
@@ -122,6 +123,10 @@ const routes: RouteObject[] = [
       {
         path: 'credentials',
         element: <CredentialsPage />,
+      },
+      {
+        path: 'departments',
+        element: <DepartmentsPage />,
       },
     ],
   },

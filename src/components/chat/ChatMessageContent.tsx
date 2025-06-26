@@ -86,11 +86,36 @@ const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }
 const CodeBlockRenderer = ({ node, children, ...props }: any) => {
   const preRef = useRef<HTMLPreElement>(null);
   return (
-    <div className="relative">
-      <pre ref={preRef} className="bg-black/80 rounded-md p-3 my-2 overflow-x-auto text-white break-all whitespace-pre-wrap" {...props}>
+    <div
+      className={
+        cn(
+          "relative my-2 group border overflow-x-auto",
+          "bg-gradient-to-br from-[#23272f] via-[#18181b] to-[#23272f] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#18181b]",
+          "border-violet-500/60 dark:border-blue-400/40",
+          "rounded-xl shadow-lg"
+        )
+      }
+    >
+      <pre
+        ref={preRef}
+        className={
+          cn(
+            "p-4 text-sm font-mono text-white dark:text-blue-100 bg-transparent rounded-xl whitespace-pre-wrap break-all transition-colors duration-200",
+            "scrollbar-thin scrollbar-thumb-violet-400/40 scrollbar-track-transparent"
+          )
+        }
+        style={{ fontFamily: 'JetBrains Mono, Fira Mono, Menlo, monospace', minHeight: 48 }}
+        {...props}
+      >
         {children}
       </pre>
       <CopyButton elementRef={preRef} />
+      <style>{`
+        .group:hover pre {
+          background: linear-gradient(90deg, #6d28d9 0%, #2563eb 100%, #23272f 100%);
+          color: #fff;
+        }
+      `}</style>
     </div>
   );
 };
@@ -107,6 +132,43 @@ const TableRenderer = ({ node, ...props }: any) => {
 
 const isVideoUrl = (url: string) =>
   /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
+
+// Hàm đệ quy hiển thị JSON dạng bảng lồng bảng
+function renderJsonAsTable(data: any): JSX.Element {
+  if (Array.isArray(data)) {
+    if (data.length === 0) return <span className="italic text-muted-foreground">[]</span>;
+    return (
+      <div className="space-y-2">
+        {data.map((item, idx) => (
+          <div key={idx} className="border border-violet-400/30 dark:border-blue-400/20 rounded-lg p-2 bg-background/60">
+            <div className="text-xs text-muted-foreground mb-1">#{idx + 1}</div>
+            {typeof item === 'object' && item !== null ? renderJsonAsTable(item) : <span>{String(item)}</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (typeof data === 'object' && data !== null) {
+    const entries = Object.entries(data);
+    if (entries.length === 0) return <span className="italic text-muted-foreground">Không có dữ liệu để hiển thị</span>;
+    return (
+      <table className="min-w-[220px] w-full border border-violet-400/40 dark:border-blue-400/40 rounded-xl bg-gradient-to-br from-[#23272f] via-[#18181b] to-[#23272f] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#18181b] text-sm mb-2">
+        <tbody>
+          {entries.map(([key, value]) => (
+            <tr key={key} className="border-b last:border-b-0 border-border hover:bg-violet-900/10 dark:hover:bg-blue-900/10 transition-colors align-top">
+              <td className="font-semibold px-4 py-2 text-violet-600 dark:text-blue-400 whitespace-nowrap w-1/4 align-top">{key}</td>
+              <td className="px-4 py-2 text-foreground break-all align-top">
+                {typeof value === 'object' && value !== null ? renderJsonAsTable(value) : String(value)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  // primitive
+  return <span>{String(data)}</span>;
+}
 
 // --- COMPONENT CHÍNH ĐÃ ĐƯỢC SỬA LỖI ---
 export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }: ChatMessageContentProps) => {
@@ -223,19 +285,15 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
     } catch (e) { /* Không phải JSON, bỏ qua */ }
 
     if (isAgent && parsedJson && typeof parsedJson === 'object' && parsedJson !== null) {
-      // Nếu là JSON, không stream từng ký tự mà hiển thị luôn khi xong
-       if (stream) {
-         // Trong lúc stream, có thể hiện ... hoặc để trống
-         return <p>...</p>;
-       }
-       // Khi stream xong, hiển thị JSON đã format
-       return (
-         <div className="relative">
-            <CodeBlockRenderer>
-              {JSON.stringify(parsedJson, null, 2)}
-            </CodeBlockRenderer>
-         </div>
-       );
+      // Nếu là JSON, hiển thị bảng lồng bảng cho mọi object/array
+      if (stream) {
+        return <p>...</p>;
+      }
+      return (
+        <div className="overflow-x-auto my-2 whitespace-pre-wrap">
+          {renderJsonAsTable(parsedJson)}
+        </div>
+      );
     }
 
     // 3. Mặc định render Markdown

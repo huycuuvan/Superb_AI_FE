@@ -147,4 +147,6 @@ export interface Folder {
   id: string;
   name: string;
   path?: string;
+  folder_type?: string;
+  status?: string;
 }

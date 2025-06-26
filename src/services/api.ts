@@ -195,11 +195,11 @@ export const getWorkspace = async (): Promise<WorkspaceResponse> => {
 };
 
 export interface CreateFolderRequest {
-  workspace_id: string;
   name: string;
   description: string;
   folder_type: "custom";
-  status: "workspace_shared";
+  status: "workspace_shared" | "system_shared";
+  workspace_id?: string;
 }
 
 export const createFolder = async (
@@ -263,7 +263,8 @@ export interface UpdateFolderRequest {
   description?: string;
   order?: number;
   pin?: number;
-  status?: number;
+  status?: string;
+  folder_type?: string;
 }
 
 export const updateFolder = async (

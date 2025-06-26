@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
@@ -7,7 +7,6 @@ import {
   Users, 
   CheckCircle, 
   Settings as SettingsIcon, 
-  Search, 
   ChevronRight,
   Plus,
   Cpu,
@@ -23,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddFolderDialog } from '@/components/AddFolderDialog';
 import { useLanguage } from '@/hooks/useLanguage';
-import SettingsDropdown from '@/components/SettingsDropdown';
 import { AddAgentDialog } from '@/components/AddAgentDialog';
 import {
   DropdownMenu,
@@ -35,15 +33,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder } from '@/services/api';
+import { updateFolder, deleteFolder, getAgents } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
 import { useTheme } from '@/hooks/useTheme';
+import { Skeleton } from '../ui/skeleton';
+import { useQuery } from '@tanstack/react-query';
+import { createAvatar } from '@dicebear/core';
+import { adventurer } from '@dicebear/collection';
+import gsap from 'gsap';
 
 
-  interface SidebarProps {
+interface SidebarProps {
     className?: string;
 }
 
@@ -78,11 +81,31 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Lấy danh sách agent thật từ API
+  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useQuery({
+    queryKey: ['agents', workspace?.id],
+    queryFn: () => getAgents(workspace?.id || ''),
+    enabled: !!workspace?.id,
+  });
+  const agents = Array.isArray(agentsData?.data) ? agentsData.data : [];
+
+  const asideRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (workspace?.id) {
-      // fetchFolders(workspace.id); // Remove this line
+// fetchFolders(workspace.id); // Remove this line
     }
   }, [workspace?.id]);
+
+  useEffect(() => {
+    if (asideRef.current) {
+      gsap.to(asideRef.current, {
+        width: collapsed ? 64 : 256, // 16 * 4 = 64px, 64 * 4 = 256px
+        duration: 0.3,
+        ease: 'power2.inOut',
+      });
+    }
+  }, [collapsed]);
 
   // Handle Rename action
   const handleRenameClick = (folder: FolderType) => {
@@ -96,21 +119,21 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
 
     setIsRenaming(true);
     try {
-      await updateFolder(folderToRename.id, { name: newFolderName.trim() });
-      toast({
-        title: t('success'),
-        description: t('folderRenamed', { name: newFolderName.trim() }),
-      });
-      setShowRenameDialog(false);
+await updateFolder(folderToRename.id, { name: newFolderName.trim() });
+toast({
+  title: t('success'),
+  description: t('folderRenamed', { name: newFolderName.trim() }),
+});
+setShowRenameDialog(false);
     } catch (error: any) {
-      console.error('Lỗi khi đổi tên folder:', error);
+console.error('Lỗi khi đổi tên folder:', error);
       toast({
-        title: t('error'),
-        description: t('folderRenameFailed', { name: newFolderName.trim() }),
-        variant: "destructive",
-      });
+ title: t('error'),
+ description: t('folderRenameFailed', { name: newFolderName.trim() }),
+ variant: "destructive",
+ });
     } finally {
-      setIsRenaming(false);
+ setIsRenaming(false);
     }
   };
 
@@ -125,16 +148,15 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
 
     setIsDeleting(true);
     try {
-      await deleteFolder(folderToDelete.id);
-      toast({
-        title: t('success'),
-        description: t('folderDeleted', { name: folderToDelete.name }),
-      });
-      setShowConfirmDeleteDialog(false);
-       // Redirect if currently viewing the deleted folder's detail page
-      if (location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
-        navigate('/dashboard');
-      }
+ await deleteFolder(folderToDelete.id);
+ toast({
+   title: t('success'),
+   description: t('folderDeleted', { name: folderToDelete.name }),
+ });
+ setShowConfirmDeleteDialog(false);
+ if (location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
+   navigate('/dashboard');
+ }
     } catch (error: any) {
       console.error('Lỗi khi xóa folder:', error);
       toast({
@@ -149,212 +171,165 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
 
   const menuItems = [
     { icon: Home, label: t('common.home'), path: '/dashboard' },
+    {
+      label: t('folder.departments'),
+      icon: Folder,
+      path: '/dashboard/departments',
+    },
     { icon: Users, label: t('common.agents'), path: '/dashboard/agents' },
     { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks' },
     { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
-    // Thêm Prompt Templates chỉ cho admin
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
       { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' }
     ] : []),
     {
       label: 'Credential',
-      icon: Key,
+ icon: Key,
       path: '/dashboard/credentials',
     },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
-    // Ẩn mục Agent nếu user có role là 'user'
     if (item.label === t('common.agents') && user?.role === 'user') {
       return false; 
     }
-    // Ẩn mục Tasks nếu user có role là 'user'
     if (item.label === t('common.tasks') && user?.role === 'user') {
       return false;
     }
-    return true; // Hiển thị các mục khác hoặc user không có role là 'user'
+    return true;
   });
 
   return (
     <>
-      <aside 
+      <aside
+        ref={asideRef}
         className={cn(
-          "relative flex flex-col h-full dark:bg-primary-white border-r border-border transition-all duration-300",
-          collapsed ? "w-16" : "w-64",
+          "flex flex-col h-screen overflow-hidden dark:bg-primary-white border-r border-border",
           className
         )}
-      >
-        <div className={cn(
-          "flex items-center p-[14px]",
-          !collapsed && "border-b border-border dark:border-slate-800"
-        )}>
-          <div className="flex items-center space-x-2">
-            
-            {!collapsed && (
-              <span className="font-bold text-lg text-foreground dark:text-white">Superb AI</span>
-            )}
-          </div>
-          <button 
-            className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            <ChevronRight className={cn("h-4 w-4 transition-transform", collapsed ? "" : "rotate-180")} />
-          </button>
-        </div>
-        
-        {/* SEARCH BAR */}
-        {!collapsed ? (
-          <div className="p-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
-              <Input 
-                type="search" 
-                placeholder={t('search')}
-                className="pl-8 bg-muted/50 dark:bg-muted dark:text-white dark:placeholder-gray-400"
-              />
+>
+        {/* === HEADER (KHÔNG CUỘN) === */}
+        {collapsed ? (
+          <div className="flex gap-2 justify-center items-center h-20">
+            <div className={`${isDark ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg p-2 ml-2`}>
+              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-          </div>
-        ) : null}
-
-        <div className={cn(
-          "flex items-center justify-between px-3 py-2",
-          !collapsed && "border-t border-b border-border dark:border-slate-800"
-        )}>
-          <div className="flex items-center space-x-2 max-w-[140px]">
-            {workspace?.name.startsWith('AI') && (
-              <div className="w-6 h-6 rounded-full bg-teampal-500 flex items-center justify-center text-white text-xs font-medium">
-                AI
-              </div>
-            )}
-            {!collapsed && (
-              <div className="text-lg font-bold truncate max-w-[15ch] pl-1 pr-1 text-foreground dark:text-white" title={workspace?.name}>
-                {workspace?.name}
-              </div>
-            )}
-          </div>
-          {!collapsed && (
-            <Button 
-              variant="default" 
-              size="icon" 
-              className={`h-6 w-6 ml-1 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}
-              onClick={() => setShowAddFolderDialog(true)}
+            <button
+              className=" text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              onClick={() => setCollapsed(false)}
             >
-              <Plus className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        
-        <div className="flex-1 min-h-0 overflow-y-auto py-2">
-          {loadingFolders ? (
-            <div className="px-3 py-2 text-muted-foreground text-sm">Loading...</div>
-          ) : (
-            folders?.map((folder) => (
-              <div
-                key={folder.id}
-                className={cn(
-                  "flex items-center px-3 py-2 mx-2 rounded-md text-sm cursor-pointer",
-                  "transition-colors",
-                  location.pathname === `/dashboard/folder/${folder.id}`
-                    ? {
-                        [isDark ? 'button-gradient-dark' : 'button-gradient-light']: true,
-                        'text-white': true,
-                      }
-                    : {
-                        'text-muted-foreground': true,
-                        [isDark ? 'hover:button-gradient-dark' : 'hover:button-gradient-light']: true,
-                        'hover:text-white': true,
-                      }
-                )}
-                onClick={() => navigate(`/dashboard/folder/${folder.id}`)}
-              >
-                <div className="flex items-center w-full">
-                  <Folder className="sidebar-icon mr-2 text-muted-foreground" />
-                  {!collapsed && <span className="truncate flex-1">{folder.name}</span>}
-                  {!collapsed && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button 
-                          className="rounded-full p-1.5 hover:bg-accent/50 focus:outline-none ml-1" 
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <MoreVertical className="sidebar-icon text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleRenameClick({id: folder.id, name: folder.name, workspace_id: workspace?.id})}>
-                          <Edit className="sidebar-icon mr-2" /> {t('rename')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => alert(`Pin ${folder.name}`)}>
-                          <Pin className="sidebar-icon mr-2" /> {t('pin')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteClick({id: folder.id, name: folder.name, workspace_id: workspace?.id})}
-                          className="text-red-500 focus:text-red-500"
-                        >
-                          <Trash className="sidebar-icon mr-2" /> {t('delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-
-          {/* Thêm đường kẻ phân cách */}
-          <div className="border-t border-border my-2 mx-2"></div>
-
-         
-        </div>
-        
-        <div className="absolute bottom-0 left-0 w-full  border-t border-border pt-2 pb-3 z-10">
-          <div className="border-b border-border p-2 space-y-1">
-            {filteredMenuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center px-3 py-2 rounded-md text-sm transition-colors",
-                    isActive
-                      ? (isDark ? 'button-gradient-dark text-white' : 'button-gradient-light text-white')
-                      : 'text-muted-foreground ' + (isDark ? 'hover:button-gradient-dark hover:text-white' : 'hover:button-gradient-light hover:text-white')
-                  )
-                }
-              >
-                {item.icon && React.createElement(item.icon, { className: "sidebar-icon mr-2" })}
-                {!collapsed && <span>{item.label}</span>}
-              </NavLink>
-            ))}
+              <ChevronRight className={cn('h-5 w-5 transition-transform')} />
+            </button>
           </div>
-          <div className="p-3 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-teampal-200 flex items-center justify-center text-foreground">
-                {user?.name ? user.name.charAt(0) : 'U'}
+        ) : (
+          <div className="flex items-center justify-between w-full px-4 py-3">
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 ${isDark ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-              {!collapsed && (
-                <div className="text-sm">{user?.name || 'Guest'}</div>
-              )}
+              <span className={`font-bold text-xl ${isDark ? 'text-white' : 'text-slate-800'}`}>SuperbAI</span>
             </div>
-            {!collapsed && <SettingsDropdown />}
+            <button
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-auto"
+              onClick={() => setCollapsed(true)}
+            >
+              <ChevronRight className={cn('h-5 w-5 transition-transform rotate-180')} />
+            </button>
+          </div>
+        )}
+
+        {/* === MENU ITEMS (KHÔNG CUỘN) === */}
+        <nav className="p-2 space-y-1 border-b border-border dark:border-primary-white flex-shrink-0">
+          {filteredMenuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-3 py-2 rounded-md text-sm transition-colors",
+                  isActive
+                    ? (isDark ? 'button-gradient-dark text-white' : 'button-gradient-light text-white')
+                    : 'text-muted-foreground ' + (isDark ? 'hover:button-gradient-dark hover:text-white' : 'hover:button-gradient-light hover:text-white')
+                )
+              }
+            >
+              {item.icon && React.createElement(item.icon, { className: cn("sidebar-icon", !collapsed && "mr-2") })}
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* === DANH SÁCH AGENT (CÓ THỂ CUỘN) === */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {!collapsed && (
+            <div className="px-2 pt-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10">
+              Agents
+            </div>
+          )}
+          <div className="flex-1 overflow-y-auto agent-scrollbar space-y-2 p-2 pt-0">
+            {/* AGENT LIST REAL DATA */}
+            {isLoadingAgents ? (
+              Array.from({ length: 8 }).map((_, idx) => (
+                <div key={idx} className="flex items-center p-2 rounded-md">
+                  <div className="w-8 h-8 mr-2 bg-gray-300 dark:bg-gray-600 rounded-full animate-pulse flex-shrink-0"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+                </div>
+              ))
+            ) : errorAgents ? (
+              <div className="text-xs text-red-500 px-2">Lỗi tải danh sách agent</div>
+            ) : agents.length === 0 ? (
+              <div className="text-xs text-muted-foreground px-2">Chưa có agent nào</div>
+            ) : (
+              agents.map(agent => (
+                <div
+                  key={agent.id}
+                  className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
+                  onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+                >
+                  {agent.avatar ? (
+                    <div
+                      className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
+                      style={{ width: 32, height: 32 }}
+                      dangerouslySetInnerHTML={{ __html: agent.avatar }}
+                    />
+                  ) : (
+                    <div
+                      className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+                      style={{ width: 32, height: 32 }}
+                      dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
+                    />
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
+                    <span className="text-xs font-medium text-foreground truncate">{agent.position}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+
       </aside>
 
+      {/* DIALOGS - Không thay đổi */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-white">{t('renameFolderTitle')}</DialogTitle>
+            <DialogTitle className="dark:text-white">{t('folder.renameFolderTitle')}</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              {t('renameFolderDescription', { name: folderToRename?.name })}
+              {t('folder.renameFolderDescription', { name: folderToRename?.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-folder-name" className="text-right dark:text-white">
-                Tên mới
+                {t('folder.newFolderName')}
               </Label>
               <Input
                 id="new-folder-name"
@@ -366,9 +341,9 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">{t('common.cancel')}</Button>
             </DialogClose>
-            <Button onClick={handleRenameFolder} disabled={isRenaming} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>{isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}</Button>
+            <Button onClick={handleRenameFolder} disabled={isRenaming} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>{isRenaming ? t('common.loading') : t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -376,14 +351,14 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-white">{t('confirmDeleteFolderTitle')}</DialogTitle>
+            <DialogTitle className="dark:text-white">{t('folder.deleteFolderConfirmation')}</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              {t('deleteFolderDescription', { name: folderToDelete?.name })}
+              {t('folder.deleteFolderConfirmationDescription', { name: folderToDelete?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-               <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
             </DialogClose>
             <Button onClick={handleDeleteFolder} disabled={isDeleting} variant="destructive">{isDeleting ? 'Đang xóa...' : 'Xóa'}</Button>
           </DialogFooter>

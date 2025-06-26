@@ -1466,7 +1466,7 @@ const handleSubmitTaskInputs = async () => {
                   onClick={() => scrollToBottom('smooth')}
                   aria-label="Cuộn xuống cuối"
                 >
-                  <ChevronsDown className="h-6 w-6 text-muted-foreground" />
+                  <ChevronsDown className="h-2 w-2 text-muted-foreground" />
                 </Button>
               </div>
             )}

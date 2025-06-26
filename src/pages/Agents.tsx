@@ -189,20 +189,20 @@ export const Agents = () => {
    }
 
   return (
-    <div className="space-y-6 p-6 background-gradient-white">
+    <div className="space-y-6 p-6 background-gradient-white ">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Agents</h1>
           <p className="text-muted-foreground">Manage and interact with your AI agents</p>
         </div>
         {canCreateAgent && (
-          <Button className={`${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white`} onClick={() => setShowAddAgentDialog(true)}>
+          <Button variant="outline" onClick={() => setShowAddAgentDialog(true)}>
             Create agent
           </Button>
         )}
       </div>
       
-      <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="flex flex-col md:flex-row items-center gap-4  ">
         <div className="relative w-full md:w-96">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -451,9 +451,9 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
   const navigate = useNavigate();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ">
       {agents.map((agent: Agent) => (
-        <Card key={agent.id} className="relative card-gradient-white p-4 flex flex-col gap-3">
+        <Card key={agent.id} className="relative card-gradient-white p-4 flex flex-col gap-3 ">
           {/* Hàng 1: Avatar + Tên */}
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center  overflow-hidden">

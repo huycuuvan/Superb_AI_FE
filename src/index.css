@@ -100,6 +100,24 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  .agent-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #18181b;
+  }
+  .agent-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .agent-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 6px;
+  }
+  .agent-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a1a1aa;
+  }
+  .agent-scrollbar::-webkit-scrollbar-track {
+    background: #18181b;
+  }
 }
 
 @layer components {
