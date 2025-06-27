@@ -376,7 +376,34 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
   }, [currentThread]); // Reconnect when currentThread changes
 
   useEffect(() => {
-    if (agentId && !isInitializingRef.current && workspace?.id) {
+    // Reset toàn bộ state liên quan đến chat khi đổi agent
+    setCurrentAgent(null);
+    setMessages([]);
+    setCurrentThread(null);
+    setTasks([]);
+    setIsLoading(true);
+    setIsSending(false);
+    setIsCreatingThread(false);
+    setShowScrollToBottom(false);
+    setShowMobileSidebar(false);
+    setIsAgentThinking(false);
+    setAboveInputContent('none');
+    setSelectedTaskId(null);
+    setSelectedTaskInputs({});
+    setTaskExecutionStatus({});
+    setTaskRunItems([]);
+    setCredentials([]);
+    setSelectedCredentialId('');
+    setLoadingCredentials(false);
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (textareaRef.current) textareaRef.current.style.height = '40px';
+    hasInitializedRef.current = false;
+    isInitializingRef.current = false;
+
+    // Luôn gọi lại initializeChat khi agentId đổi
+    if (agentId && workspace?.id) {
       const initializeChat = async () => {
         if (isInitializingRef.current) return;
         isInitializingRef.current = true;
@@ -384,11 +411,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
           setIsLoading(true);
           await new Promise(resolve => setTimeout(resolve, 500));
 
-          // KHÔNG gọi getWorkspace nữa
-          // Lấy workspaceId từ context
           const currentWorkspaceId = workspace.id;
-
-          // Get agent information
           const agentData = await getAgentById(agentId);
           setCurrentAgent(agentData.data);
 
@@ -404,94 +427,95 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
             }
           }
 
-          let threadId: string | null = currentThread;
+          let threadId: string | null = null;
           let initialMessages: ChatMessage[] = [];
 
-          // Check if we already have a thread ID from URL or state
-          if (!threadId) {
-            let threadCheck = null;
-            if (currentWorkspaceId) {
-              threadCheck = await checkThreadExists(agentId, currentWorkspaceId);
-            }
-
-            if (threadCheck && threadCheck.exists && threadCheck.thread_id) {
-              threadId = threadCheck.thread_id;
-              try {
-                const messagesResponse = await getThreadMessages(threadId);
-                initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
-                    id: msg.id,
-                    content: msg.message_content,
-                    sender: msg.sender_type,
-                    timestamp: msg.created_at,
-                    agentId: msg.sender_agent_id,
-                    image_url: msg.image_url,
-                    file_url: msg.file_url,
-                })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-                if (initialMessages.length === 0 && agentData.data.greeting_message) {
-                  const welcomeMessage: ChatMessage = {
-                    id: Date.now().toString(),
-                    content: agentData.data.greeting_message || 'Hello! How can I help you?',
-                    sender: 'agent',
-                    timestamp: new Date().toISOString(),
-                    agentId: agentData.data.id,
-                    image_url: agentData.data.image_url,
-                    file_url: agentData.data.file_url,
-                  };
-                  initialMessages.push(welcomeMessage);
-                }
-              } catch (fetchError) {
-                console.error('Error fetching initial messages:', fetchError);
-              }
-            } else {
-              // Tạo thread mới khi không tồn tại thread nào
-              const threadData = {
-                agent_id: agentId,
-                workspace_id: currentWorkspaceId,
-                title: ""
-              };
-              const threadResponse = await createThread(threadData);
-              threadId = threadResponse.data.id;
-
-              const welcomeMessage: ChatMessage = {
-                id: Date.now().toString(),
-                content: agentData.data.greeting_message || 'Hello! How can I help you?',
-                sender: 'agent',
-                timestamp: new Date().toISOString(),
-                agentId: agentData.data.id,
-                image_url: agentData.data.image_url,
-                file_url: agentData.data.file_url,
-              };
-              initialMessages = [welcomeMessage];
-            }
+          // Kiểm tra thread tồn tại
+          let threadCheck = null;
+          if (currentWorkspaceId) {
+            threadCheck = await checkThreadExists(agentId, currentWorkspaceId);
           }
-          // If threadId was already available, fetch its messages
-          try {
-            const messagesResponse = await getThreadMessages(threadId);
-            initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
-                id: msg.id,
-                content: msg.message_content,
-                sender: msg.sender_type,
-                timestamp: msg.created_at,
-                agentId: msg.sender_agent_id,
-                image_url: msg.image_url,
-                file_url: msg.file_url,
-            })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-            if (initialMessages.length === 0 && agentData.data.greeting_message) {
-              const welcomeMessage: ChatMessage = {
-                id: Date.now().toString(),
-                content: agentData.data.greeting_message || 'Hello! How can I help you?',
-                sender: 'agent',
-                timestamp: new Date().toISOString(),
-                agentId: agentData.data.id,
-                image_url: agentData.data.image_url,
-                file_url: agentData.data.file_url,
-              };
-              initialMessages.push(welcomeMessage);
+          if (threadCheck && threadCheck.exists && threadCheck.thread_id) {
+            threadId = threadCheck.thread_id;
+            try {
+              const messagesResponse = await getThreadMessages(threadId);
+              initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+                  id: msg.id,
+                  content: msg.message_content,
+                  sender: msg.sender_type,
+                  timestamp: msg.created_at,
+                  agentId: msg.sender_agent_id,
+                  image_url: msg.image_url,
+                  file_url: msg.file_url,
+              })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+              if (initialMessages.length === 0 && agentData.data.greeting_message) {
+                const welcomeMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                  sender: 'agent',
+                  timestamp: new Date().toISOString(),
+                  agentId: agentData.data.id,
+                  image_url: agentData.data.image_url,
+                  file_url: agentData.data.file_url,
+                };
+                initialMessages.push(welcomeMessage);
+              }
+            } catch (fetchError) {
+              console.error('Error fetching initial messages:', fetchError);
             }
-          } catch (fetchError) {
-            console.error('Error fetching initial messages:', fetchError);
+          } else {
+            // Tạo thread mới khi không tồn tại thread nào
+            const threadData = {
+              agent_id: agentId,
+              workspace_id: currentWorkspaceId,
+              title: ""
+            };
+            const threadResponse = await createThread(threadData);
+            threadId = threadResponse.data.id;
+
+            const welcomeMessage: ChatMessage = {
+              id: Date.now().toString(),
+              content: agentData.data.greeting_message || 'Hello! How can I help you?',
+              sender: 'agent',
+              timestamp: new Date().toISOString(),
+              agentId: agentData.data.id,
+              image_url: agentData.data.image_url,
+              file_url: agentData.data.file_url,
+            };
+            initialMessages = [welcomeMessage];
+          }
+
+          // Nếu threadId đã có, fetch messages
+          if (threadId) {
+            try {
+              const messagesResponse = await getThreadMessages(threadId);
+              initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
+                  id: msg.id,
+                  content: msg.message_content,
+                  sender: msg.sender_type,
+                  timestamp: msg.created_at,
+                  agentId: msg.sender_agent_id,
+                  image_url: msg.image_url,
+                  file_url: msg.file_url,
+              })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+              if (initialMessages.length === 0 && agentData.data.greeting_message) {
+                const welcomeMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                  sender: 'agent',
+                  timestamp: new Date().toISOString(),
+                  agentId: agentData.data.id,
+                  image_url: agentData.data.image_url,
+                  file_url: agentData.data.file_url,
+                };
+                initialMessages.push(welcomeMessage);
+              }
+            } catch (fetchError) {
+              console.error('Error fetching initial messages:', fetchError);
+            }
           }
 
           setCurrentThread(threadId);
@@ -1040,34 +1064,6 @@ const handleSubmitTaskInputs = async () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Reset toàn bộ state và ref khi đổi agent
-  useEffect(() => {
-    setCurrentAgent(null);
-    setMessages([]);
-    setCurrentThread(null);
-    setTasks([]);
-    setIsLoading(true);
-    setIsSending(false);
-    setIsCreatingThread(false);
-    setShowScrollToBottom(false);
-    setShowMobileSidebar(false);
-    setIsAgentThinking(false);
-    setAboveInputContent('none');
-    setSelectedTaskId(null);
-    setSelectedTaskInputs({});
-    setTaskExecutionStatus({});
-    setTaskRunItems([]);
-    setCredentials([]);
-    setSelectedCredentialId('');
-    setLoadingCredentials(false);
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (textareaRef.current) textareaRef.current.style.height = '40px';
-    hasInitializedRef.current = false;
-    isInitializingRef.current = false;
-  }, [agentId]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">

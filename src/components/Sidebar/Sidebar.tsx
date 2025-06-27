@@ -16,7 +16,9 @@ import {
   Pin,
   Trash,
   Book,
-  Key
+  Key,
+  MessageSquare,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder } from '@/services/api';
+import { updateFolder, deleteFolder, getThreadMessages, getThreadByAgentId } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
@@ -45,6 +47,7 @@ import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
 import gsap from 'gsap';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
+import { ApiMessage, Thread } from '@/types';
 
 
 interface SidebarProps {
@@ -82,6 +85,11 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // State for agent messages
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [agentMessages, setAgentMessages] = useState<{[agentId: string]: ApiMessage[]}>({});
+  const [loadingMessages, setLoadingMessages] = useState<{[agentId: string]: boolean}>({});
+
   // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
   const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds);
@@ -105,6 +113,98 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       )
     : [];
 
+  // Fetch threads for each agent
+  const { data: threadsData, isLoading: isLoadingThreads } = useQuery({
+    queryKey: ['agent-threads', agents.map(a => a.id)],
+    queryFn: async () => {
+      const threadsPromises = agents.map(async (agent) => {
+        try {
+          const response = await getThreadByAgentId(agent.id);
+          return { agentId: agent.id, threads: response.data || [] };
+        } catch (error) {
+          console.error(`Error fetching threads for agent ${agent.id}:`, error);
+          return { agentId: agent.id, threads: [] };
+        }
+      });
+      return Promise.all(threadsPromises);
+    },
+    enabled: agents.length > 0,
+  });
+
+  // Function to fetch messages for a specific agent
+  const fetchAgentMessages = async (agentId: string) => {
+    if (loadingMessages[agentId]) return;
+    
+    setLoadingMessages(prev => ({ ...prev, [agentId]: true }));
+    try {
+      const agentThreads = threadsData?.find(t => t.agentId === agentId)?.threads || [];
+      if (agentThreads.length === 0) {
+        setAgentMessages(prev => ({ ...prev, [agentId]: [] }));
+        return;
+      }
+
+      // Get the most recent thread
+      const latestThread = agentThreads.sort((a, b) => 
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )[0];
+
+      const messagesResponse = await getThreadMessages(latestThread.id);
+      const messages = messagesResponse.data || [];
+      
+      setAgentMessages(prev => ({ ...prev, [agentId]: messages }));
+    } catch (error) {
+      console.error(`Error fetching messages for agent ${agentId}:`, error);
+      setAgentMessages(prev => ({ ...prev, [agentId]: [] }));
+    } finally {
+      setLoadingMessages(prev => ({ ...prev, [agentId]: false }));
+    }
+  };
+
+  // Function to get latest message preview for an agent
+  const getLatestMessagePreview = (agentId: string) => {
+    const messages = agentMessages[agentId] || [];
+    if (messages.length === 0) return null;
+    
+    const latestMessage = messages.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+    
+    return {
+      content: latestMessage.message_content,
+      timestamp: latestMessage.created_at,
+      senderType: latestMessage.sender_type
+    };
+  };
+
+  // Function to count unread messages for an agent
+  const getUnreadMessageCount = (agentId: string) => {
+    const messages = agentMessages[agentId] || [];
+    if (messages.length === 0) return 0;
+    
+    // Count messages from agent in the last 5 minutes
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    return messages.filter(msg => 
+      msg.sender_type === 'agent' && 
+      new Date(msg.created_at).getTime() > fiveMinutesAgo
+    ).length;
+  };
+
+  // Function to format timestamp
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInHours * 60);
+      return `${diffInMinutes}m`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h`;
+    } else {
+      return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' });
+    }
+  };
+
   const asideRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,6 +222,19 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       });
     }
   }, [collapsed]);
+
+  // Auto-fetch messages when threads data is available
+  useEffect(() => {
+    if (threadsData && agents.length > 0) {
+      agents.forEach(agent => {
+        if (!agentMessages[agent.id] && !loadingMessages[agent.id]) {
+          fetchAgentMessages(agent.id);
+        }
+      });
+    }
+  }, [threadsData, agents]);
+
+  // ĐÃ BỎ auto-refresh/polling vì đã dùng WebSocket cho chat real-time
 
   // Handle Rename action
   const handleRenameClick = (folder: FolderType) => {
@@ -218,6 +331,16 @@ console.error('Lỗi khi đổi tên folder:', error);
 
 console.log(agents);
 
+  // State for search functionality
+  const [searchAgent, setSearchAgent] = useState('');
+
+  // Filter agents based on search
+  const filteredAgents = agents.filter(agent => {
+    const nameMatch = agent.name.toLowerCase().includes(searchAgent.toLowerCase());
+    const roleMatch = agent.role_description.toLowerCase().includes(searchAgent.toLowerCase());
+    return nameMatch || roleMatch;
+  });
+
   return (
     <>
       <aside
@@ -286,8 +409,16 @@ console.log(agents);
         {/* === DANH SÁCH AGENT (CÓ THỂ CUỘN) === */}
         <div className="flex-1 min-h-0 flex flex-col">
           {!collapsed && (
-            <div className="px-2 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10">
-              Agents
+            <div className="px-2 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10 flex flex-col gap-2">
+              <span>Agents</span>
+              <input
+                type="text"
+                placeholder="Tìm kiếm agent..."
+                className="px-2 py-1 rounded border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                value={searchAgent}
+                onChange={e => setSearchAgent(e.target.value)}
+                style={{ marginTop: 4, marginBottom: 2 }}
+              />
             </div>
           )}
           <div className="flex-1 overflow-y-auto agent-scrollbar space-y-2 p-2 pt-0">
@@ -301,35 +432,81 @@ console.log(agents);
               ))
             ) : errorAgents ? (
               <div className="text-xs text-red-500 px-2">Lỗi tải danh sách agent</div>
-            ) : agents.length === 0 ? (
-              <div className="text-xs text-muted-foreground px-2">Chưa có agent nào</div>
+            ) : filteredAgents.length === 0 ? (
+              <div className="text-xs text-muted-foreground px-2">Không tìm thấy agent nào</div>
             ) : (
-              agents
-                .map(agent => (
-                  <div
-                    key={agent.id}
-                    className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
-                    onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
-                  >
-                    {agent?.avatar ? (
-                      <div
-                        className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
-                        style={{ width: 32, height: 32 }}
-                        dangerouslySetInnerHTML={{ __html: agent?.avatar }}
-                      />
-                    ) : (
-                      <div
-                        className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
-                        style={{ width: 32, height: 32 }}
-                        dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
-                      />
-                    )}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
-                      <span className="text-xs font-medium text-foreground truncate">{agent.role_description}</span>
+              filteredAgents
+                .map(agent => {
+                  const latestMessage = getLatestMessagePreview(agent.id);
+                  const isSelected = location.pathname === `/dashboard/agents/${agent.id}`;
+                  return (
+                    <div
+                      key={agent.id}
+                      className={cn(
+                        "flex items-start p-2 rounded-md hover:bg-muted cursor-pointer transition-colors relative",
+                        isSelected && (isDark ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-purple-50')
+                      )}
+                      onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
+                    >
+                      {agent?.avatar ? (
+                        <div
+                          className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
+                          style={{ width: 32, height: 32 }}
+                          dangerouslySetInnerHTML={{ __html: agent?.avatar }}
+                        />
+                      ) : (
+                        <div
+                          className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+                          style={{ width: 32, height: 32 }}
+                          dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
+                        />
+                      )}
+                      
+                      {!collapsed && (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
+                            <div className="flex items-center gap-1">
+                              {latestMessage && (
+                                <span className="text-xs text-muted-foreground flex items-center">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {formatTimestamp(latestMessage.timestamp)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-xs text-muted-foreground truncate">{agent.role_description}</span>
+                            {loadingMessages[agent.id] && (
+                              <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                            )}
+                          </div>
+                          
+                          {latestMessage ? (
+                            <div className="flex items-start gap-1">
+                              <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs text-muted-foreground truncate block">
+                                  {latestMessage.senderType === 'user' ? 'Bạn: ' : `${agent.name}: `}
+                                  {latestMessage.content.length > 50 
+                                    ? `${latestMessage.content.substring(0, 50)}...` 
+                                    : latestMessage.content
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Chưa có tin nhắn</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
             )}
           </div>
         </div>
