@@ -15,6 +15,7 @@ import { getFolderDetail, FolderDetailResponse, getAgentsByFolder } from '@/serv
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
+import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 
 // Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
 interface FolderType {
@@ -34,8 +35,6 @@ const FolderDetail = () => {
   const [loadingFolderDetail, setLoadingFolderDetail] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loadingAgents, setLoadingAgents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
@@ -70,25 +69,13 @@ const FolderDetail = () => {
     }
   }, [folderId, workspace?.id, isLoadingWorkspace]);
 
-  // Logic fetch agents
-  useEffect(() => {
-    const fetchAgents = async () => {
-      if (folderId) {
-        setLoadingAgents(true);
-        try {
-          const response = await getAgentsByFolder(folderId);
-          setAgents(response.data || []);
-        } catch (err: unknown) {
-          console.error('Error fetching agents:', err);
-          setAgents([]);
-        } finally {
-          setLoadingAgents(false);
-        }
-      }
-    };
-
-    fetchAgents();
-  }, [folderId]);
+  // Thay thế logic fetch agents bằng hook by-folders
+  const folderIds = folderId ? [folderId] : [];
+  const { data: agentsByFoldersData, isLoading: loadingAgents } = useAgentsByFolders(folderIds);
+  const folderAgentsGroup = Array.isArray(agentsByFoldersData?.data)
+    ? agentsByFoldersData.data.find(group => group.id === folderId)
+    : null;
+  const agents = folderAgentsGroup?.agents || [];
 
   // Filter agents based on search query
   const filteredAgents = agents.filter(agent =>

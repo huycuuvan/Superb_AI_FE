@@ -143,6 +143,10 @@ const Header = React.memo(() => {
   const memberToConfirmRemoval = membersData?.data.find(member => member.user_id === memberToRemoveId);
   const isAgentChatPage = location.pathname.startsWith('/dashboard/agents/') && agentId;
   const isAgentsListPage = location.pathname === '/dashboard/agents';
+  const isDepartmentsPage = location.pathname.startsWith('/dashboard/departments');
+  const isKnowledgePage = location.pathname.startsWith('/dashboard/knowledge');
+  const isSettingsPage = location.pathname.startsWith('/dashboard/settings');
+  const isCredentialPage = location.pathname.startsWith('/dashboard/credential');
 
   return (
     // CLEANED: Using `bg-background` for the header to match the layout.
@@ -154,29 +158,84 @@ const Header = React.memo(() => {
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          {(isAgentChatPage || isAgentsListPage) ? (
-            <div className="hidden md:flex">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
-                  {user?.role !== 'user' && (
-                    <>
+          {(() => {
+            if (isAgentChatPage || isAgentsListPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      {user?.role !== 'user' && (
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
+                        </>
+                      )}
+                      {isAgentChatPage && (
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem><BreadcrumbPage>{currentAgent?.name || 'Agent'}</BreadcrumbPage></BreadcrumbItem>
+                        </>
+                      )}
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            if (isDepartmentsPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
-                    </>
-                  )}
-                  {isAgentChatPage && (
-                    <>
+                      <BreadcrumbItem><BreadcrumbPage>{t('folder.departments')}</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            if (isKnowledgePage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbPage>{currentAgent?.name || 'Agent'}</BreadcrumbPage></BreadcrumbItem>
-                    </>
-                  )}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          ) : (
-            <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>
-          )}
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.knowledge')}</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            if (isSettingsPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.settings')}</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            if (isCredentialPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>Credential</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            return <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>;
+          })()}
         </div>
         
         {/* --- RIGHT SECTION --- */}
