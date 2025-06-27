@@ -79,6 +79,16 @@ interface TaskLog {
   task_id?: string;
 }
 
+// Interface cho subflow log từ WebSocket
+interface SubflowLog {
+  type: "subflow_log";
+  thread_id: string;
+  content: string;
+  timestamp: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Định nghĩa interface Credential (giống CredentialsPage)
 interface Credential {
   id: string;
@@ -93,6 +103,9 @@ const AgentChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
   const [isAgentThinking, setIsAgentThinking] = useState(false);
+  const [currentStage, setCurrentStage] = useState(0);
+  const [subflowLogs, setSubflowLogs] = useState<SubflowLog[]>([]);
+  const [showTaskHistory, setShowTaskHistory] = useState(false);
   const { user } = useAuth();
 const [agentTargetContent, setAgentTargetContent] = useState('');
   // Loading states
@@ -125,8 +138,6 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
   // Ref để theo dõi ID của tin nhắn agent đang được stream/chunk
   const lastAgentMessageIdRef = useRef<string | null>(null);
   const agentDoneTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [timeoutStage, setTimeoutStage] = useState<number>(0);
-  const [showTaskHistory, setShowTaskHistory] = useState(false);
   const [taskRunItems, setTaskRunItems] = useState<TaskRun[]>([]);
 
   const queryClient = useQueryClient();
@@ -240,7 +251,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
        
           if (receivedData.type === "chat" && msgData.sender_type === "agent") {
             
-            setTimeoutStage(0);
+            setSubflowLogs([]); // Reset subflow logs khi agent bắt đầu trả lời
             setMessages(prevMessages => {
               const lastMessageIndex = prevMessages.length - 1;
               if (prevMessages.length > 0 && prevMessages[lastMessageIndex].sender === 'agent' && prevMessages[lastMessageIndex].isStreaming) {
@@ -276,7 +287,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
           if (receivedData.type === "done") {
             lastAgentMessageIdRef.current = null;
             setIsAgentThinking(false);
-            setTimeoutStage(0);
+            setSubflowLogs([]); // Reset subflow logs khi agent hoàn thành
             setMessages(prevMessages => {
               if (prevMessages.length === 0) return prevMessages;
               const lastMessageIndex = prevMessages.length - 1;
@@ -323,6 +334,24 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                 console.error("Error parsing status update: ", e);
             }
           }
+
+          // Xử lý subflow_log từ backend
+          if (receivedData.type === "subflow_log") {
+            console.log("Nhận subflow log:", receivedData);
+            setSubflowLogs(prevLogs => {
+              // Thêm log mới vào cuối danh sách
+              const newLog: SubflowLog = {
+                type: "subflow_log",
+                thread_id: receivedData.thread_id,
+                content: receivedData.content,
+                timestamp: receivedData.timestamp,
+                created_at: receivedData.created_at,
+                updated_at: receivedData.updated_at
+              };
+              return [...prevLogs, newLog];
+            });
+            return;
+          }
       
         } catch (error) {
           console.error("Error processing WebSocket message:", error);
@@ -345,43 +374,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
       };
     }
   }, [currentThread]); // Reconnect when currentThread changes
-  useEffect(() => {
-    // Nếu agent không suy nghĩ, không làm gì cả
-    if (!isAgentThinking) {
-      setTimeoutStage(0); // Reset stage khi có kết quả
-      return;
-    }
 
-    // Mảng để lưu các ID của timer, giúp chúng ta dọn dẹp sau
-    const timers: NodeJS.Timeout[] = [];
-
-    // Định nghĩa các mốc thời gian và thông điệp
-    const stages = [
-      { delay: 15000, stage: 1 }, // 15 giây -> Giai đoạn 1
-      { delay: 30000, stage: 2 }, // 30 giây -> Giai đoạn 2
-      { delay: 60000, stage: 3 }, // 60 giây -> Giai đoạn 3 (thay cho báo lỗi)
-    ];
-
-    stages.forEach(({ delay, stage }) => {
-      const timer = setTimeout(() => {
-        console.log(`Timeout Stage ${stage} reached`);
-        setTimeoutStage(stage);
-        if (stage === 3) { // Tại giai đoạn cuối, có thể hiển thị một toast thân thiện
-             toast({
-                title: "Agent đang xử lý tác vụ phức tạp",
-                description: "Vui lòng chờ thêm một chút. Tác vụ này mất nhiều thời gian hơn dự kiến.",
-             });
-        }
-      }, delay);
-      timers.push(timer);
-    });
-
-    // Hàm dọn dẹp: Sẽ được gọi khi isAgentThinking chuyển thành false
-    return () => {
-      console.log("Cleaning up timeouts...");
-      timers.forEach(clearTimeout);
-    };
-  }, [isAgentThinking]);
   useEffect(() => {
     if (agentId && !isInitializingRef.current && workspace?.id) {
       const initializeChat = async () => {
@@ -616,6 +609,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
         ws.current?.send(JSON.stringify(messageToSendObj));
         setIsSending(false); 
         setIsAgentThinking(true);
+        setSubflowLogs([]); // Reset subflow logs khi bắt đầu chat mới
       }
     }
   };
@@ -1477,7 +1471,7 @@ const handleSubmitTaskInputs = async () => {
       <AgentTypingIndicator
         agentName={currentAgent?.name}
         agentAvatar={currentAgent?.avatar}
-        stage={timeoutStage}
+        subflowLogs={subflowLogs}
       />
     );
   }

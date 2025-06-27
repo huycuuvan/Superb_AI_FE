@@ -16,7 +16,7 @@ const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [loadingFolders, setLoadingFolders] = useState(true);
   const [errorFolders, setErrorFolders] = useState<Error | null>(null);
   const { workspace } = useSelectedWorkspace();
 

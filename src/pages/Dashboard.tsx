@@ -74,7 +74,7 @@ const Dashboard = () => {
   if (Array.isArray(agentsByFoldersData?.data) && agentsByFoldersData.data.length > 0 && Array.isArray(agentsByFoldersData.data[0].agents)) {
     foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];
   }
-
+  console.log("foldersWithAgents",foldersWithAgents);
   const AgentsForFolder: React.FC<{ folderName: string, agents: any[], navigate: any }> = React.memo(({ folderName, agents, navigate }) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -194,7 +194,7 @@ const Dashboard = () => {
       <SearchInput onSearchChange={setSearchQuery} />
 
       <div className="grid gap-4">
-        {loadingFolders ? (
+        {loadingFolders || isLoadingAgents || !workspace?.id ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
               <div key={i}>
