@@ -1,8 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BrainCircuit } from 'lucide-react';
+import { BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 interface SubflowLog {
   type: "subflow_log";
@@ -21,6 +21,7 @@ interface AgentTypingIndicatorProps {
 
 export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs = [] }: AgentTypingIndicatorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Auto-scroll khi có log mới
   useEffect(() => {
@@ -28,6 +29,8 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [subflowLogs]);
+
+  const handleToggleExpand = () => setIsExpanded((prev) => !prev);
 
   // Hàm để chọn nội dung hiển thị dựa trên subflow logs hoặc stage
   const getIndicatorContent = () => {
@@ -50,33 +53,33 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
       };
 
       return (
-        <div className="space-y-1" ref={containerRef}>
-          {/* Hiển thị log mới nhất với animation */}
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground animate-in fade-in-50 duration-300">
-            <BrainCircuit className="h-4 w-4 animate-pulse" />
-            <span>{latestLog.content}</span>
-            <span className="text-xs text-muted-foreground/60">
-              {formatTime(latestLog.timestamp)}
-            </span>
-            {subflowLogs.length > 1 && (
-              <span className="text-xs bg-muted-foreground/20 px-1.5 py-0.5 rounded-full text-muted-foreground/70">
-                {subflowLogs.length} bước
-              </span>
-            )}
+        <div className="relative space-y-1" ref={containerRef}>
+          {/* Nút toggle mở rộng/thu gọn */}
+          <div className="absolute -top-3 -right-2 z-10">
+            <button type="button" onClick={handleToggleExpand} className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted-foreground/10 transition">
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <span className="sr-only">{isExpanded ? 'Thu gọn log' : 'Mở rộng log'}</span>
+            </button>
           </div>
-          
-          {/* Hiển thị các log trước đó nếu có nhiều hơn 1 log */}
-          {subflowLogs.length > 1 && (
-            <div className="space-y-1">
-              {subflowLogs.slice(-3, -1).map((log, index) => (
-                <div key={`${log.timestamp}-${index}`} className="flex items-center space-x-2 text-xs text-muted-foreground/70">
-                  <div className="h-2 w-2 bg-muted-foreground/50 rounded-full"></div>
+          {/* Hiển thị log */}
+          {isExpanded ? (
+            <div className="space-y-1 max-h-48 overflow-y-auto pr-2">
+              {subflowLogs.map((log, idx) => (
+                <div key={`${log.timestamp}-${idx}`} className="flex items-center space-x-2 text-xs text-muted-foreground/80">
+                  <BrainCircuit className="h-3 w-3 animate-pulse" />
                   <span>{log.content}</span>
-                  <span className="text-xs text-muted-foreground/50">
-                    {formatTime(log.timestamp)}
-                  </span>
+                  <span className="text-xs text-muted-foreground/50">{formatTime(log.timestamp)}</span>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground animate-in fade-in-50 duration-300">
+              <BrainCircuit className="h-4 w-4 animate-pulse" />
+              <span>{latestLog.content}</span>
+              <span className="text-xs text-muted-foreground/60">{formatTime(latestLog.timestamp)}</span>
+              {subflowLogs.length > 1 && (
+                <span className="text-xs bg-muted-foreground/20 px-1.5 py-0.5 rounded-full text-muted-foreground/70">{subflowLogs.length} bước</span>
+              )}
             </div>
           )}
         </div>
