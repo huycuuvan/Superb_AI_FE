@@ -575,7 +575,6 @@ export const sendMessageToThread = async (
   return response.json();
 };
 
-// New function to get messages for a thread
 export const getThreadMessages = async (
   threadId: string
 ): Promise<{ data: ApiMessage[] }> => {
