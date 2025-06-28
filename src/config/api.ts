@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
       `/workspaces/invitations/${invitationId}/decline`,
     getMembers: (workspaceId: string) =>
       `${API_BASE_URL}/workspaces/${workspaceId}/members`,
+    scrapUrl: `${API_BASE_URL}/workspaces/profile/scrap-url`,
   },
   agents: {
     list: `${API_BASE_URL}/agents/all`,

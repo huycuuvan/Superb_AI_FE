@@ -152,12 +152,12 @@ function renderJsonAsTable(data: any): JSX.Element {
     const entries = Object.entries(data);
     if (entries.length === 0) return <span className="italic text-muted-foreground">Không có dữ liệu để hiển thị</span>;
     return (
-      <table className="min-w-[220px] w-full border border-violet-400/40 dark:border-blue-400/40 rounded-xl bg-gradient-to-br from-[#23272f] via-[#18181b] to-[#23272f] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#18181b] text-sm mb-2">
+      <table className="min-w-[220px] w-full border border-slate-300 dark:border-blue-400/40 rounded-xl bg-white dark:bg-gradient-to-br dark:from-[#18181b] dark:via-[#23272f] dark:to-[#18181b] text-sm mb-2">
         <tbody>
           {entries.map(([key, value]) => (
-            <tr key={key} className="border-b last:border-b-0 border-border hover:bg-violet-900/10 dark:hover:bg-blue-900/10 transition-colors align-top">
-              <td className="font-semibold px-4 py-2 text-violet-600 dark:text-blue-400 whitespace-nowrap w-1/4 align-top">{key}</td>
-              <td className="px-4 py-2 text-foreground break-all align-top">
+            <tr key={key} className="border-b last:border-b-0 border-slate-200 dark:border-border hover:bg-violet-100/40 dark:hover:bg-blue-900/10 transition-colors align-top">
+              <td className="font-semibold px-4 py-2 text-violet-700 dark:text-blue-400 whitespace-nowrap w-1/4 align-top">{key}</td>
+              <td className="px-4 py-2 text-slate-800 dark:text-foreground break-all align-top">
                 {typeof value === 'object' && value !== null ? renderJsonAsTable(value) : String(value)}
               </td>
             </tr>

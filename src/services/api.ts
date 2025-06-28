@@ -1372,3 +1372,24 @@ export const getAgentsByFolders = async (
   }
   return res.json();
 };
+
+export const scrapWorkspaceProfile = async ({
+  workspace_id,
+  website_url,
+}: {
+  workspace_id: string;
+  website_url: string;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.workspace.scrapUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ workspace_id, website_url }),
+  });
+  if (!res.ok)
+    throw new Error("Không thể lấy thông tin doanh nghiệp từ website");
+  return res.json();
+};
