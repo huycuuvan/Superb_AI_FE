@@ -1392,3 +1392,18 @@ export const scrapWorkspaceProfile = async ({
     throw new Error("Không thể lấy thông tin doanh nghiệp từ website");
   return res.json();
 };
+
+export const getSubflowLogs = async (message_id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/logs/subflow?message_id=${message_id}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) throw new Error("Không thể lấy log subflow");
+  return res.json();
+};

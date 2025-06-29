@@ -53,35 +53,33 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
       };
 
       return (
-        <div className="relative space-y-1" ref={containerRef}>
-          {/* Nút toggle mở rộng/thu gọn */}
-          <div className="absolute -top-3 -right-2 z-10">
-            <button type="button" onClick={handleToggleExpand} className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted-foreground/10 transition">
-              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              <span className="sr-only">{isExpanded ? 'Thu gọn log' : 'Mở rộng log'}</span>
-            </button>
+        <div className="relative mt-1 w-full max-w-full">
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2 text-xs text-blue-500 font-semibold mb-1">
+              <span className="flex items-center">
+                <BrainCircuit className="w-4 h-4 mr-1" style={{ marginTop: 2 }} />
+                Tiến trình tư duy
+              </span>
+              <button
+                type="button"
+                onClick={handleToggleExpand}
+                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted-foreground/10 transition"
+                aria-label={isExpanded ? 'Thu gọn log' : 'Mở rộng log'}
+              >
+                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </div>
+            {(isExpanded ? subflowLogs : subflowLogs.slice(-2)).map((log, idx) => (
+              <div key={`${log.timestamp || idx}`} className="flex items-start gap-2 text-xs text-blue-900 dark:text-blue-200">
+                <span>{log.content}</span>
+              </div>
+            ))}
+            {!isExpanded && subflowLogs.length > 2 && (
+              <div className="text-xs text-blue-500 cursor-pointer underline" onClick={() => setIsExpanded(true)}>
+                Hiển thị tất cả {subflowLogs.length} bước
+              </div>
+            )}
           </div>
-          {/* Hiển thị log */}
-          {isExpanded ? (
-            <div className="space-y-1 max-h-48 overflow-y-auto pr-2">
-              {subflowLogs.map((log, idx) => (
-                <div key={`${log.timestamp}-${idx}`} className="flex items-center space-x-2 text-xs text-muted-foreground/80">
-                  <BrainCircuit className="h-3 w-3 animate-pulse" />
-                  <span>{log.content}</span>
-                  <span className="text-xs text-muted-foreground/50">{formatTime(log.timestamp)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground animate-in fade-in-50 duration-300">
-              <BrainCircuit className="h-4 w-4 animate-pulse" />
-              <span>{latestLog.content}</span>
-              <span className="text-xs text-muted-foreground/60">{formatTime(latestLog.timestamp)}</span>
-              {subflowLogs.length > 1 && (
-                <span className="text-xs bg-muted-foreground/20 px-1.5 py-0.5 rounded-full text-muted-foreground/70">{subflowLogs.length} bước</span>
-              )}
-            </div>
-          )}
         </div>
       );
     }

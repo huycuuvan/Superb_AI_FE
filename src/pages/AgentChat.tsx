@@ -5,7 +5,8 @@ import {
   Send, X, Plus, Paperclip, 
   ListPlus, Book, Clock,
   Rocket, Lightbulb,
-  ChevronsDown
+      ChevronsDown, BrainCircuit,
+  ChevronUp, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials, getSubflowLogs } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -32,6 +33,8 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import LogAgentThinking from '@/components/LogAgentThinking';
 
 interface TaskInput {
   id: string;
@@ -603,6 +606,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
       // Reset chiều cao textarea về mặc định (ví dụ 40px)
       if (textareaRef.current) {
         textareaRef.current.style.height = '40px';
+        textareaRef.current.focus();
       }
       
       // Gửi dữ liệu trong nền
@@ -1057,13 +1061,39 @@ const handleSubmitTaskInputs = async () => {
     }
   }, [aboveInputContent]);
 
-  console.log("currentAgent", currentAgent);
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const [messageLogs, setMessageLogs] = useState<Record<string, SubflowLog[]>>({});
+
+  // Khi render message agent đã trả lời xong, tìm message user gần nhất phía trước, gọi getSubflowLogs với id của user đó, lưu log vào messageLogs theo id agent để render đúng UI.
+  useEffect(() => {
+    messages.forEach((msg, idx) => {
+      if (msg.sender === 'agent' && !msg.isStreaming && !messageLogs[msg.id]) {
+        // Tìm message user gần nhất phía trước
+        const userMsg = [...messages].slice(0, idx).reverse().find(m => m.sender === 'user');
+        if (userMsg) {
+          getSubflowLogs(userMsg.id).then(res => {
+            console.log('API log for', userMsg.id, res); // Log debug API trả về
+            if (res && res.data) {
+              setMessageLogs(prev => ({ ...prev, [msg.id]: res.data }));
+            }
+          }).catch(() => {});
+        }
+      }
+    });
+  }, [messages]);
+
+  // Tự động focus lại input chat khi agent trả lời xong
+  useEffect(() => {
+    if (!isAgentThinking && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isAgentThinking]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1294,6 +1324,15 @@ const handleSubmitTaskInputs = async () => {
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} // CSS để xuống dòng tốt hơn
         >
           {/* FIX: Bỏ prop timestamp khỏi đây */}
+          {msg.sender === 'agent' && !msg.isStreaming && (
+        <>
+          {console.log('Render log for', msg.id, messageLogs[msg.id])}
+          {messageLogs[msg.id]?.length > 0 && (
+            <LogAgentThinking logs={messageLogs[msg.id]} />
+          )}
+        </>
+      )}
+
           <ChatMessageContent
             content={msg.content}
             isAgent={msg.sender === 'agent'}
@@ -1310,13 +1349,16 @@ const handleSubmitTaskInputs = async () => {
             </div>
           )}
         </div>
+        
         {msg.sender === 'user' && (
            <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1"> {/* Căn chỉnh avatar */}
             <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
           </Avatar>
         )}
       </div>
-      {/* FIX: Hiển thị timestamp ở đây, bên ngoài message bubble */}
+      {/* Hiển thị log dưới message agent đã trả lời xong */}
+     
+      {/* Timestamp */}
       <div
         className={cn(
           "px-12 text-xs text-muted-foreground select-none mt-1",
@@ -1479,7 +1521,7 @@ const handleSubmitTaskInputs = async () => {
               <div className="absolute bottom-28 md:bottom-32 right-6 z-40">
                 <Button
                   size="icon"
-                  className="rounded-full h-11 w-11 bg-background/70 backdrop-blur-sm border-2 border-border shadow-lg hover:scale-110 hover:bg-muted/90 transition-all duration-200 animate-in fade-in-50"
+                  className="rounded-full h-8 w-8 bg-background/70 backdrop-blur-sm border-2 border-border shadow-lg hover:scale-110 hover:bg-muted/90 transition-all duration-200 animate-in fade-in-50"
                   onClick={() => scrollToBottom('smooth')}
                   aria-label="Cuộn xuống cuối"
                 >
