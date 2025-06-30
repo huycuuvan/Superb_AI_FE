@@ -157,8 +157,11 @@ function renderJsonAsTable(data: any): JSX.Element {
           {entries.map(([key, value]) => (
             <tr key={key} className="border-b last:border-b-0 border-slate-200 dark:border-border hover:bg-violet-100/40 dark:hover:bg-blue-900/10 transition-colors align-top">
               <td className="font-semibold px-4 py-2 text-violet-700 dark:text-blue-400 whitespace-nowrap w-1/4 align-top">{key}</td>
-              <td className="px-4 py-2 text-slate-800 dark:text-foreground break-all align-top">
-                {typeof value === 'object' && value !== null ? renderJsonAsTable(value) : String(value)}
+              <td className="px-4 py-2 text-slate-800 dark:text-foreground align-top">
+                {typeof value === 'object' && value !== null
+                  ? renderJsonAsTable(value)
+                  : <span className="whitespace-pre-wrap">{String(value)}</span>
+                }
               </td>
             </tr>
           ))}
