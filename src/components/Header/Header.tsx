@@ -236,6 +236,7 @@ const Header = React.memo(() => {
             }
             return <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>;
           })()}
+          
         </div>
         
         {/* --- RIGHT SECTION --- */}
@@ -306,6 +307,7 @@ const Header = React.memo(() => {
                     <div className="px-3 py-2">
                       <p className="text-sm font-medium text-foreground leading-none">{user.name || "User"}</p>
                       <p className="text-xs text-muted-foreground leading-none mt-1">{user.email}</p>
+                      <p className="text-xs text-muted-foreground leading-none mt-1">Credit: {user?.credit ?? 0}</p>
                     </div>
                     <DropdownMenuSeparator />
                   </>

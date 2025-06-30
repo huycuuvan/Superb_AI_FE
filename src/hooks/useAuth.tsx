@@ -13,6 +13,7 @@ interface User {
     name: string;
   };
   role?: string;
+  credit?: number;
 }
 
 interface DecodedToken {

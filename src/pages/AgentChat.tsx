@@ -109,7 +109,7 @@ const AgentChat = () => {
   const [currentStage, setCurrentStage] = useState(0);
   const [subflowLogs, setSubflowLogs] = useState<SubflowLog[]>([]);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 const [agentTargetContent, setAgentTargetContent] = useState('');
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -210,8 +210,18 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
 
       ws.current.onmessage = (event) => {
         try {
-         
           const receivedData: any = JSON.parse(event.data);
+          // Xử lý cập nhật credit realtime
+          if (receivedData.type === 'credit_update' && typeof receivedData.credit === 'number') {
+            updateUser({ ...user, credit: receivedData.credit });
+            return;
+          }
+          // Xử lý lỗi hết credit
+          if (receivedData.type === 'error' && receivedData.content && receivedData.content.includes('hết credit')) {
+            setIsCreditError(true);
+            setIsAgentThinking(false);
+            return;
+          }
           const msgData = receivedData.chat_message ? receivedData.chat_message : receivedData;
       
         
@@ -571,6 +581,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
     };
   }, [isLoading]); // Chạy lại khi trạng thái loading thay đổi
   const handleSendMessage = () => {
+    if (isCreditError) return;
     // Cho phép gửi nếu có text hoặc có ảnh
     if ((message.trim() || imageFile) && currentThread) {
       setIsSending(true);
@@ -1095,6 +1106,8 @@ const handleSubmitTaskInputs = async () => {
     }
   }, [isAgentThinking]);
 
+  const [isCreditError, setIsCreditError] = useState(false);
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1613,6 +1626,19 @@ const handleSubmitTaskInputs = async () => {
         style={{ display: 'none' }}
         onChange={handleFileChange}
         />
+      <AlertDialog open={isCreditError}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn đã hết credit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn đã hết credit, vui lòng nạp thêm để tiếp tục sử dụng dịch vụ. Chat sẽ tạm dừng cho đến khi bạn nạp thêm credit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsCreditError(false)} autoFocus>Đóng</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
