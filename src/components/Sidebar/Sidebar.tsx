@@ -35,7 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder, getThreadMessages, getThreadByAgentId } from '@/services/api';
+import { updateFolder, deleteFolder, getThreadMessages, getThreadByAgentId, clearAgentThreadHistory } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
@@ -52,6 +52,7 @@ import { ApiMessage, Thread } from '@/types';
 
 interface SidebarProps {
     className?: string;
+    isMobileDrawer?: boolean;
 }
 
 interface FolderType {
@@ -60,7 +61,7 @@ interface FolderType {
   workspace_id: string;
 }
 
-const Sidebar = React.memo(({ className }: SidebarProps) => {
+const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -84,6 +85,11 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // State cho dialog xác nhận xóa lịch sử chat agent
+  const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
+  const [agentIdToClear, setAgentIdToClear] = useState<string | null>(null);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
 
   // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
@@ -249,6 +255,34 @@ console.log(agents);
     return nameMatch || roleMatch;
   });
 
+  // Hàm mở dialog xác nhận xóa lịch sử chat với agent
+  const handleOpenClearHistoryModal = (agentId: string) => {
+    setAgentIdToClear(agentId);
+    setShowClearHistoryDialog(true);
+  };
+
+  const handleClearHistory = async () => {
+    if (!agentIdToClear || !workspace?.id) return;
+    setIsClearingHistory(true);
+    try {
+      await clearAgentThreadHistory(agentIdToClear, workspace.id);
+      toast({
+        title: t('success'),
+        description: 'Đã xóa lịch sử trò chuyện của agent!',
+      });
+      setShowClearHistoryDialog(false);
+      setAgentIdToClear(null);
+    } catch (error: any) {
+      toast({
+        title: t('error'),
+        description: 'Xóa lịch sử trò chuyện thất bại!',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClearingHistory(false);
+    }
+  };
+
   return (
     <>
       <aside
@@ -259,7 +293,16 @@ console.log(agents);
         )}
 >
         {/* === HEADER (KHÔNG CUỘN) === */}
-        {collapsed ? (
+        {isMobileDrawer ? (
+          <div className="flex items-center w-full px-4 py-3">
+            <div className={`p-2 ${isDark ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
+              <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className={`font-bold text-xl ml-3 ${isDark ? 'text-white' : 'text-slate-800'}`}>SuperbAI</span>
+          </div>
+        ) : collapsed ? (
           <div className="flex gap-2 justify-center items-center h-20">
             <div className={`${isDark ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg p-2 ml-2`}>
               <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -357,60 +400,69 @@ console.log(agents);
                         "flex items-start p-2 rounded-md hover:bg-muted cursor-pointer transition-colors relative",
                         isSelected && (isDark ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-purple-50')
                       )}
-                      onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
                     >
-                      {agent?.avatar ? (
-                        <div
-                          className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
-                          style={{ width: 32, height: 32 }}
-                          dangerouslySetInnerHTML={{ __html: agent?.avatar }}
-                        />
-                      ) : (
-                        <div
-                          className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
-                          style={{ width: 32, height: 32 }}
-                          dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
-                        />
-                      )}
-                      
-                      {!collapsed && (
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
-                            <div className="flex items-center gap-1">
-                              {agent.last_message_time && (
-                                <span className="text-xs text-muted-foreground flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {formatTimestamp(agent.last_message_time)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-xs text-muted-foreground truncate">{agent.role_description}</span>
-                          </div>
-                          
-                          {agent.last_message ? (
-                            <div className="flex items-start gap-1">
-                              <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs text-muted-foreground truncate block">
-                                  {agent.last_message.length > 50 
-                                    ? `${agent.last_message.substring(0, 50)}...` 
-                                    : agent.last_message
-                                  }
-                                </span>
+                      <div className="flex flex-1 min-w-0" onClick={() => navigate(`/dashboard/agents/${agent.id}`)}>
+                        {agent?.avatar ? (
+                          <div
+                            className="w-8 h-8 mr-2 rounded-full flex-shrink-0"
+                            style={{ width: 32, height: 32 }}
+                            dangerouslySetInnerHTML={{ __html: agent?.avatar }}
+                          />
+                        ) : (
+                          <div
+                            className="w-8 h-8 mr-2 rounded-full flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+                            style={{ width: 32, height: 32 }}
+                            dangerouslySetInnerHTML={{ __html: createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString() }}
+                          />
+                        )}
+                        {!collapsed && (
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
+                              <div className="flex items-center gap-1">
+                                {agent.last_message_time && (
+                                  <span className="text-xs text-muted-foreground flex items-center">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {formatTimestamp(agent.last_message_time)}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <MessageSquare className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">Chưa có tin nhắn</span>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-xs text-muted-foreground truncate">{agent.role_description}</span>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {agent.last_message ? (
+                              <div className="flex items-start gap-1">
+                                <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs text-muted-foreground truncate block">
+                                    {agent.last_message.length > 50 
+                                      ? `${agent.last_message.substring(0, 50)}...` 
+                                      : agent.last_message
+                                    }
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Chưa có tin nhắn</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {/* Icon xóa lịch sử chỉ hiện trên mobile */}
+                      <button
+                        className="ml-2 p-1 rounded hover:bg-destructive/10 md:hidden"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenClearHistoryModal(agent.id);
+                        }}
+                        aria-label="Xóa lịch sử"
+                      >
+                        <Trash className="h-4 w-4 text-destructive" />
+                      </button>
                     </div>
                   );
                 })
@@ -479,6 +531,45 @@ console.log(agents);
       {showAddAgentDialog.open && (
         <AddAgentDialog open={showAddAgentDialog.open} onOpenChange={open => setShowAddAgentDialog({...showAddAgentDialog, open})} folderId={showAddAgentDialog.folderId} />
       )}
+
+      {/* Dialog xác nhận xóa lịch sử chat agent */}
+      <Dialog open={showClearHistoryDialog} onOpenChange={setShowClearHistoryDialog}>
+        <DialogContent className="dark:bg-slate-900 dark:border-slate-700 p-3 md:p-6 max-w-xs w-80 mx-auto">
+          {/* MOBILE UI */}
+          <div className="md:hidden flex flex-col items-center justify-center">
+            <Trash className="h-6 w-6 text-destructive mb-0.5" />
+            <DialogHeader className="w-full items-center text-center">
+              <DialogTitle className="text-sm font-bold text-destructive">Xác nhận xóa lịch sử trò chuyện</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5 mb-2">
+                Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện với agent này? Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="w-full flex flex-col gap-2 mt-1">
+              <Button onClick={handleClearHistory} disabled={isClearingHistory} variant="destructive" className="w-full py-1.5 text-xs">
+                {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
+              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" className="w-full py-1.5 text-xs dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+              </DialogClose>
+            </div>
+          </div>
+          {/* DESKTOP UI giữ nguyên */}
+          <div className="hidden md:block">
+            <DialogHeader>
+              <DialogTitle className="dark:text-white">Xác nhận xóa lịch sử trò chuyện</DialogTitle>
+              <DialogDescription className="dark:text-gray-400">
+                Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện với agent này? Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
+              </DialogClose>
+              <Button onClick={handleClearHistory} disabled={isClearingHistory} variant="destructive">{isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });

@@ -43,7 +43,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     <ThemeProvider>
       <div className="min-h-screen bg-white dark:bg-slate-950 text-foreground flex">
         {/* Sidebar */}
-        <AdminSidebar />
+        <AdminSidebar className="hidden md:flex" />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden ml-16 lg:ml-64 transition-all duration-300">

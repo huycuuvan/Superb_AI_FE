@@ -131,11 +131,10 @@ const AgentChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
   const [isAgentThinking, setIsAgentThinking] = useState(false);
-  const [currentStage, setCurrentStage] = useState(0);
+  
   const [subflowLogs, setSubflowLogs] = useState<SubflowLog[]>([]);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
   const { user, updateUser } = useAuth();
-const [agentTargetContent, setAgentTargetContent] = useState('');
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -1281,7 +1280,7 @@ const handleSubmitTaskInputs = async () => {
       {/* Button nổi xóa lịch sử trò chuyện và AlertDialog đặt ngoài sidebar */}
       <Button
         variant="primary"
-        className="fixed md:absolute left-0 md:left-auto bottom-4 md:bottom-6 w-[90vw] md:w-56 mx-4 md:mx-4 z-1 pointer-events-auto flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 animate-bounce"
+        className="hidden md:flex absolute left-auto bottom-6 w-56 mx-4 z-1 pointer-events-auto items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30"
         onClick={() => setShowClearHistoryModal(true)}
         disabled={isClearingHistory || isLoading}
       >
@@ -1637,7 +1636,9 @@ const handleSubmitTaskInputs = async () => {
                             </div>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center gap-1">
+                            {/* Mobile: icon menu và text cảnh báo căn giữa, dọc */}
+                            <div className="block md:hidden mt-2 w-full">
+                              <div className="flex justify-center items-center gap-2">
                                 <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
@@ -1651,9 +1652,31 @@ const handleSubmitTaskInputs = async () => {
                                 >
                                   <Lightbulb className="h-5 w-5" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMobileSidebar(true)}><Clock className="h-5 w-5 text-muted-foreground"/></Button>
+                                
+                              </div>
+                              <p className="text-xs text-muted-foreground text-center mt-2">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
+                            {/* Desktop: giữ nguyên layout cũ */}
+                            <div className="hidden md:flex items-center justify-center mt-2 ">
+                              <div className="flex items-center gap-1 min-w-max">
+                                <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Gợi ý prompt" 
+                                  onClick={() => setShowPromptTemplatesModal(true)}
+                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+                                >
+                                  <Lightbulb className="h-5 w-5" />
+                                </Button>
+                              </div>
+                             
+                              <p className="text-xs text-muted-foreground ml-[19rem]">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
+                              
+                            </div>
                         </div>
                     </div>
                 </div>

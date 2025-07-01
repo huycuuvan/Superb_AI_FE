@@ -154,10 +154,6 @@ const Header = React.memo(() => {
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
         {/* --- LEFT SECTION --- */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-
           {(() => {
             if (isAgentChatPage || isAgentsListPage) {
               return (

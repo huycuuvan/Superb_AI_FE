@@ -30,7 +30,11 @@ type MenuItem = {
   icon: React.ElementType;
 };
 
-const AdminSidebar = () => {
+interface AdminSidebarProps {
+  className?: string;
+}
+
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -162,7 +166,8 @@ const AdminSidebar = () => {
   return (
     <div className={cn(
       'fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 z-50 overflow-hidden',
-      sidebarWidth
+      sidebarWidth,
+      className
     )}>
       {/* Header */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800">
