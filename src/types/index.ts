@@ -134,6 +134,7 @@ export interface ChatMessage {
   image_url?: string;
   file_url?: string;
   isStreaming?: boolean;
+  parent_message_id?: string;
 }
 
 export interface SidebarItem {

@@ -3,6 +3,7 @@ import { BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { memo, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SubflowLog {
   type: "subflow_log";
@@ -22,7 +23,7 @@ interface AgentTypingIndicatorProps {
 export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs = [] }: AgentTypingIndicatorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-
+  const { t } = useTranslation();
   // Auto-scroll khi có log mới
   useEffect(() => {
     if (containerRef.current && subflowLogs.length > 0) {
@@ -58,7 +59,7 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
             <div className="flex items-center justify-between gap-2 text-xs text-blue-500 font-semibold mb-1">
               <span className="flex items-center">
                 <BrainCircuit className="w-4 h-4 mr-1" style={{ marginTop: 2 }} />
-                Tiến trình tư duy
+                {t('agent_chat.log_agent_thinking')}
               </span>
               <button
                 type="button"
@@ -76,7 +77,7 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
             ))}
             {!isExpanded && subflowLogs.length > 2 && (
               <div className="text-xs text-blue-500 cursor-pointer underline" onClick={() => setIsExpanded(true)}>
-                Hiển thị tất cả {subflowLogs.length} bước
+                {t('agent_chat.show_all_steps', { count: subflowLogs.length })}
               </div>
             )}
           </div>

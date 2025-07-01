@@ -85,11 +85,6 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // State for agent messages
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [agentMessages, setAgentMessages] = useState<{[agentId: string]: ApiMessage[]}>({});
-  const [loadingMessages, setLoadingMessages] = useState<{[agentId: string]: boolean}>({});
-
   // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
   const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds);
@@ -113,88 +108,11 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
       )
     : [];
 
-  // Fetch threads for each agent
-  const { data: threadsData, isLoading: isLoadingThreads } = useQuery({
-    queryKey: ['agent-threads', agents.map(a => a.id)],
-    queryFn: async () => {
-      const threadsPromises = agents.map(async (agent) => {
-        try {
-          const response = await getThreadByAgentId(agent.id);
-          return { agentId: agent.id, threads: response.data || [] };
-        } catch (error) {
-          console.error(`Error fetching threads for agent ${agent.id}:`, error);
-          return { agentId: agent.id, threads: [] };
-        }
-      });
-      return Promise.all(threadsPromises);
-    },
-    enabled: agents.length > 0,
-  });
-
-  // Function to fetch messages for a specific agent
-  const fetchAgentMessages = async (agentId: string) => {
-    if (loadingMessages[agentId]) return;
-    
-    setLoadingMessages(prev => ({ ...prev, [agentId]: true }));
-    try {
-      const agentThreads = threadsData?.find(t => t.agentId === agentId)?.threads || [];
-      if (agentThreads.length === 0) {
-        setAgentMessages(prev => ({ ...prev, [agentId]: [] }));
-        return;
-      }
-
-      // Get the most recent thread
-      const latestThread = agentThreads.sort((a, b) => 
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      )[0];
-
-      const messagesResponse = await getThreadMessages(latestThread.id);
-      const messages = messagesResponse.data || [];
-      
-      setAgentMessages(prev => ({ ...prev, [agentId]: messages }));
-    } catch (error) {
-      console.error(`Error fetching messages for agent ${agentId}:`, error);
-      setAgentMessages(prev => ({ ...prev, [agentId]: [] }));
-    } finally {
-      setLoadingMessages(prev => ({ ...prev, [agentId]: false }));
-    }
-  };
-
-  // Function to get latest message preview for an agent
-  const getLatestMessagePreview = (agentId: string) => {
-    const messages = agentMessages[agentId] || [];
-    if (messages.length === 0) return null;
-    
-    const latestMessage = messages.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )[0];
-    
-    return {
-      content: latestMessage.message_content,
-      timestamp: latestMessage.created_at,
-      senderType: latestMessage.sender_type
-    };
-  };
-
-  // Function to count unread messages for an agent
-  const getUnreadMessageCount = (agentId: string) => {
-    const messages = agentMessages[agentId] || [];
-    if (messages.length === 0) return 0;
-    
-    // Count messages from agent in the last 5 minutes
-    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-    return messages.filter(msg => 
-      msg.sender_type === 'agent' && 
-      new Date(msg.created_at).getTime() > fiveMinutesAgo
-    ).length;
-  };
-
-  // Function to format timestamp
+  // Giữ lại hàm formatTimestamp
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
     if (diffInHours < 1) {
       const diffInMinutes = Math.floor(diffInHours * 60);
       return `${diffInMinutes}m`;
@@ -224,16 +142,6 @@ const Sidebar = React.memo(({ className }: SidebarProps) => {
   }, [collapsed]);
 
   // Auto-fetch messages when threads data is available
-  useEffect(() => {
-    if (threadsData && agents.length > 0) {
-      agents.forEach(agent => {
-        if (!agentMessages[agent.id] && !loadingMessages[agent.id]) {
-          fetchAgentMessages(agent.id);
-        }
-      });
-    }
-  }, [threadsData, agents]);
-
   // ĐÃ BỎ auto-g/polling vì đã dùng WebSocket cho chat real-time
 
   // Handle Rename action
@@ -411,21 +319,6 @@ console.log(agents);
           {!collapsed && (
             <div className="px-2 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase bg-transparent sticky top-0 z-10 flex items-center justify-between">
               <span>Agents</span>
-              <button
-                onClick={() => {
-                  filteredAgents.forEach(agent => {
-                    if (!loadingMessages[agent.id]) {
-                      fetchAgentMessages(agent.id);
-                    }
-                  });
-                }}
-                className="p-1 hover:bg-muted rounded transition-colors"
-                title="Làm mới tin nhắn"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
             </div>
           )}
           <div className="px-2 pt-1 pb-0">
@@ -456,7 +349,6 @@ console.log(agents);
             ) : (
               filteredAgents
                 .map(agent => {
-                  const latestMessage = getLatestMessagePreview(agent.id);
                   const isSelected = location.pathname === `/dashboard/agents/${agent.id}`;
                   return (
                     <div
@@ -486,10 +378,10 @@ console.log(agents);
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
                             <div className="flex items-center gap-1">
-                              {latestMessage && (
+                              {agent.last_message_time && (
                                 <span className="text-xs text-muted-foreground flex items-center">
                                   <Clock className="w-3 h-3 mr-1" />
-                                  {formatTimestamp(latestMessage.timestamp)}
+                                  {formatTimestamp(agent.last_message_time)}
                                 </span>
                               )}
                             </div>
@@ -497,20 +389,16 @@ console.log(agents);
                           
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-xs text-muted-foreground truncate">{agent.role_description}</span>
-                            {loadingMessages[agent.id] && (
-                              <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                            )}
                           </div>
                           
-                          {latestMessage ? (
+                          {agent.last_message ? (
                             <div className="flex items-start gap-1">
                               <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
                               <div className="flex-1 min-w-0">
                                 <span className="text-xs text-muted-foreground truncate block">
-                                  {latestMessage.senderType === 'user' ? 'Bạn: ' : `${agent.name}: `}
-                                  {latestMessage.content.length > 50 
-                                    ? `${latestMessage.content.substring(0, 50)}...` 
-                                    : latestMessage.content
+                                  {agent.last_message.length > 50 
+                                    ? `${agent.last_message.substring(0, 50)}...` 
+                                    : agent.last_message
                                   }
                                 </span>
                               </div>

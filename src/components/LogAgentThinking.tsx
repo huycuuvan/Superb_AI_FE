@@ -1,5 +1,6 @@
 import { BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SubflowLog {
   type: string;
@@ -13,20 +14,21 @@ interface SubflowLog {
 
 export default function LogAgentThinking({ logs }: { logs: SubflowLog[] }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useTranslation();
   if (!logs || logs.length === 0) return null;
   const logsToShow = isExpanded ? logs : logs.slice(-2); // Hiển thị 2 log mới nhất khi thu gọn
   return (
     <div className="relative space-y-1 mt-1">
       <div className="flex items-center gap-1 text-xs text-blue-500 font-semibold mb-1">
         <BrainCircuit className="w-4 h-4" />
-        Hiện tiến trình tư duy
+        {t( 'agent_chat.log_agent_thinking')}
       </div>
       {/* Nút toggle thu gọn/mở rộng */}
       <button
         type="button"
         onClick={() => setIsExpanded(v => !v)}
         className="absolute -top-3 -right-2 z-10 h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted-foreground/10 transition"
-        aria-label={isExpanded ? 'Thu gọn log' : 'Mở rộng log'}
+          aria-label={isExpanded ? t('agent_chat.collapse_log') : t('agent_chat.expand_log')}
       >
         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
@@ -38,7 +40,7 @@ export default function LogAgentThinking({ logs }: { logs: SubflowLog[] }) {
         ))}
         {!isExpanded && logs.length > 2 && (
           <div className="text-xs text-blue-500 cursor-pointer underline" onClick={() => setIsExpanded(true)}>
-            Hiển thị tất cả {logs.length} bước
+            {t('agent_chat.show_all_steps', { count: logs.length })}
           </div>
         )}
       </div>

@@ -26,7 +26,6 @@ import { useFolders } from '@/contexts/FolderContext';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import React from 'react';
-import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslation } from "react-i18next";
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
@@ -66,7 +65,7 @@ const Dashboard = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
   const { data: agentsByFoldersData, isLoading: isLoadingAgents, error: agentsError } = useAgentsByFolders(folderIds);
@@ -74,7 +73,18 @@ const Dashboard = () => {
   if (Array.isArray(agentsByFoldersData?.data) && agentsByFoldersData.data.length > 0 && Array.isArray(agentsByFoldersData.data[0].agents)) {
     foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];
   }
-  console.log("foldersWithAgents",foldersWithAgents);
+
+  // Lọc dữ liệu dựa trên search query
+  const filteredFoldersWithAgents = foldersWithAgents.map(folder => ({
+    ...folder,
+    agents: folder.agents.filter(agent => 
+      agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.role_description?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(folder => folder.agents.length > 0 || searchQuery === '');
+
+  console.log("foldersWithAgents", foldersWithAgents);
+  console.log("filteredFoldersWithAgents", filteredFoldersWithAgents);
   const AgentsForFolder: React.FC<{ folderName: string, agents: any[], navigate: any }> = React.memo(({ folderName, agents, navigate }) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -193,6 +203,31 @@ const Dashboard = () => {
       {/* Separate Search Input Component */}
       <SearchInput onSearchChange={setSearchQuery} />
 
+      {/* Search Results Summary */}
+      {searchQuery && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <span>
+            {t('agent.searchResults', { 
+              count: filteredFoldersWithAgents.reduce((total, folder) => total + folder.agents.length, 0),
+              query: searchQuery 
+            })}
+          </span>
+        </div>
+      )}
+
       <div className="grid gap-4">
         {loadingFolders || isLoadingAgents || !workspace?.id ? (
           <div className="space-y-6">
@@ -209,17 +244,22 @@ const Dashboard = () => {
           </div>
         ) : errorFolders ? (
           <div className="text-sm text-red-500">Lỗi khi tải thư mục: {errorFolders.message}</div>
-        ) : foldersWithAgents.length > 0 ? (
-          foldersWithAgents.map((folder) => {
+        ) : filteredFoldersWithAgents.length > 0 ? (
+          filteredFoldersWithAgents.map((folder) => {
             const folderWithAgents = folder as FolderWithAgents;
             return (
               <div key={folderWithAgents.id} className="mb-8">
                 <div className="flex items-center gap-2 mb-2">
                   <FolderIcon className="h-5 w-5 text-primary" />
                   <span className="font-semibold text-lg text-foreground">{folderWithAgents.name}</span>
+                  {searchQuery && (
+                    <span className="text-sm text-muted-foreground">
+                      ({folderWithAgents.agents.length} {folderWithAgents.agents.length === 1 ? t('agent.agentsFound').replace('agents', 'agent') : t('agent.agentsFound')})
+                    </span>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                  {user?.role !== 'user' && (
+                  {user?.role !== 'user' && searchQuery === '' && (
                   <Card
                     className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
                     onClick={() => {
@@ -240,6 +280,10 @@ const Dashboard = () => {
               </div>
             );
           })
+        ) : searchQuery ? (
+          <div className="text-sm text-muted-foreground text-center py-10">
+            {t('agent.noAgentsFound', { query: searchQuery })}
+          </div>
         ) : (
           <div className="text-sm text-muted-foreground text-center py-10">{t('folder.noFolders')}</div>
         )}
@@ -307,10 +351,23 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
   const [query, setQuery] = useState('');
   const { t } = useTranslation();
 
+  // Debounce search input
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onSearchChange(query);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [query, onSearchChange]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    onSearchChange(newQuery);
+  };
+
+  const handleClear = () => {
+    setQuery('');
+    onSearchChange('');
   };
 
   return (
@@ -332,10 +389,29 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({ onSearchChange }) 
         <Input
           type="search"
           placeholder={t('agent.searchAgents')}
-          className="pl-9"
+          className="pl-9 pr-9"
           value={query}
           onChange={handleChange}
         />
+        {query && (
+          <button
+            onClick={handleClear}
+            className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

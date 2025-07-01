@@ -35,6 +35,8 @@ import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import LogAgentThinking from '@/components/LogAgentThinking';
+import { useInView } from 'react-intersection-observer';
+import React from 'react';
 
 interface TaskInput {
   id: string;
@@ -59,6 +61,7 @@ interface Message {
   sender_type: "user" | "agent";
   sender_user_id: string;
   chat_message?: ApiMessage;
+  parent_message_id?: string;
 }
 
 // Định nghĩa một kiểu dữ liệu cho output video
@@ -99,6 +102,28 @@ interface Credential {
   credential: object;
   created_at?: string;
 }
+
+// Thêm component con cho message agent:
+const AgentMessageWithLog = ({ msg, userMsgId, messageLogs, loadingLog, handleShowLog, children }) => {
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+  React.useEffect(() => {
+    console.log('AgentMessageWithLog', {
+      inView,
+      userMsgId,
+      msgId: msg.id,
+      hasLog: !!messageLogs[msg.id],
+      loading: !!loadingLog[msg.id]
+    });
+    if (inView && userMsgId && !messageLogs[msg.id] && !loadingLog[msg.id]) {
+      handleShowLog(msg.id, userMsgId);
+    }
+  }, [inView, userMsgId, msg.id, messageLogs, loadingLog]);
+  return (
+    <div ref={ref} key={msg.id} className="flex flex-col">
+      {children}
+    </div>
+  );
+};
 
 const AgentChat = () => {
   const { agentId, threadId: threadFromUrl } = useParams<{ agentId: string; threadId?: string }>();
@@ -263,7 +288,6 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
           
        
           if (receivedData.type === "chat" && msgData.sender_type === "agent") {
-            
             setSubflowLogs([]); // Reset subflow logs khi agent bắt đầu trả lời
             setMessages(prevMessages => {
               const lastMessageIndex = prevMessages.length - 1;
@@ -288,8 +312,13 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                   image_url: msgData.image_url,
                   file_url: msgData.file_url,
                   isStreaming: true,
+                  parent_message_id: msgData.parent_message_id, // Đảm bảo có parent_message_id
                 };
                 if (prevMessages.some(m => m.id === newChatMessage.id)) return prevMessages;
+                // GỌI LUÔN handleShowLog nếu có parent_message_id
+                if (newChatMessage.parent_message_id) {
+                  handleShowLog(newChatMessage.id, newChatMessage.parent_message_id);
+                }
                 return [...prevMessages, newChatMessage];
               }
             });
@@ -461,6 +490,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                   agentId: msg.sender_agent_id,
                   image_url: msg.image_url,
                   file_url: msg.file_url,
+                  parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
               if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -512,6 +542,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
                   agentId: msg.sender_agent_id,
                   image_url: msg.image_url,
                   file_url: msg.file_url,
+                  parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
               if (initialMessages.length === 0 && agentData.data.greeting_message) {
@@ -721,6 +752,7 @@ const [agentTargetContent, setAgentTargetContent] = useState('');
           agentId: msg.sender_agent_id,
           image_url: msg.image_url,
           file_url: msg.file_url,
+          parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setMessages(initialMessages); // Sử dụng messages từ backend
@@ -882,6 +914,7 @@ const handleSubmitTaskInputs = async () => {
           agentId: msg.sender_agent_id,
           image_url: msg.image_url,
           file_url: msg.file_url,
+          parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Update the state with messages from the clicked thread
@@ -1080,24 +1113,20 @@ const handleSubmitTaskInputs = async () => {
   }, [messages]);
 
   const [messageLogs, setMessageLogs] = useState<Record<string, SubflowLog[]>>({});
+  const [loadingLog, setLoadingLog] = useState<Record<string, boolean>>({});
 
-  // Khi render message agent đã trả lời xong, tìm message user gần nhất phía trước, gọi getSubflowLogs với id của user đó, lưu log vào messageLogs theo id agent để render đúng UI.
-  useEffect(() => {
-    messages.forEach((msg, idx) => {
-      if (msg.sender === 'agent' && !msg.isStreaming && !messageLogs[msg.id]) {
-        // Tìm message user gần nhất phía trước
-        const userMsg = [...messages].slice(0, idx).reverse().find(m => m.sender === 'user');
-        if (userMsg) {
-          getSubflowLogs(userMsg.id).then(res => {
-            console.log('API log for', userMsg.id, res); // Log debug API trả về
-            if (res && res.data) {
-              setMessageLogs(prev => ({ ...prev, [msg.id]: res.data }));
-            }
-          }).catch(() => {});
-        }
-      }
-    });
-  }, [messages]);
+  // Thêm hàm fetch log khi click:
+  const handleShowLog = async (agentMsgId: string, userMsgId: string) => {
+    if (messageLogs[agentMsgId] || loadingLog[agentMsgId]) return;
+    setLoadingLog(prev => ({ ...prev, [agentMsgId]: true }));
+    try {
+      const res = await getSubflowLogs(userMsgId);
+      // Luôn set, kể cả khi log rỗng
+      setMessageLogs(prev => ({ ...prev, [agentMsgId]: Array.isArray(res?.data) ? res.data : [] }));
+    } finally {
+      setLoadingLog(prev => ({ ...prev, [agentMsgId]: false }));
+    }
+  };
 
   // Tự động focus lại input chat khi agent trả lời xong
   useEffect(() => {
@@ -1308,82 +1337,109 @@ const handleSubmitTaskInputs = async () => {
             )}
           >
             {/* 1. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
-            {messages.slice(-50).map((msg) => (
-    // Sử dụng React.Fragment để bọc message và timestamp
-    <div key={msg.id} className="flex flex-col">
-      <div
-        className={cn(
-          "flex items-end gap-2",
-          msg.sender === 'user' ? 'justify-end' : 'justify-start'
-        )}
-      >
-        {msg.sender === 'agent' && (
-          <div className="h-9 w-9 flex-shrink-0 self-start mt-1"> {/* Căn chỉnh avatar */}
-            {currentAgent?.avatar ? (
-              <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
-            ) : (
-              <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
-            )}
-          </div>
-        )}
-        <div
-          className={cn(
-            "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative", // Tăng max-width
-            msg.sender === 'user'
-              ? 'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg'
-              : 'dark:bg-[#23272f] light:bg-gradient-light text-foreground rounded-bl-lg',
-            'whitespace-normal' // Đảm bảo whitespace được xử lý đúng
-          )}
-          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} // CSS để xuống dòng tốt hơn
-        >
-          {/* FIX: Bỏ prop timestamp khỏi đây */}
-          {msg.sender === 'agent' && !msg.isStreaming && (
-        <>
-          {console.log('Render log for', msg.id, messageLogs[msg.id])}
-          {messageLogs[msg.id]?.length > 0 && (
-            <LogAgentThinking logs={messageLogs[msg.id]} />
-          )}
-        </>
-      )}
-
-          <ChatMessageContent
-            content={msg.content}
-            isAgent={msg.sender === 'agent'}
-            stream={msg.isStreaming ?? false}
-          />
-          {/* Hiển thị ảnh nếu có */}
-          {(msg.image_url || msg.file_url) && (
-            <div className="mt-2">
-              <img
-                src={msg.image_url || msg.file_url}
-                alt="uploaded content"
-                className="max-w-xs rounded-lg"
-              />
-            </div>
-          )}
-        </div>
-        
-        {msg.sender === 'user' && (
-           <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1"> {/* Căn chỉnh avatar */}
-            <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
-          </Avatar>
-        )}
-      </div>
-      {/* Hiển thị log dưới message agent đã trả lời xong */}
-     
-      {/* Timestamp */}
-      <div
-        className={cn(
-          "px-12 text-xs text-muted-foreground select-none mt-1",
-          msg.sender === 'user' ? 'text-right' : 'text-left'
-        )}
-      >
-        <span>
-          {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
-        </span>
-      </div>
-    </div>
-  ))}
+            {messages.slice(-50).map((msg, idx) => {
+              if (msg.sender === 'agent') {
+                // Chỉ fetch log nếu có parent_message_id, nhưng luôn render message agent
+                const userMsgId = msg.parent_message_id;
+                // Không còn fallback slice/index, chỉ lấy đúng parent_message_id
+                return (
+                  <AgentMessageWithLog
+                    key={msg.id}
+                    msg={msg}
+                    userMsgId={userMsgId}
+                    messageLogs={messageLogs}
+                    loadingLog={loadingLog}
+                    handleShowLog={handleShowLog}
+                  >
+                    <div className="flex items-end gap-2 justify-start">
+                      {/* Avatar agent bên trái */}
+                      <div className="h-9 w-9 flex-shrink-0 self-start mt-1">
+                        {currentAgent?.avatar ? (
+                          <div dangerouslySetInnerHTML={{ __html: currentAgent.avatar }} style={{ width: 36, height: 36 }} />
+                        ) : (
+                          <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: currentAgent?.name || 'Agent' }).toString() }} style={{ width: 36, height: 36 }} />
+                        )}
+                      </div>
+                      {/* Bubble agent */}
+                      <div
+                        className={cn(
+                          "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative",
+                          'dark:bg-[#23272f] light:bg-gradient-light text-foreground rounded-bl-lg',
+                          'whitespace-normal'
+                        )}
+                        style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                      >
+                        {/* Log subflow nếu có */}
+                        {msg.sender === 'agent' && !msg.isStreaming && Array.isArray(messageLogs[msg.id]) && messageLogs[msg.id].length > 0 && (
+                          <LogAgentThinking logs={messageLogs[msg.id]} />
+                        )}
+                        <ChatMessageContent
+                          content={msg.content}
+                          isAgent={true}
+                          stream={msg.isStreaming ?? false}
+                        />
+                        {(msg.image_url || msg.file_url) && (
+                          <div className="mt-2">
+                            <img
+                              src={msg.image_url || msg.file_url}
+                              alt="uploaded content"
+                              className="max-w-xs rounded-lg"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Timestamp agent */}
+                    <div className="px-12 text-xs text-muted-foreground select-none mt-1 text-left">
+                      <span>
+                        {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </span>
+                    </div>
+                  </AgentMessageWithLog>
+                );
+              }
+              // Message user
+              return (
+                <div key={msg.id} className="flex flex-col">
+                  <div className="flex items-end gap-2 justify-end">
+                    {/* Bubble user */}
+                    <div
+                      className={cn(
+                        "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative",
+                        'bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg',
+                        'whitespace-normal'
+                      )}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    >
+                      <ChatMessageContent
+                        content={msg.content}
+                        isAgent={false}
+                        stream={msg.isStreaming ?? false}
+                      />
+                      {(msg.image_url || msg.file_url) && (
+                        <div className="mt-2">
+                          <img
+                            src={msg.image_url || msg.file_url}
+                            alt="uploaded content"
+                            className="max-w-xs rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {/* Avatar user bên phải */}
+                    <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1">
+                      <AvatarFallback className="font-bold button-gradient-light dark:button-gradient-dark text-white">U</AvatarFallback>
+                    </Avatar>
+                  </div>
+                  {/* Timestamp user */}
+                  <div className="px-12 text-xs text-muted-foreground select-none mt-1 text-right">
+                    <span>
+                      {msg.timestamp && new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
 
           
 
