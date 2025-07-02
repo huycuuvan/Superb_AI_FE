@@ -1421,3 +1421,15 @@ export const getSubflowLogs = async (message_id: string) => {
   if (!res.ok) throw new Error("Không thể lấy log subflow");
   return res.json();
 };
+
+export const verifyEmail = async (email: string, code: string) => {
+  const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};

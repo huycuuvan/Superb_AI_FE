@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
-import { registerWithEmail, registerWithGoogle } from "@/services/api";
+import { registerWithEmail, registerWithGoogle, verifyEmail } from "@/services/api";
 import { ApiErrorException, isApiError } from "@/utils/errorHandler";
 import gsap from 'gsap';
 
@@ -39,6 +39,11 @@ const Register = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showVerify, setShowVerify] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [verifySuccess, setVerifySuccess] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
   const registerCardRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +59,16 @@ const Register = () => {
     setLoading(true);
     setError("");
     setSuccess("");
+    setShowVerify(false);
     try {
-      await registerWithEmail({ email, password, name });
-      setSuccess("Register successfully");
-      setTimeout(() => navigate("/login"), 1500);
+      const res = await registerWithEmail({ email, password, name });
+      if (res && res.tag === "REGISTER_VERIFICATION_SENT") {
+        setSuccess("Đã gửi mã xác thực về email. Vui lòng kiểm tra email và nhập mã xác thực để hoàn tất đăng ký.");
+        setShowVerify(true);
+      } else {
+        setSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.");
+        setShowVerify(true);
+      }
     } catch (err) {
       if (isApiError(err)) {
         if (err.tag === "REGISTER_PASSWORD_TOO_SHORT") {
@@ -92,6 +103,46 @@ const Register = () => {
     }
   };
 
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyError("");
+    setVerifySuccess("");
+    try {
+      const res = await verifyEmail(email, verifyCode);
+      if (res && res.code === 0) {
+        setVerifySuccess("Xác thực email thành công! Bạn có thể đăng nhập.");
+        setTimeout(() => navigate("/login"), 1500);
+      } else {
+        setVerifyError("Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+      }
+    } catch (err) {
+      setVerifyError("Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+    }
+  };
+
+  const handleResendCode = async () => {
+    setVerifyError("");
+    setVerifySuccess("");
+    setResendCooldown(60);
+    try {
+      const res = await registerWithEmail({ email, password, name });
+      if (res && res.tag === "REGISTER_VERIFICATION_SENT") {
+        setVerifySuccess("Đã gửi lại mã xác thực về email. Vui lòng kiểm tra email.");
+      } else {
+        setVerifySuccess("Đã gửi lại mã xác thực về email. Vui lòng kiểm tra email.");
+      }
+    } catch (err) {
+      setVerifyError("Không thể gửi lại mã. Vui lòng thử lại sau.");
+    }
+  };
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative">
       {/* Subtle animated background shapes */}
@@ -109,7 +160,7 @@ const Register = () => {
               Join Superb AI and start your journey
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} style={{ display: showVerify ? 'none' : undefined }}>
             <CardContent className="space-y-6 p-6 sm:p-8">
               {error && (
                 <Alert variant="destructive" className="mb-4">
@@ -194,6 +245,42 @@ const Register = () => {
               </Button>
             </CardContent>
           </form>
+          {showVerify && (
+            <form onSubmit={handleVerify} className="space-y-6 p-6 sm:p-8">
+              <Alert variant="info" className="mb-4">
+                Đã gửi mã xác thực về email <b>{email}</b>. Vui lòng kiểm tra email và nhập mã xác thực gồm 6 số để hoàn tất đăng ký.
+              </Alert>
+              {verifyError && <Alert variant="destructive">{verifyError}</Alert>}
+              {verifySuccess && <Alert variant="success">{verifySuccess}</Alert>}
+              <div className="space-y-1.5">
+                <Label htmlFor="verifyCode" className="font-medium text-sm text-slate-700">Mã xác thực</Label>
+                <Input
+                  id="verifyCode"
+                  type="text"
+                  placeholder="Nhập mã xác thực 6 số"
+                  value={verifyCode}
+                  onChange={e => setVerifyCode(e.target.value)}
+                  required
+                  maxLength={6}
+                  minLength={6}
+                  pattern="[0-9]{6}"
+                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40" size="lg">
+                Xác thực email
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-2"
+                onClick={handleResendCode}
+                disabled={resendCooldown > 0}
+              >
+                {resendCooldown > 0 ? `Gửi lại mã (${resendCooldown}s)` : "Gửi lại mã"}
+              </Button>
+            </form>
+          )}
           <CardFooter className="flex justify-center p-6 bg-inherit border-t border-white/20 rounded-b-xl">
             <p className="text-sm text-slate-600">
               Already have an account?{" "}
