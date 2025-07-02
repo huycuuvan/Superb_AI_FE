@@ -66,7 +66,7 @@ const Header = React.memo(() => {
   const { data: agentData } = useQuery({
     queryKey: ['agent', agentId],
     queryFn: () => getAgentById(agentId!),
-    enabled: !!agentId,
+    enabled: !!user && !!agentId,
   });
 
   const currentAgent = agentData?.data || null;
@@ -83,14 +83,14 @@ const Header = React.memo(() => {
   } = useQuery<{ data: DetailedInvitation[] }, Error>({
       queryKey: ['userInvitations'],
       queryFn: getAllInvitations,
-      enabled: isNotificationsOpen,
+      enabled: !!user && isNotificationsOpen,
       staleTime: 60 * 1000,
   });
 
   const { data: membersData, isLoading: isLoadingMembers, error: membersError } = useQuery<{ data: WorkspaceMember[] }>({
     queryKey: ['workspaceMembers', workspaceIdForMembers],
     queryFn: () => getWorkspaceMembers(workspaceIdForMembers as string),
-    enabled: !!workspaceIdForMembers && isMembersModalOpen,
+    enabled: !!user && !!workspaceIdForMembers && isMembersModalOpen,
   });
 
   const queryClient = useQueryClient();
@@ -135,8 +135,7 @@ const Header = React.memo(() => {
   };
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    logout(navigate);
   };
 
   const pendingInvitations = invitationsData?.data?.filter(inv => inv.Status === 'pending') || [];

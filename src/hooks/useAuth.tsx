@@ -28,7 +28,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: (navigate?: (path: string, opts?: any) => void) => void;
   updateUser: (user: User) => void;
   hasWorkspace: boolean;
   isTokenExpired: boolean;
@@ -235,16 +235,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (navigate?: (path: string, opts?: any) => void) => {
     try {
       // Gọi API logout để thu hồi refresh token
+      const refreshToken = localStorage.getItem('refresh_token');
       const token = localStorage.getItem('token');
-      if (token) {
+      if (refreshToken && token) {
         await fetch(API_ENDPOINTS.auth.logout, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
         });
       }
     } catch (err) {
@@ -262,6 +265,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Reset state
       setUser(null);
       setIsTokenExpired(false);
+      // Redirect về trang login nếu có navigate truyền vào
+      if (navigate) navigate("/login", { replace: true });
     }
   };
 

@@ -64,7 +64,7 @@ const WorkspacePage = () => {
   }>({
     queryKey: ['workspaceMembers', workspaceIdForMembers],
     queryFn: () => getWorkspaceMembers(workspaceIdForMembers as string),
-    enabled: !!workspaceIdForMembers && isMembersModalOpen,
+    enabled: !!user && !!workspaceIdForMembers && isMembersModalOpen,
   });
 
   const { data: profileData, isLoading: isLoadingProfile, error: profileError } = useQuery<{
@@ -72,19 +72,13 @@ const WorkspacePage = () => {
   } | null>({
     queryKey: ['workspaceProfile', selectedWorkspaceId],
     queryFn: () => selectedWorkspaceId ? getWorkspaceProfile(selectedWorkspaceId) : Promise.resolve(null),
-    enabled: !!selectedWorkspaceId,
+    enabled: !!user && !!selectedWorkspaceId,
   });
-
-  useEffect(() => {
-    if (!isLoadingProfile && !profileError && selectedWorkspaceId && profileData && profileData.data === null) {
-      navigate(`/workspace/${selectedWorkspaceId}/profile`);
-    }
-  }, [isLoadingProfile, profileError, selectedWorkspaceId, profileData, navigate]);
 
   const { data: foldersData, isLoading: isLoadingFolders } = useQuery<FolderResponse | null>({
     queryKey: ['folders', selectedWorkspaceId],
     queryFn: () => selectedWorkspaceId ? getFolders(selectedWorkspaceId) : Promise.resolve(null),
-    enabled: !!selectedWorkspaceId,
+    enabled: !!user && !!selectedWorkspaceId,
   });
 
   const workspaces = (data && data.data) ? (Array.isArray(data.data) ? data.data : [data.data]) : [];
@@ -215,8 +209,7 @@ const WorkspacePage = () => {
         variant="ghost" 
         className="absolute top-4 right-4 flex items-center gap-2 z-20 bg-white dark:bg-[#23232a] text-slate-700 dark:text-white border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-[#23232a]"
         onClick={() => {
-          logout();
-          navigate('/login');
+          logout(navigate);
         }}
       >
         <LogOut className="w-4 h-4" />

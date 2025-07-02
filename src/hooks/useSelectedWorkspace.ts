@@ -8,6 +8,9 @@ export const useSelectedWorkspace = () => {
       ? localStorage.getItem("selectedWorkspace")
       : null;
 
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
   // Sử dụng useQuery với cùng key của danh sách workspaces để truy cập cache
   // Hook này chỉ tìm kiếm trong dữ liệu đã fetch bởi query ['workspaces']
   const {
@@ -17,7 +20,7 @@ export const useSelectedWorkspace = () => {
   } = useQuery<WorkspaceResponse | null>({
     queryKey: ["workspaces"], // Cùng key với fetch danh sách workspace
     queryFn: getWorkspace, // Vẫn cần queryFn dù có thể không fetch nếu cache có
-    enabled: true, // Fetch nếu cache không có hoặc stale
+    enabled: !!token, // Chỉ fetch khi đã đăng nhập
     staleTime: 5 * 60 * 1000, // Giữ data tươi trong cache
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,

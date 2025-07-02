@@ -48,6 +48,20 @@ export const registerWithGoogle = async () => {
   return res.json();
 };
 
+export const loginWithGoogle = async (idToken: string) => {
+  const res = await fetch(API_ENDPOINTS.auth.google, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+  });
+
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+
+  return res.json();
+};
+
 // Thêm các hàm API khác ở đây
 export const createWorkspace = async (workspaceData: {
   name: string;

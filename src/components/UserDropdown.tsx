@@ -18,8 +18,7 @@ const UserDropdown = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    logout(navigate);
   };
 
   if (!user) return null;

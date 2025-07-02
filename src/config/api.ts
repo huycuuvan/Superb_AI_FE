@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
     register: `${API_BASE_URL}/auth/register`,
     logout: `${API_BASE_URL}/auth/logout`,
     refresh: `${API_BASE_URL}/auth/refresh`,
+    google: `${API_BASE_URL}/auth/google/token`,
   },
   workspace: {
     create: `${API_BASE_URL}/workspaces`,
