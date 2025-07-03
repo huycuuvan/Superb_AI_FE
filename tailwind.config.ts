@@ -23,6 +23,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        heading: ["'General Sans'", "Satoshi", "Inter", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
       },
       colors: {
         // --- Các màu cơ bản được định nghĩa bằng biến CSS ---

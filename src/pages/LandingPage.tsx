@@ -739,35 +739,11 @@ const LandingPage: React.FC = () => {
           } flex justify-between items-center`}>
             {/* Logo */}
             <Link to="/" className="font-bold flex items-center space-x-2">
-              <svg 
-                className={`transition-all duration-300 ${
-                  isSticky ? 'w-5 h-5 sm:w-6 sm:h-6' : 'w-6 h-6 sm:w-8 sm:h-8'
-                }`}
-                viewBox="0 0 375 374.999991" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <clipPath id="28682cf8b0">
-                    <path d="M 212.070312 79.519531 L 287.820312 79.519531 L 287.820312 155.269531 L 212.070312 155.269531 Z M 212.070312 79.519531 "/>
-                  </clipPath>
-                  <clipPath id="fbf10c9d0c">
-                    <path d="M 129.140625 45.132812 L 243.140625 45.132812 L 243.140625 306.261719 L 129.140625 306.261719 Z M 129.140625 45.132812 "/>
-                  </clipPath>
-                </defs>
-                <g clipPath="url(#28682cf8b0)">
-                  <path 
-                    fill="#5e17eb" 
-                    d="M 250.863281 99.785156 C 250.980469 100.84375 251.183594 101.882812 251.476562 102.90625 C 251.765625 103.929688 252.144531 104.921875 252.605469 105.882812 C 253.0625 106.84375 253.601562 107.757812 254.21875 108.628906 C 254.832031 109.496094 255.515625 110.308594 256.269531 111.058594 C 257.023438 111.8125 257.832031 112.496094 258.703125 113.113281 C 259.570312 113.726562 260.484375 114.265625 261.445312 114.726562 C 262.40625 115.1875 263.398438 115.5625 264.421875 115.855469 C 265.445312 116.148438 266.488281 116.351562 267.546875 116.464844 C 272.667969 117.027344 279.277344 117.390625 287.808594 117.390625 C 279.277344 117.390625 272.667969 117.753906 267.546875 118.3125 C 266.488281 118.429688 265.445312 118.632812 264.421875 118.925781 C 263.398438 119.21875 262.40625 119.59375 261.445312 120.054688 C 260.484375 120.515625 259.570312 121.050781 258.703125 121.667969 C 257.832031 122.28125 257.023438 122.96875 256.269531 123.71875 C 255.515625 124.472656 254.832031 125.285156 254.21875 126.152344 C 253.601562 127.023438 253.0625 127.9375 252.605469 128.898438 C 252.144531 129.855469 251.765625 130.847656 251.476562 131.871094 C 251.183594 132.898438 250.980469 133.9375 250.863281 134.996094 C 250.300781 140.117188 249.941406 146.726562 249.941406 155.261719 C 249.941406 146.726562 249.578125 140.117188 249.015625 134.996094 C 248.898438 133.9375 248.695312 132.898438 248.40625 131.871094 C 248.113281 130.847656 247.734375 129.855469 247.277344 128.898438 C 246.816406 127.9375 246.277344 127.023438 245.660156 126.152344 C 245.046875 125.285156 244.363281 124.472656 243.609375 123.71875 C 242.855469 122.96875 242.046875 122.28125 241.175781 121.667969 C 240.308594 121.050781 239.394531 120.515625 238.433594 120.054688 C 237.472656 119.59375 236.480469 119.21875 235.457031 118.925781 C 234.433594 118.632812 233.390625 118.429688 232.332031 118.3125 C 227.210938 117.753906 220.601562 117.390625 212.070312 117.390625 C 220.601562 117.390625 227.210938 117.027344 232.332031 116.464844 C 233.390625 116.351562 234.433594 116.148438 235.457031 115.855469 C 236.480469 115.5625 237.472656 115.1875 238.433594 114.726562 C 239.394531 114.265625 240.308594 113.726562 241.175781 113.113281 C 242.046875 112.496094 242.855469 111.8125 243.609375 111.058594 C 244.363281 110.308594 245.046875 109.496094 245.660156 108.628906 C 246.277344 107.757812 246.816406 106.84375 247.277344 105.882812 C 247.734375 104.921875 248.113281 103.929688 248.40625 102.90625 C 248.695312 101.882812 248.898438 100.84375 249.015625 99.785156 C 249.578125 94.664062 249.941406 88.054688 249.941406 79.519531 C 249.941406 88.050781 250.300781 94.664062 250.863281 99.785156 Z M 250.863281 99.785156 "
-                  />
-                </g>
-                <g clipPath="url(#fbf10c9d0c)">
-                  <path 
-                    fill="#5e17eb" 
-                    d="M 213.3125 45.132812 L 129.140625 216.617188 L 176.207031 216.902344 L 164.164062 306.261719 L 243.148438 171.058594 L 195.3125 169.582031 L 213.3125 45.132812 "
-                  />
-                </g>
-              </svg>
+            <div className={`p-2 ${isDarkMode ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
+                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
               <span className={`${isDarkMode ? 'text-white' : 'text-slate-800'} transition-all duration-300 ${
                 isSticky ? 'text-sm sm:text-base font-semibold' : 'text-lg sm:text-2xl font-bold'
               }`}>SuperbAI</span>
@@ -1099,24 +1075,24 @@ const LandingPage: React.FC = () => {
               
               <AnimatedSection>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                  {/* Free Plan */}
+                  {/* Startup Plan */}
                   <div className={`p-8 rounded-xl backdrop-blur-sm border transition-all duration-300 ${
                     isDarkMode 
                       ? 'bg-slate-800/50 border-slate-700/50' 
                       : 'bg-white/60 border-white/40'
                   } hover:shadow-lg`}>
-                    <h3 className="text-2xl font-bold mb-2">Free</h3>
-                    <div className="text-4xl font-bold mb-4">$0<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <h3 className="text-2xl font-bold mb-2">Startup</h3>
+                    <div className="text-4xl font-bold mb-4">$9<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
                     <ul className="space-y-3 mb-6 text-left">
-                      <li className="flex items-center gap-2">✅ 5 AI Agents</li>
-                      <li className="flex items-center gap-2">✅ 100 tasks/month</li>
-                      <li className="flex items-center gap-2">✅ Basic templates</li>
+                      <li className="flex items-center gap-2">✅ 9 active agents simultaneously</li>
+                      <li className="flex items-center gap-2">✅ 99 tasks/month</li>
+                      <li className="flex items-center gap-2">✅ 999 tokens</li>
                       <li className="flex items-center gap-2">✅ Community support</li>
                     </ul>
                     <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
                       Get Started
-      </button>
-    </div>
+                    </button>
+                  </div>
 
                   {/* Pro Plan */}
                   <div className={`p-8 rounded-xl border-2 border-purple-500 relative backdrop-blur-sm transition-all duration-300 ${
@@ -1124,16 +1100,16 @@ const LandingPage: React.FC = () => {
                   } hover:shadow-2xl`}>
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
                       Most Popular
-        </div>
+                    </div>
                     <h3 className="text-2xl font-bold mb-2">Pro</h3>
-                    <div className="text-4xl font-bold mb-4">$29<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <div className="text-4xl font-bold mb-4">$99<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
                     <ul className="space-y-3 mb-6 text-left">
-                      <li className="flex items-center gap-2">✅ 25 AI Agents</li>
-                      <li className="flex items-center gap-2">✅ 10,000 tasks/month</li>
-                      <li className="flex items-center gap-2">✅ Premium templates</li>
+                      <li className="flex items-center gap-2">✅ 99 active agents</li>
+                      <li className="flex items-center gap-2">✅ 1,999 tasks/month</li>
+                      <li className="flex items-center gap-2">✅ 19,999 tokens</li>
                       <li className="flex items-center gap-2">✅ Priority support</li>
                       <li className="flex items-center gap-2">✅ Custom integrations</li>
-      </ul>
+                    </ul>
                     <button className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105">
                       Start Free Trial
                     </button>
@@ -1156,8 +1132,8 @@ const LandingPage: React.FC = () => {
                     </ul>
                     <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
                       Contact Sales
-      </button>
-                </div>
+                    </button>
+                  </div>
                 </div>
               </AnimatedSection>
             </div>

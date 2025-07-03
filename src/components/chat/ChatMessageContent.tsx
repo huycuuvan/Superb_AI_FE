@@ -69,7 +69,12 @@ const CopyButton = ({ elementRef }: { elementRef: React.RefObject<HTMLElement> }
             variant="ghost"
             size="icon"
             onClick={handleCopy}
-            className="absolute top-1 right-1 h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
+            className={
+              `absolute top-1 right-1 h-8 w-8
+              border transition-colors
+              dark:text-white/70 dark:hover:bg-white/20 dark:border-transparent
+              text-slate-700 hover:bg-slate-100 border-slate-200`
+            }
             aria-label="Sao chép"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -123,9 +128,9 @@ const CodeBlockRenderer = ({ node, children, ...props }: any) => {
 const TableRenderer = ({ node, ...props }: any) => {
   const tableRef = useRef<HTMLTableElement>(null);
   return (
-    <div className="relative">
-      <table ref={tableRef} className="w-full my-2 border-collapse border border-slate-400" {...props} />
+    <div className="relative pt-2 pr-10">
       <CopyButton elementRef={tableRef} />
+      <table ref={tableRef} className="w-full my-2 border-collapse border border-slate-400" {...props} />
     </div>
   );
 };
@@ -312,23 +317,33 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
     return <p className="whitespace-pre-wrap">{userContent}</p>;
   };
 
-  const containerClassName = cn('w-full', isAgent ? 'text-card-foreground' : 'text-white');
+  const containerClassName = cn(
+    'w-full',
+    isAgent
+      ? 'text-slate-800 dark:text-card-foreground'
+      : 'text-white'
+  );
   
   const ToggleButton = ({ isExpanded }: { isExpanded: boolean }) => (
-    <div className="absolute -top-3 -right-2 z-10">
-        <TooltipProvider delayDuration={100}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handleToggleExpand} className="h-7 w-7">
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        <span className="sr-only">{isExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                    <p>{isExpanded ? 'Thu gọn văn bản' : 'Mở rộng văn bản'}</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+    <div className="absolute -top-2 -right-2 z-10">
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleExpand}
+              className="h-8 w-8  bg-transparent hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
+              aria-label={isExpanded ? 'Thu gọn văn bản' : 'Mở rộng văn bản'}
+            >
+              {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center">
+            {isExpanded ? 'Thu gọn văn bản' : 'Mở rộng văn bản'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 

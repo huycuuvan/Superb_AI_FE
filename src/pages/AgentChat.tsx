@@ -33,7 +33,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
-import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import LogAgentThinking from '@/components/LogAgentThinking';
 import { useInView } from 'react-intersection-observer';
 import React from 'react';
@@ -1244,20 +1244,56 @@ const handleSubmitTaskInputs = async () => {
                 <p className="text-xs text-muted-foreground">{currentAgent?.role_description}</p>
               </div>
             </div>
-            <div className="p-4 border-b">
-              <Button
-                variant="primary"
-                className="w-full flex items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30 rounded-xl group transition-all duration-200 "
-                onClick={() => handleNewChat(currentAgent?.id)}
-                disabled={isCreatingThread || isLoading || (!!currentThread && !hasUserMessage)}
-              >
-                {isCreatingThread ? (
-                  <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
-                ) : (
-                  <Plus className="h-4 w-4 " />
-                )}
-                <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span>
-              </Button>
+            <div className="p-4 border-b flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={`
+                        flex-1 h-10 rounded-xl border border-primary flex items-center justify-center space-x-2 px-6
+                        bg-transparent
+                        dark:bg-transparent dark:text-primary-foreground dark:shadow-2xl dark:border-primary
+                      `}
+                      onClick={() => handleNewChat(currentAgent?.id)}
+                      disabled={isCreatingThread || isLoading || (!!currentThread && !hasUserMessage)}
+                    >
+                      {isCreatingThread ? (
+                        <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                      <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    Tạo cuộc trò chuyện mới
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className=" h-10 rounded-xl border border-primary flex items-center justify-center space-x-2 px-4
+                        bg-transparent
+                        dark:bg-transparent dark:text-primary-foreground dark:shadow-2xl dark:border-primary"
+                      onClick={() => setShowClearHistoryModal(true)}
+                      disabled={isClearingHistory || isLoading}
+                      aria-label="Xóa lịch sử trò chuyện"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
+                      </svg>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    Xóa lịch sử trò chuyện
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
@@ -1276,33 +1312,6 @@ const handleSubmitTaskInputs = async () => {
           </>
         )}
       </aside>
-
-      {/* Button nổi xóa lịch sử trò chuyện và AlertDialog đặt ngoài sidebar */}
-      <Button
-        variant="primary"
-        className="hidden md:flex absolute left-auto bottom-6 w-56 mx-4 z-1 pointer-events-auto items-center justify-center space-x-2 shadow-2xl ring-2 ring-primary/30"
-        onClick={() => setShowClearHistoryModal(true)}
-        disabled={isClearingHistory || isLoading}
-      >
-        <X className="h-4 w-4" />
-        <span>Xóa lịch sử trò chuyện</span>
-      </Button>
-      <AlertDialog open={showClearHistoryModal} onOpenChange={setShowClearHistoryModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bạn chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn với agent này trong workspace hiện tại và không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearingHistory}>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearHistory} disabled={isClearingHistory} className="bg-destructive text-white">
-              {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background">
@@ -1674,7 +1683,7 @@ const handleSubmitTaskInputs = async () => {
                                 </Button>
                               </div>
                              
-                              <p className="text-xs text-muted-foreground ml-[19rem]">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
+                              <p className="text-xs text-muted-foreground ml-[18rem]">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
                               
                             </div>
                         </div>
@@ -1715,6 +1724,31 @@ const handleSubmitTaskInputs = async () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setIsCreditError(false)} autoFocus>Đóng</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={showClearHistoryModal} onOpenChange={setShowClearHistoryModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn với agent này trong workspace hiện tại và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingHistory}>Hủy</AlertDialogCancel>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertDialogAction onClick={handleClearHistory} disabled={isClearingHistory} className="bg-destructive text-white">
+                    {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
+                  </AlertDialogAction>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  Xóa lịch sử trò chuyện
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

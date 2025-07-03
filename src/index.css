@@ -1,5 +1,9 @@
 /* index.css */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=General+Sans:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+/* Nếu muốn dùng Satoshi, cần tải file font và import qua @font-face hoặc dùng General Sans từ Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -61,7 +65,18 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'General Sans', monospace;
+    font-weight: 500;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'General Sans', 'Satoshi', 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  code, pre, .font-mono, .stat-number, .statistic, .accent-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1em;
+    letter-spacing: 0;
   }
 }
 
