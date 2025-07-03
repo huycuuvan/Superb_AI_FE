@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials, getSubflowLogs } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials, getSubflowLogs, deleteThread } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -1136,6 +1136,9 @@ const handleSubmitTaskInputs = async () => {
 
   const [isCreditError, setIsCreditError] = useState(false);
 
+  const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1295,19 +1298,54 @@ const handleSubmitTaskInputs = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {Array.isArray(threadsData?.data) ? threadsData.data.map((thread, index, arr) => (
-                <div key={thread.id}>
-                  <div className="p-3 rounded-lg hover:bg-muted cursor-pointer">
-                    <button className="text-sm font-medium " onClick={() => handleThreadClick(thread.id)}>
-                      {thread.title ? thread.title : 'New chat'}
-                    </button>
-                  </div>
-                  {index < arr.length - 1 && (
-                    <div className="border-b border-muted-foreground/20 my-2"></div>
-                  )}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
+                    
+        {Array.isArray(threadsData?.data) ? threadsData.data.map((thread) => {
+          const isActive = currentThread === thread.id;
+          return (
+            
+            <a
+              key={thread.id}
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handleThreadClick(thread.id);
+              }}
+              className={cn(
+                "group flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isActive
+                  ? "dark:bg-zinc-800 text-zinc-50 bg-primary "
+                  : "dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 hover:bg-primary hover:text-primary-foreground"
+              )}
+            >
+              <span className="truncate">
+                {thread.title || 'New chat'}
+              </span>
+              {user?.id === thread.user_id && (
+                <div className="opacity-0 transition-opacity group-hover:opacity-100 ">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-zinc-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setThreadToDelete(thread.id);
+                      setShowDeleteThreadModal(true);
+                    }}
+                    aria-label="Xóa cuộc trò chuyện"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
+                    </svg>
+                  </Button>
                 </div>
-              )) : <div className="text-center text-muted-foreground p-2">Không có cuộc hội thoại nào</div>}
+              )}
+            </a>
+            
+          );
+        }) : <div className="text-center p-2 text-zinc-500">Không có cuộc hội thoại nào</div>}
             </div>
           </>
         )}
@@ -1749,6 +1787,42 @@ const handleSubmitTaskInputs = async () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* AlertDialog xác nhận xóa thread */}
+      <AlertDialog open={showDeleteThreadModal} onOpenChange={setShowDeleteThreadModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn chắc chắn muốn xóa cuộc trò chuyện này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thao tác này sẽ xóa vĩnh viễn toàn bộ tin nhắn trong cuộc trò chuyện này và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white"
+              onClick={async () => {
+                if (!threadToDelete) return;
+                try {
+                  await deleteThread(threadToDelete);
+                  toast({ title: 'Đã xóa cuộc trò chuyện', variant: 'default' });
+                  queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
+                  if (currentThread === threadToDelete) {
+                    setCurrentThread(null);
+                    setMessages([]);
+                  }
+                } catch (err) {
+                  toast({ title: 'Xóa cuộc trò chuyện thất bại', description: String(err), variant: 'destructive' });
+                } finally {
+                  setShowDeleteThreadModal(false);
+                  setThreadToDelete(null);
+                }
+              }}
+            >
+              Xóa
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

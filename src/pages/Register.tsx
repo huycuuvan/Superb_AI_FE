@@ -9,6 +9,8 @@ import { Alert } from "@/components/ui/alert";
 import { registerWithEmail, registerWithGoogle, verifyEmail } from "@/services/api";
 import { ApiErrorException, isApiError } from "@/utils/errorHandler";
 import gsap from 'gsap';
+import { useTheme } from '@/hooks/useTheme';
+import { cn } from '@/lib/utils';
 
 // Simple Superb AI Logo Component
 const SuperbAiLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
@@ -46,6 +48,7 @@ const Register = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
   const registerCardRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     if(registerCardRef.current){
@@ -144,19 +147,26 @@ const Register = () => {
   }, [resendCooldown]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-200 via-pink-100 to-blue-100 p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative">
-      {/* Subtle animated background shapes */}
+    <div className={cn(
+      'min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative',
+      'bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50',
+      theme === 'dark' && 'dark bg-gradient-to-br from-zinc-900 via-zinc-950 to-black'
+    )}>
+      {/* Animated background shapes */}
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
-        <div className="absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 bg-sky-300/30 rounded-full filter blur-3xl opacity-40 animate-pulse-slow animation-delay-500"></div>
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-400/20 dark:bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-pulse-slow"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-400/20 dark:bg-pink-500/10 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
+        <div className="absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 bg-sky-400/20 dark:bg-sky-500/10 rounded-full filter blur-3xl opacity-40 animate-pulse-slow animation-delay-500"></div>
       </div>
-
-      <div ref={registerCardRef} className="w-full max-w-md relative z-10">
-        <Card className="shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg bg-white/40 border border-white/20">
-          <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-white/20">
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800">Create Account</CardTitle>
-            <CardDescription className="text-center text-slate-600 text-sm sm:text-base">
+      <div ref={registerCardRef} className="w-full max-w-sm sm:max-w-md relative z-10">
+        <Card className={cn(
+          "shadow-2xl rounded-xl backdrop-filter backdrop-blur-lg",
+          "bg-white/40 border border-white/20",
+          "dark:bg-zinc-900/60 dark:border-zinc-700/50"
+        )}>
+          <CardHeader className="space-y-1.5 p-4 sm:p-6 border-b border-white/20 dark:border-zinc-700/50">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800 dark:text-zinc-100">Create Account</CardTitle>
+            <CardDescription className="text-center text-slate-600 dark:text-zinc-400 text-sm sm:text-base">
               Join Superb AI and start your journey
             </CardDescription>
           </CardHeader>
@@ -182,7 +192,12 @@ const Register = () => {
                   onChange={e => setName(e.target.value)} 
                   required 
                   disabled={loading || googleLoading}
-                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                  className={cn(
+                    "border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50",
+                    "text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400",
+                    "text-slate-800 rounded-md",
+                    theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500'
+                  )}
                 />
               </div>
               <div className="space-y-1.5">
@@ -195,7 +210,12 @@ const Register = () => {
                   onChange={e => setEmail(e.target.value)} 
                   required 
                   disabled={loading || googleLoading}
-                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                  className={cn(
+                    "border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50",
+                    "text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400",
+                    "text-slate-800 rounded-md",
+                    theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500'
+                  )}
                 />
               </div>
               <div className="space-y-1.5">
@@ -207,12 +227,20 @@ const Register = () => {
                   onChange={e => setPassword(e.target.value)} 
                   required 
                   disabled={loading || googleLoading}
-                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                  className={cn(
+                    "border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50",
+                    "text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400",
+                    "text-slate-800 rounded-md",
+                    theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500'
+                  )}
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40" 
+                className={cn(
+                  "w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40",
+                  theme === 'dark' && 'dark:shadow-primary/80'
+                )} 
                 size="lg"
                 disabled={loading || googleLoading}
               >
@@ -220,7 +248,10 @@ const Register = () => {
               </Button>
               <div className="relative pt-2 pb-1">
                 <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full bg-white/40" />
+                  <Separator className={cn(
+                    "w-full bg-white/40",
+                    theme === 'dark' && 'dark:bg-zinc-700/50'
+                  )} />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-white/30 px-2 text-slate-500 backdrop-blur-sm rounded-sm">
@@ -230,7 +261,10 @@ const Register = () => {
               </div>
               <Button 
                 variant="outline" 
-                className="w-full border-white/40 !text-slate-700 hover:bg-white/50 focus:ring-purple-500/30 py-2.5 bg-white/60"
+                className={cn(
+                  "w-full border-white/40 !text-slate-700 hover:bg-white/50 focus:ring-purple-500/30 py-2.5 bg-white/60",
+                  theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50'
+                )}
                 type="button" 
                 onClick={handleGoogleSignIn}
                 disabled={loading || googleLoading}
@@ -264,10 +298,18 @@ const Register = () => {
                   maxLength={6}
                   minLength={6}
                   pattern="[0-9]{6}"
-                  className="border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400 text-slate-800 rounded-md"
+                  className={cn(
+                    "border-white/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50",
+                    "text-base py-2.5 px-3.5 bg-white/60 placeholder:text-slate-400",
+                    "text-slate-800 rounded-md",
+                    theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500'
+                  )}
                 />
               </div>
-              <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40" size="lg">
+              <Button type="submit" className={cn(
+                "w-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-gray-500/40",
+                theme === 'dark' && 'dark:shadow-primary/80'
+              )} size="lg">
                 Xác thực email
               </Button>
               <Button
@@ -284,7 +326,10 @@ const Register = () => {
           <CardFooter className="flex justify-center p-6 bg-inherit border-t border-white/20 rounded-b-xl">
             <p className="text-sm text-slate-600">
               Already have an account?{" "}
-              <Link to="/login" className="font-medium text-purple-600 hover:text-purple-700 hover:underline">
+              <Link to="/login" className={cn(
+                "font-medium text-purple-600 hover:text-purple-700 hover:underline",
+                theme === 'dark' && 'dark:text-purple-400 dark:hover:text-purple-300'
+              )}>
                 Sign in
               </Link>
             </p>

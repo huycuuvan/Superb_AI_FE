@@ -1433,3 +1433,20 @@ export const verifyEmail = async (email: string, code: string) => {
   }
   return res.json();
 };
+
+export const deleteThread = async (
+  threadId: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/threads/${threadId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};

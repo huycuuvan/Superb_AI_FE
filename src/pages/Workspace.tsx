@@ -201,29 +201,27 @@ const WorkspacePage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative text-slate-900 dark:text-white">
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slow animation-delay-200"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-300/40 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
-        <div className="absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 bg-sky-300/30 rounded-full filter blur-3xl opacity-40 animate-pulse-slow animation-delay-500"></div>
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-400/20 dark:bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-pulse-slow"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-400/20 dark:bg-pink-500/10 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
+        <div className="absolute top-1/3 right-1/3 w-48 h-48 sm:w-72 sm:h-72 bg-sky-400/20 dark:bg-sky-500/10 rounded-full filter blur-3xl opacity-40 animate-pulse-slow animation-delay-500"></div>
       </div>
       <Button 
         variant="ghost" 
         className="absolute top-4 right-4 flex items-center gap-2 z-20 bg-white dark:bg-[#23232a] text-slate-700 dark:text-white border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-[#23232a]"
-        onClick={() => {
-          logout(navigate);
-        }}
+        onClick={() => { logout(navigate); }}
       >
         <LogOut className="w-4 h-4" />
         Logout
       </Button>
-      <div ref={cardRef} className="w-full max-w-lg relative z-10">
-        <Card className="shadow-2xl rounded-xl bg-white border border-gray-200 dark:bg-[#18181b] dark:border-gray-700">
-          <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800 dark:text-white">Your Workspace</CardTitle>
-            <CardDescription className="text-center text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+      <div ref={cardRef} className="w-full max-w-md sm:max-w-lg mx-auto relative z-10">
+        <Card className="shadow-2xl rounded-3xl bg-white/30 dark:bg-zinc-900/70 border border-purple-200 dark:border-purple-800 backdrop-blur-lg">
+          <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-purple-100 dark:border-purple-900">
+            <CardTitle className="text-3xl font-bold text-center text-zinc-900 dark:text-white">Your Workspace</CardTitle>
+            <CardDescription className="text-center text-purple-700 dark:text-purple-300 text-base sm:text-lg">
               {showCreate ? 'Enter details for your new workspace' : 'Choose a workspace to continue'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 p-6 sm:p-8 bg-white dark:bg-[#18181b]">
+          <CardContent className="space-y-8 p-6 sm:p-8 bg-transparent">
             {showCreate ? (
               <form onSubmit={handleCreateWorkspace} className="w-full space-y-6">
                 <h2 className="text-xl font-semibold text-center text-slate-800">Create a new workspace</h2>
@@ -283,67 +281,52 @@ const WorkspacePage = () => {
             ) : (
               <>
                 {workspaces.length > 0 && (
-                  <div className="w-full space-y-4">
-                    {workspaces.map((workspace) => {
-                      console.log('Workspace:', workspace.name);
-                      console.log('Workspace Owner ID:', workspace.owner_id);
-                      console.log('Current User ID:', user?.id);
-                      return (
-                        <div key={workspace.id} className="mb-3 last:mb-0">
-                          <div
-                            className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-[#23232a] hover:shadow-md transition-all w-full max-w-full gap-2 sm:gap-4"
-                            onClick={() => handleSelectWorkspace(workspace.id)}
-                          >
-                            <Avatar className="bg-gray-200 text-foreground w-9 h-9 flex items-center justify-center mr-2 text-base dark:bg-gray-700 dark:text-white">
-                              <span className="font-bold dark:text-white">{workspace.name.charAt(0).toUpperCase()}</span>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-base text-slate-800 dark:text-white leading-tight flex items-center gap-2">
-                                <span className="truncate">{workspace.name}</span>
-                                {user && (
-                                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 whitespace-nowrap">
-                                    {workspace.owner_id === user.id ? 'Sở hữu' : 'Thành viên'}
-                                  </span>
-                                )}
-                              </div>
-                              {workspace.description && (
-                                <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight">{workspace.description}</div>
+                  <div className="w-full space-y-6">
+                    {workspaces.map((workspace) => (
+                      <div key={workspace.id} className="mb-2 last:mb-0">
+                        <div
+                          className="flex items-center p-4 border border-purple-200 dark:border-purple-800 rounded-2xl shadow-md bg-white/60 dark:bg-zinc-800/60 hover:bg-gradient-to-r hover:from-purple-500/80 hover:to-indigo-500/80 hover:text-white transition-all w-full max-w-full gap-4 group cursor-pointer"
+                          onClick={() => handleSelectWorkspace(workspace.id)}
+                        >
+                          <Avatar className="bg-gradient-to-br from-purple-400 to-indigo-500 text-white w-11 h-11 flex items-center justify-center mr-2 text-lg font-bold shadow-lg">
+                            <span>{workspace.name.charAt(0).toUpperCase()}</span>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-lg leading-tight flex items-center gap-2">
+                              <span className="truncate group-hover:text-white">{workspace.name}</span>
+                              {user && (
+                                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 group-hover:bg-white/20 group-hover:text-white min-w-[80px] px-4 py-1 text-center">
+                                  {workspace.owner_id === user.id ? 'Sở hữu' : 'Thành viên'}
+                                </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 ml-auto">
-                              <InviteMember workspaceId={workspace.id} iconOnly={true} />
-                              <button
-                                className={`block sm:hidden rounded-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-200`}
-                                onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
-                                aria-label="Go to Dashboard"
-                              >
-                                <ArrowRight className="w-5 h-5" />
-                              </button>
-                              <Button 
-                                variant="default"
-                                size="sm"
-                                className={`hidden sm:inline-flex rounded-full px-4 py-2 text-sm font-medium ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white border-0 shadow transition-all`}
-                                onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
-                              >
-                                Go to Dashboard
-                              </Button>
-                            </div>
+                            {workspace.description && (
+                              <div className="text-xs text-gray-500 dark:text-gray-200 truncate leading-tight group-hover:text-white/80">{workspace.description}</div>
+                            )}
                           </div>
+                          <Button 
+                            variant="default"
+                            size="sm"
+                            className="rounded-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0 shadow group-hover:from-purple-600 group-hover:to-indigo-600 group-hover:shadow-lg transition-all"
+                            onClick={e => { e.stopPropagation(); handleGoToDashboard(workspace.id); }}
+                          >
+                            Go to Dashboard
+                          </Button>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 )}
               </>
             )}
           </CardContent>
-          <CardFooter className="flex justify-center p-6 bg-white dark:bg-[#18181b] border-t border-gray-200 dark:border-gray-700 rounded-b-xl">
+          <CardFooter className="flex justify-center p-6 bg-transparent border-t border-purple-100 dark:border-purple-900 rounded-b-3xl">
             {!showCreate && (
               <Button 
                 onClick={() => setShowCreate(true)} 
-                className="flex items-center gap-2 text-white bg-gray-900 hover:bg-black"
+                className="flex items-center gap-2 text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 rounded-full px-6 py-2 shadow-lg text-base font-semibold"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Create a new workspace
               </Button>
             )}
