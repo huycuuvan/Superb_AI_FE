@@ -436,8 +436,8 @@ const AgentChat = () => {
     setCredentials([]);
     setSelectedCredentialId('');
     setLoadingCredentials(false);
-    setImageFile(null);
-    setImagePreview(null);
+    setUploadedFile(null);
+    setFilePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (textareaRef.current) textareaRef.current.style.height = '40px';
     hasInitializedRef.current = false;
@@ -612,8 +612,8 @@ const AgentChat = () => {
   }, [isLoading]); // Chạy lại khi trạng thái loading thay đổi
   const handleSendMessage = () => {
     if (isCreditError) return;
-    // Cho phép gửi nếu có text hoặc có ảnh
-    if ((message.trim() || imageFile) && currentThread) {
+    // Cho phép gửi nếu có text hoặc có file
+    if ((message.trim() || uploadedFile) && currentThread) {
       setIsSending(true);
   
       // Tạo ID tạm thời duy nhất
@@ -625,8 +625,8 @@ const AgentChat = () => {
         content: message,
         sender: 'user',
         timestamp: new Date().toISOString(),
-        file_url: imagePreview || undefined,
-        image_url: imagePreview || undefined,
+        file_url: filePreview?.url || undefined,
+        image_url: filePreview?.url || undefined,
       };
   
       // Cập nhật UI ngay lập tức
@@ -634,13 +634,13 @@ const AgentChat = () => {
   
       // Lưu lại dữ liệu để gửi đi
       const messageToSend = message;
-      const fileToSend = imageFile;
+      const fileToSend = uploadedFile;
       const threadIdToSend = currentThread;
   
       // Xóa input
       setMessage('');
-      setImageFile(null);
-      setImagePreview(null);
+      setUploadedFile(null);
+      setFilePreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -651,12 +651,12 @@ const AgentChat = () => {
       }
       
       // Gửi dữ liệu trong nền
-      if (fileToSend) { // Trường hợp có ảnh
+      if (fileToSend) { // Trường hợp có file
         setIsAgentThinking(true);
         uploadMessageWithFile(threadIdToSend, messageToSend, fileToSend, optimisticId)
           .catch(error => {
             console.error('Error sending message with file:', error);
-            toast({ variant: "destructive", title: "Lỗi", description: "Gửi ảnh thất bại." });
+            toast({ variant: "destructive", title: "Lỗi", description: "Gửi file thất bại." });
             setMessages(prev => prev.filter(m => m.id !== optimisticId));
           })
           .finally(() => {
@@ -1058,26 +1058,54 @@ const handleSubmitTaskInputs = async () => {
     }
   };
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<{url: string; type: string; name: string; size: string} | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        toast({
+          variant: "destructive",
+          title: "File quá lớn",
+          description: "Vui lòng chọn file có dung lượng nhỏ hơn 10MB.",
+        });
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      setUploadedFile(file);
+      const fileSize = file.size < 1024 * 1024 
+        ? `${(file.size / 1024).toFixed(1)} KB` 
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+      
+      setFilePreview({
+        url: URL.createObjectURL(file),
+        type: file.type,
+        name: file.name,
+        size: fileSize
+      });
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
+      const item = items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
         if (file) {
-          setImageFile(file);
-          setImagePreview(URL.createObjectURL(file));
+          setUploadedFile(file);
+          const fileSize = file.size < 1024 * 1024 
+            ? `${(file.size / 1024).toFixed(1)} KB` 
+            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+          
+          setFilePreview({
+            url: URL.createObjectURL(file),
+            type: file.type,
+            name: file.name,
+            size: fileSize
+          });
           e.preventDefault();
           break;
         }
@@ -1085,9 +1113,9 @@ const handleSubmitTaskInputs = async () => {
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const handleRemoveFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -1138,6 +1166,45 @@ const handleSubmitTaskInputs = async () => {
 
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+
+  // Helper: Lấy tên file từ URL
+  function getFileName(url?: string) {
+    if (!url) return '';
+    const lastSlash = url.lastIndexOf('/');
+    let name = url.substring(lastSlash + 1);
+    // Nếu có dấu _ thì lấy phần sau cùng (tên gốc)
+    const lastUnderscore = name.lastIndexOf('_');
+    if (lastUnderscore !== -1) {
+      name = name.substring(lastUnderscore + 1);
+    }
+    return decodeURIComponent(name);
+  }
+
+  // Helper: Xác định loại file từ tên file
+  function getFileTypeLabel(fileName: string) {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (["pdf"].includes(ext)) return "PDF";
+    if (["doc", "docx"].includes(ext)) return "Document";
+    if (["xls", "xlsx"].includes(ext)) return "Spreadsheet";
+    if (["ppt", "pptx"].includes(ext)) return "Presentation";
+    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext)) return "Image";
+    if (["txt", "md", "csv"].includes(ext)) return "Text file";
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return "Archive";
+    return "File";
+  }
+
+  // Helper: Xác định màu và label icon theo loại file
+  function getFileIconProps(fileName: string) {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (["pdf"].includes(ext)) return { color: "bg-red-500", label: "PDF" };
+    if (["doc", "docx"].includes(ext)) return { color: "bg-blue-500", label: "DOC" };
+    if (["xls", "xlsx"].includes(ext)) return { color: "bg-green-500", label: "XLS" };
+    if (["ppt", "pptx"].includes(ext)) return { color: "bg-orange-500", label: "PPT" };
+    if (["txt", "md", "csv"].includes(ext)) return { color: "bg-gray-500", label: "TXT" };
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return { color: "bg-yellow-500", label: "ZIP" };
+    if (["json"].includes(ext)) return { color: "bg-pink-500", label: "JSON" };
+    return { color: "bg-pink-500", label: "FILE" };
+  }
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1426,11 +1493,43 @@ const handleSubmitTaskInputs = async () => {
                         />
                         {(msg.image_url || msg.file_url) && (
                           <div className="mt-2">
-                            <img
-                              src={msg.image_url || msg.file_url}
-                              alt="uploaded content"
-                              className="max-w-xs rounded-lg"
-                            />
+                            {msg.image_url ? (
+                              // Hiển thị ảnh
+                              <img
+                                src={msg.image_url}
+                                alt="uploaded image"
+                                className="max-w-xs rounded-lg"
+                              />
+                            ) : msg.file_url ? (
+                              (() => {
+                                const fileName = getFileName(msg.file_url);
+                                const fileType = getFileTypeLabel(fileName);
+                                return (
+                                  <a
+                                    href={msg.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block max-w-xs"
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm hover:border-primary transition">
+                                      <div className="flex-shrink-0">
+                                        {/* Icon document màu hồng */}
+                                        <div className="w-8 h-8 bg-pink-500 rounded-lg flex items-center justify-center">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </div>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold truncate">{fileName}</div>
+                                        <div className="text-xs text-muted-foreground">{fileType}</div>
+                                      </div>
+                                    </div>
+                                  </a>
+                                );
+                              })()
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -1464,11 +1563,43 @@ const handleSubmitTaskInputs = async () => {
                       />
                       {(msg.image_url || msg.file_url) && (
                         <div className="mt-2">
-                          <img
-                            src={msg.image_url || msg.file_url}
-                            alt="uploaded content"
-                            className="max-w-xs rounded-lg"
-                          />
+                          {msg.image_url ? (
+                            // Hiển thị ảnh
+                            <img
+                              src={msg.image_url}
+                              alt="uploaded image"
+                              className="max-w-xs rounded-lg"
+                            />
+                          ) : msg.file_url ? (
+                            (() => {
+                              const fileName = getFileName(msg.file_url);
+                              const fileType = getFileTypeLabel(fileName);
+                              return (
+                                <a
+                                  href={msg.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block max-w-xs"
+                                  style={{ textDecoration: 'none' }}
+                                >
+                                  <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm hover:border-primary transition">
+                                    <div className="flex-shrink-0">
+                                      {/* Icon document màu hồng */}
+                                      <div className="w-8 h-8 bg-pink-500 rounded-lg flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                                        </svg>
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-semibold truncate">{fileName}</div>
+                                      <div className="text-xs text-muted-foreground">{fileType}</div>
+                                    </div>
+                                  </div>
+                                </a>
+                              );
+                            })()
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -1648,13 +1779,35 @@ const handleSubmitTaskInputs = async () => {
               <div className="p-4 bg-background border-t border-border">
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
-                            {/* Preview ảnh phía trên input chat */}
-                            {imagePreview && (
-                              <div className="mb-2 relative w-24 h-24">
-                                <img src={imagePreview} alt="preview" className="rounded-lg object-cover w-full h-full" />
-                                <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full" onClick={handleRemoveImage}>
-                                  <X className="h-4 w-4" />
-                                </Button>
+                            {/* Preview file phía trên input chat */}
+                            {filePreview && (
+                              <div className="mb-2 relative max-w-xs">
+                                {filePreview.type.startsWith('image/') ? (
+                                  <div className="relative w-24 h-24">
+                                    <img src={filePreview.url} alt="preview" className="rounded-lg object-cover w-full h-full" />
+                                    <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full" onClick={handleRemoveFile}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  (() => {
+                                    const { color, label } = getFileIconProps(filePreview.name);
+                                    return (
+                                      <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm">
+                                        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center`}>
+                                          <span className="text-white text-xs font-bold">{label}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-semibold truncate">{filePreview.name}</div>
+                                          <div className="text-xs text-muted-foreground">{filePreview.size}</div>
+                                        </div>
+                                        <Button size="icon" variant="destructive" className="h-6 w-6 p-0 rounded-full flex-shrink-0" onClick={handleRemoveFile}>
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    );
+                                  })()
+                                )}
                               </div>
                             )}
                             <div className="flex items-end relative">
@@ -1747,7 +1900,7 @@ const handleSubmitTaskInputs = async () => {
       />
       <input
         type="file"
-        accept="image/*"
+        accept="*/*"
         ref={fileInputRef}
         style={{ display: 'none' }}
         onChange={handleFileChange}
