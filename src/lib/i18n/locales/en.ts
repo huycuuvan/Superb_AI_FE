@@ -160,6 +160,6 @@ export default {
     log_agent_thinking: "Agent Thinking",
     collapse_log: "Collapse Log",
     expand_log: "Expand Log",
-    show_all_steps: "Show All Steps",
+    show_all_steps: "Show all {{count}} steps",
   },
 };

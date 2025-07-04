@@ -148,6 +148,6 @@ export default {
     log_agent_thinking: "Tiến trình thực thi",
     collapse_log: "Thu gọn log",
     expand_log: "Mở rộng log",
-    show_all_steps: "Hiển thị tất cả {count} bước",
+    show_all_steps: "Hiển thị tất cả {{count}} bước",
   },
 };
