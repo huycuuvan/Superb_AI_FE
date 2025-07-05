@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, clearAgentThreadHistory, uploadMessageWithFile, getCredentials, getSubflowLogs, deleteThread } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, getSubflowLogs, deleteThread } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -1024,26 +1024,7 @@ const handleSubmitTaskInputs = async () => {
     setMessage(renderedPrompt);
   };
 
-  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
-  const [isClearingHistory, setIsClearingHistory] = useState(false);
 
-  const handleClearHistory = async () => {
-    if (!currentAgent?.id || !workspace?.id) return;
-    setIsClearingHistory(true);
-    try {
-      await clearAgentThreadHistory(currentAgent.id, workspace.id);
-      toast({ title: 'Đã xóa lịch sử trò chuyện', variant: 'default' });
-      // Refetch threads list (đúng queryKey)
-      queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
-      setCurrentThread(null);
-      setMessages([]);
-      setShowClearHistoryModal(false);
-    } catch (err) {
-      toast({ title: 'Xóa lịch sử thất bại', description: String(err), variant: 'destructive' });
-    } finally {
-      setIsClearingHistory(false);
-    }
-  };
 
   // Helper: kiểm tra thread hiện tại đã có tin nhắn user chưa
   const hasUserMessage = messages.some(msg => msg.sender === 'user');
@@ -1341,29 +1322,7 @@ const handleSubmitTaskInputs = async () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className=" h-10 rounded-xl border border-primary flex items-center justify-center space-x-2 px-4
-                        bg-transparent
-                        dark:bg-transparent dark:text-primary-foreground dark:shadow-2xl dark:border-primary"
-                      onClick={() => setShowClearHistoryModal(true)}
-                      disabled={isClearingHistory || isLoading}
-                      aria-label="Xóa lịch sử trò chuyện"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
-                      </svg>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    Xóa lịch sử trò chuyện
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
                     
@@ -1918,31 +1877,7 @@ const handleSubmitTaskInputs = async () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={showClearHistoryModal} onOpenChange={setShowClearHistoryModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bạn chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn với agent này trong workspace hiện tại và không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearingHistory}>Hủy</AlertDialogCancel>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertDialogAction onClick={handleClearHistory} disabled={isClearingHistory} className="bg-destructive text-white">
-                    {isClearingHistory ? 'Đang xóa...' : 'Xóa lịch sử'}
-                  </AlertDialogAction>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center">
-                  Xóa lịch sử trò chuyện
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
       {/* AlertDialog xác nhận xóa thread */}
       <AlertDialog open={showDeleteThreadModal} onOpenChange={setShowDeleteThreadModal}>
         <AlertDialogContent>
