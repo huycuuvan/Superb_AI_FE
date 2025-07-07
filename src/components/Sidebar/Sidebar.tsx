@@ -18,7 +18,8 @@ import {
   Book,
   Key,
   MessageSquare,
-  Clock
+  Clock,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ import { adventurer } from '@dicebear/collection';
 import gsap from 'gsap';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 import { ApiMessage, Thread } from '@/types';
+import { RunningTasksBadge } from '@/components/RunningTasksBadge';
 
 
 interface SidebarProps {
@@ -93,7 +95,7 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
 
   // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
-  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds);
+  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds, 1, 1000);
   // Chỉ hiển thị mỗi agent 1 lần duy nhất (theo agent.id)
   const agents = Array.isArray(agentsData?.data)
     ? Array.from(
@@ -221,6 +223,8 @@ console.error('Lỗi khi đổi tên folder:', error);
     },
     { icon: Users, label: t('common.agents'), path: '/dashboard/agents' },
     { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks' },
+    // Thêm tab Scheduled Tasks
+    { icon: Calendar, label: 'Task theo lịch trình', path: '/dashboard/scheduled-tasks' },
     { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
@@ -228,7 +232,7 @@ console.error('Lỗi khi đổi tên folder:', error);
     ] : []),
     {
       label: 'Credential',
- icon: Key,
+      icon: Key,
       path: '/dashboard/credentials',
     },
   ];
@@ -282,6 +286,9 @@ console.log(agents);
       setIsClearingHistory(false);
     }
   };
+
+  // TODO: Lấy số task thường chưa hoàn thành (ví dụ: todo, in-progress) từ API hoặc state
+  const normalTasksCount = 0; // Thay bằng logic lấy số task thường chưa hoàn thành
 
   return (
     <>
@@ -352,7 +359,17 @@ console.log(agents);
               }
             >
               {item.icon && React.createElement(item.icon, { className: cn("sidebar-icon", !collapsed && "mr-2") })}
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <div className="flex items-center justify-between w-full">
+                  <span>{item.label}</span>
+                  {item.label === t('common.tasks') && normalTasksCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-destructive text-white rounded-full">
+                      {normalTasksCount}
+                    </span>
+                  )}
+                  {item.label === 'Task theo lịch trình' && <RunningTasksBadge showIcon={false} className="ml-2" />}
+                </div>
+              )}
             </NavLink>
           ))}
         </nav>

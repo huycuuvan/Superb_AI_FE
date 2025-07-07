@@ -41,6 +41,7 @@ import AgentProfilePage from '@/pages/AgentProfilePage';
 import PromptTemplatesPage from '@/pages/PromptTemplates';
 import CredentialsPage from '@/pages/Credentials';
 import DepartmentsPage from '@/pages/Departments';
+import ScheduledTasksPage from '@/pages/ScheduledTasks';
 
 const routes: RouteObject[] = [
   {
@@ -127,6 +128,10 @@ const routes: RouteObject[] = [
       {
         path: 'departments',
         element: <DepartmentsPage />,
+      },
+      {
+        path: 'scheduled-tasks',
+        element: <ScheduledTasksPage />,
       },
     ],
   },

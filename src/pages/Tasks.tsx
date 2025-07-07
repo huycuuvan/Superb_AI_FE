@@ -10,7 +10,8 @@ import { getTasks, createTask, updateTask, deleteTask, CreateTaskRequest, Update
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { agents } from "@/services/mockData";
+import { useQuery as useQueryAgents } from '@tanstack/react-query';
+import { getAgents } from '@/services/api';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,14 @@ export const Tasks = () => {
   });
 
   const tasks = tasksData?.data || [];
+
+  // Lấy agents từ API thật (chuẩn phân trang mới)
+  const { data: agentsData } = useQueryAgents({
+    queryKey: ['agents', workspace?.id],
+    queryFn: () => getAgents( 1, 100),
+    enabled: !!workspace?.id,
+  });
+  const agents = (agentsData && agentsData.data && Array.isArray(agentsData.data.data)) ? agentsData.data.data : [];
 
   const handleSubmitTask = async (taskData: CreateTaskRequest) => {
     try {
@@ -236,9 +245,8 @@ const TaskList = ({ tasks, isLoading }: { tasks: Task[], isLoading: boolean }) =
 };
 
 const TaskCard = ({ task }: { task: Task }) => {
-  const assignedAgent = task.assignedAgentId 
-    ? agents.find(agent => agent.id === task.assignedAgentId) 
-    : undefined;
+  // Không có agents, chỉ hiển thị Unassigned
+  const assignedAgent = undefined;
   
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) {

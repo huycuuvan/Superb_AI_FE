@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,6 +25,8 @@ interface FolderType {
   description?: string;
 }
 
+const PAGE_SIZE = 12;
+
 const FolderDetail = () => {
   const { folderId } = useParams<{ folderId: string }>();
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
@@ -40,6 +42,10 @@ const FolderDetail = () => {
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedAgentFolderId, setSelectedAgentFolderId] = useState<string | undefined>(undefined);
   const { canCreateAgent } = useAuth(); // Lấy canCreateAgent từ useAuth
+
+  const [page, setPage] = useState(1);
+  const [allAgents, setAllAgents] = useState([]);
+  const loaderRef = useRef(null);
 
   // Logic fetch folder detail
   useEffect(() => {
@@ -69,16 +75,48 @@ const FolderDetail = () => {
     }
   }, [folderId, workspace?.id, isLoadingWorkspace]);
 
-  // Thay thế logic fetch agents bằng hook by-folders
+  // Thay thế logic fetch agents bằng hook by-folders với phân trang
   const folderIds = folderId ? [folderId] : [];
-  const { data: agentsByFoldersData, isLoading: loadingAgents } = useAgentsByFolders(folderIds);
+  const { data: agentsByFoldersData, isLoading: loadingAgents } = useAgentsByFolders(folderIds, page, PAGE_SIZE);
   const folderAgentsGroup = Array.isArray(agentsByFoldersData?.data)
     ? agentsByFoldersData.data.find(group => group.id === folderId)
     : null;
   const agents = folderAgentsGroup?.agents || [];
 
+  // Gộp dữ liệu các trang
+  useEffect(() => {
+    if (agents && agents.length > 0) {
+      setAllAgents(prev => {
+        // Tránh trùng lặp agent khi refetch
+        const ids = new Set(prev.map(a => a.id));
+        return [...prev, ...agents.filter(a => !ids.has(a.id))];
+      });
+    }
+  }, [agents]);
+
+  // Reset khi folderId đổi
+  useEffect(() => {
+    setAllAgents([]);
+    setPage(1);
+  }, [folderId]);
+
+  // Intersection Observer để load thêm agent khi cuộn tới cuối
+  useEffect(() => {
+    if (!loaderRef.current) return;
+    const observer = new window.IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && !loadingAgents && agents.length === PAGE_SIZE) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 1 }
+    );
+    observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [loadingAgents, agents]);
+
   // Filter agents based on search query
-  const filteredAgents = agents.filter(agent =>
+  const filteredAgents = allAgents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (agent.role_description && agent.role_description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -151,7 +189,7 @@ const FolderDetail = () => {
 
       {/* Agents List Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        {loadingAgents ? (
+        {loadingAgents && allAgents.length === 0 ? (
           // Loading skeletons
           Array.from({ length: 4 }).map((_, idx) => (
             <Skeleton key={idx} className={`h-32 md:h-40 rounded-xl ${theme === 'teampal-pink' ? 'bg-teampal-100' : theme === 'blue' ? 'bg-blue-100' : theme === 'purple' ? 'bg-purple-100' : 'bg-muted'}`} />
@@ -212,6 +250,9 @@ const FolderDetail = () => {
             </Card>
           ))
         )}
+        {/* Loader để IntersectionObserver quan sát */}
+        <div ref={loaderRef} style={{ height: 40 }} />
+        {loadingAgents && allAgents.length > 0 && <div className="col-span-full text-center py-2">Đang tải thêm...</div>}
       </div>
 
       {/* Add Agent Dialog */}

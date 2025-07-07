@@ -31,6 +31,9 @@ import { adventurer  } from '@dicebear/collection';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
+// Thêm phân trang FE
+const PAGE_SIZE = 10;
+
 export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { theme } = useTheme();
@@ -47,16 +50,23 @@ export const Agents = () => {
   const { canCreateAgent } = useAuth();
   const queryClient = useQueryClient();
   const [editedTemperature, setEditedTemperature] = useState('0.8');
+  // State cho phân trang
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['agents', workspace?.id],
-    queryFn: () => getAgents(workspace?.id || ''),
-    enabled: !!workspace?.id, // Only fetch if workspaceId is available
+    queryKey: ['agents', workspace?.id, page],
+    queryFn: () => getAgents(page, 10),
+    enabled: !!workspace?.id,
   });
 
-  // Ensure data.data is an array before processing
-  const agentsData: Agent[] = Array.isArray(data?.data) ? data?.data : [];
-
+  // Lấy agents từ data.data.data (BE trả về dạng phân trang)
+  let agentsData: Agent[] = [];
+  let pagination: any = undefined;
+  if (data && typeof data === 'object' && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    agentsData = Array.isArray(data.data.data) ? data.data.data : [];
+    pagination = data.data.pagination;
+  }
+  
   // Group agents by category
   const categories = Array.from(new Set(agentsData.map(agent => agent.category || 'Other')));
   
@@ -247,6 +257,29 @@ export const Agents = () => {
       ) : (
         <div className="text-center py-10 text-muted-foreground">
           {searchQuery ? 'Không tìm thấy agent nào' : 'Chưa có agent nào trong workspace này'}
+        </div>
+      )}
+
+      {/* Phân trang ở cuối */}
+      {pagination && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <Button
+            variant="outline"
+            disabled={!pagination.has_prev || page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Trang trước
+          </Button>
+          <span>
+            Trang {pagination.page} / {pagination.total_pages}
+          </span>
+          <Button
+            variant="outline"
+            disabled={!pagination.has_next || page === pagination.total_pages}
+            onClick={() => setPage(page + 1)}
+          >
+            Trang sau
+          </Button>
         </div>
       )}
 

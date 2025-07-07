@@ -75,17 +75,15 @@ export const AddTaskDialog = ({ onClose, onSubmit, initialData }: AddTaskDialogP
 
   useEffect(() => {
     const fetchAgents = async () => {
-      if (workspace?.id) {
         try {
-          const response = await getAgents(workspace.id);
-          setAgents(response.data || []);
+          const response = await getAgents(1, 100);
+          setAgents(Array.isArray(response.data?.data) ? response.data.data : []);
         } catch (error) {
           console.error('Lỗi khi tải danh sách agents:', error);
         }
-      }
     };
     fetchAgents();
-  }, [workspace?.id]);
+  }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

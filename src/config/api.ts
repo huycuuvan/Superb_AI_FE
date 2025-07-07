@@ -1,5 +1,7 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+export const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000/ws";
+
 export const API_ENDPOINTS = {
   auth: {
     login: `${API_BASE_URL}/auth/login`,

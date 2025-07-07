@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,11 +11,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Database, CheckCircle } from 'lucide-react'; // Assuming these icons are available
 import * as XLSX from 'xlsx';
 import { useTheme } from '@/hooks/useTheme';
+// Thêm toast
+import { useToast } from '@/hooks/use-toast';
+import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
+import { createScheduledTask } from '@/services/api';
 
 const AgentTaskConfig = () => {
-  const { agentId } = useParams<{ agentId: string }>();
+  const { agentId: agentIdParam, taskId: taskIdParam } = useParams<{ agentId: string, taskId?: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { theme } = useTheme();
+  const { toast } = useToast();
+  const { workspace } = useSelectedWorkspace();
   const isDark = theme === 'dark';
+
+  // Nhận inputData từ location.state nếu có
+  const inputDataFromState = location.state?.inputData;
+  const agentId = location.state?.agentId || agentIdParam;
+  const taskId = location.state?.taskId || taskIdParam;
 
   // State for scheduler settings
   const [frequency, setFrequency] = useState('daily'); // Default to Daily
@@ -30,27 +43,100 @@ const AgentTaskConfig = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [excelData, setExcelData] = useState<Array<Record<string, any>>>([]); // State to store parsed Excel data
 
-  // Define steps for the indicator
+  // State cho dữ liệu đầu vào (ví dụ prompt)
+  const [inputPrompt, setInputPrompt] = useState(inputDataFromState?.prompt || '');
+  // Thêm state cho name, description
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Stepper
   const steps = [
     { label: 'Scheduler Settings', icon: Clock },
     { label: 'Select Input Data', icon: Database },
     { label: 'Review and Confirm', icon: CheckCircle },
   ];
-
-  const [currentStep, setCurrentStep] = useState(0); // State to manage current step
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const handleDaySelect = (day: string) => {
-    setSelectedDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    setSelectedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
   };
 
+  // Validate từng bước
+  const validateStep = (step: number) => {
+    if (step === 0) {
+      if (!frequency || !time) return false;
+      if ((frequency === 'daily' || frequency === 'weekly') && selectedDays.length === 0) return false;
+      if (!timeLimit || isNaN(Number(timeLimit)) || Number(timeLimit) <= 0) return false;
+      return true;
+    }
+    if (step === 1) {
+      if (inputPrompt.trim() === '') return false;
+      if (!name.trim() || !description.trim()) return false;
+      // KHÔNG bắt buộc upload file nữa
+      return true;
+    }
+    return true;
+  };
+
+  // Điều hướng bước tiếp theo
+  const handleNext = () => {
+    if (!validateStep(currentStep)) {
+      toast({ title: 'Thiếu thông tin', description: 'Vui lòng nhập đủ thông tin trước khi tiếp tục.', variant: 'destructive' });
+      return;
+    }
+    setCurrentStep(currentStep + 1);
+  };
+
+  // Điều hướng bước trước
+  const handlePrev = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  // Xử lý lưu task (gọi API thật)
+  const handleSaveTask = async () => {
+    if (!validateStep(1)) {
+      toast({ title: 'Thiếu thông tin', description: 'Vui lòng nhập đủ thông tin trước khi lưu.', variant: 'destructive' });
+      return;
+    }
+    if (!workspace?.id || !agentId || !taskId) {
+      toast({ title: 'Thiếu thông tin', description: 'Thiếu workspace, agent hoặc task.', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      // Build schedule_config
+      const schedule_config: any = { time };
+      if (frequency === 'weekly') schedule_config.day_of_week = selectedDays.map(day => daysOfWeek.indexOf(day));
+      if (frequency === 'monthly') schedule_config.day_of_month = 1; // Có thể cho user chọn
+      // Build payload
+      const payload = {
+        agent_id: agentId,
+        workspace_id: workspace.id,
+        task_id: taskId,
+        name: name.trim(),
+        description: description.trim(),
+        schedule_type: frequency as 'daily' | 'weekly' | 'monthly' | 'custom',
+        schedule_config,
+        auto_create_conversation: true,
+        conversation_template: {
+          input_data: { prompt: inputPrompt }
+        }
+      };
+      await createScheduledTask(payload);
+      toast({ title: 'Thành công', description: 'Đã lưu cấu hình Scheduled Task!' });
+      navigate('/dashboard/scheduled-tasks');
+    } catch (e) {
+      toast({ title: 'Lỗi', description: 'Có lỗi xảy ra khi lưu task.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCancel = () => {
-    console.log('Cancelling configuration');
-    // Add cancel logic / navigation here
+    navigate(-1);
   };
 
   const handleExcelFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,34 +144,22 @@ const AgentTaskConfig = () => {
     if (file) {
       setExcelFile(file);
       const reader = new FileReader();
-
       reader.onload = (e) => {
         const binaryStr = e.target?.result;
         if (binaryStr) {
           const workbook = XLSX.read(binaryStr, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0]; // Assuming the first sheet
+          const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const data = XLSX.utils.sheet_to_json(worksheet);
           setExcelData(data);
-          console.log('Excel data parsed:', data);
         }
       };
-
       reader.readAsBinaryString(file);
-
-      console.log('Excel file selected:', file.name);
     }
   };
 
-  // Dummy data for preview table and column mapping selects
-  const previewData = [
-    { "Product Name": "Eco-Friendly Water Bottle", "Description": "Durable stainless steel bottle...", "Photo Link": "https://...", "Keywords": "eco, sustainable, water, bottle, stainless steel" },
-    { "Product Name": "Organic Cotton T-Shirt", "Description": "Soft, breathable organic cotton...", "Photo Link": "https://...", "Keywords": "organic, cotton, t-shirt, apparel, soft" },
-    // Add more dummy data as needed
-  ];
-
-  // Use excelData for preview if available, otherwise use dummyData
-  const dataToPreview = excelData.length > 0 ? excelData : previewData;
+  // Chỉ preview nếu có dữ liệu thực tế từ file upload
+  const dataToPreview = excelData;
   const dataColumns = Object.keys(dataToPreview.length > 0 ? dataToPreview[0] : {});
 
   return (
@@ -202,9 +276,10 @@ const AgentTaskConfig = () => {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 mt-auto">
-            <Button variant="outline">Cancel</Button>
-              {/* UPDATED: Sử dụng class gradient */}
-              <Button className="button-gradient-light dark:button-gradient-dark text-white">Save Settings</Button>
+              <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+              <Button className="button-gradient-light dark:button-gradient-dark text-white" onClick={handleNext} disabled={!validateStep(0)}>
+                Next
+              </Button>
             </div>
           </>
         )}
@@ -214,6 +289,40 @@ const AgentTaskConfig = () => {
             <div className="flex-shrink-0">
               <h1 className="text-2xl font-bold mb-2 text-foreground">Select Input Data</h1>
               <p className="text-muted-foreground">Select where your content data comes from.</p>
+              {/* Thêm input cho prompt nếu có inputDataFromState */}
+              {inputDataFromState && (
+                <div className="mt-4">
+                  <Label htmlFor="input-prompt">Prompt từ lần chạy trước</Label>
+                  <Input
+                    id="input-prompt"
+                    value={inputPrompt}
+                    onChange={e => setInputPrompt(e.target.value)}
+                    className="bg-background text-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Đã tự động điền prompt từ lần chạy trước. Bạn có thể chỉnh sửa lại nếu muốn.</p>
+                </div>
+              )}
+              {/* Thêm input cho name, description */}
+              <div className="mt-4">
+                <Label htmlFor="task-name">Tên lịch trình <span className="text-red-500">*</span></Label>
+                <Input
+                  id="task-name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Nhập tên lịch trình"
+                  className="bg-background text-foreground"
+                />
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="task-desc">Mô tả <span className="text-red-500">*</span></Label>
+                <Input
+                  id="task-desc"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Nhập mô tả cho lịch trình"
+                  className="bg-background text-foreground"
+                />
+              </div>
 
               <div className="mt-4 flex space-x-2">
                 <Button 
@@ -291,63 +400,64 @@ const AgentTaskConfig = () => {
               )}
             </div>
 
-            {/* Data Preview Section (Conditional) */}
-            {dataToPreview.length > 0 && (
+            {/* Data Preview & Column Mapping chỉ hiển thị nếu có dữ liệu thực tế */}
+            {dataToPreview.length > 0 ? (
               <div className="mt-6 space-y-4 flex-1 flex flex-col flex-shrink-0">
-                 <h2 className="text-xl font-semibold text-foreground">Data Preview</h2>
-                 <div className="overflow-auto flex-shrink-0 max-h-[200px]">
-                   <table className="w-full table-auto border-collapse border border-border">
-                      <thead>
-                         <tr className="bg-muted text-muted-foreground">
-                      {dataColumns.map(col => (
-                               <th key={col} className="px-4 py-2 text-left text-sm font-medium border border-border">{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                      <tbody>
-                         {dataToPreview.slice(0, 5).map((row, rowIndex) => (
-                            <tr key={rowIndex} className="even:bg-background odd:bg-card text-card-foreground">
+                <h2 className="text-xl font-semibold text-foreground">Data Preview</h2>
+                <div className="overflow-auto flex-shrink-0 max-h-[200px]">
+                  <table className="w-full table-auto border-collapse border border-border">
+                    <thead>
+                      <tr className="bg-muted text-muted-foreground">
                         {dataColumns.map(col => (
-                                  <td key={`${rowIndex}-${col}`} className="px-4 py-2 text-sm border border-border overflow-hidden text-ellipsis whitespace-nowrap">{String(row[col])}</td>
+                          <th key={col} className="px-4 py-2 text-left text-sm font-medium border border-border">{col}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-                 {/* Column Mapping Section */}
-                 <div className="space-y-4 flex-shrink-0">
-                    <h2 className="text-xl font-semibold text-foreground">Column Mapping</h2>
-                    <p className="text-sm text-muted-foreground">Map your data columns to the agent's required fields.</p>
-                    {/* Placeholder for mapping inputs */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {/* Example mapping input */}
-                <div>
-                          <Label htmlFor="product-name-mapping">Product Name</Label>
-                  <Select>
-                             <SelectTrigger id="product-name-mapping" className="bg-background text-foreground border-border">
-                                <SelectValue placeholder="Select column" />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {dataColumns.map(col => (
-                        <SelectItem key={col} value={col}>{col}</SelectItem>
+                    </thead>
+                    <tbody>
+                      {dataToPreview.slice(0, 5).map((row, rowIndex) => (
+                        <tr key={rowIndex} className="even:bg-background odd:bg-card text-card-foreground">
+                          {dataColumns.map(col => (
+                            <td key={`${rowIndex}-${col}`} className="px-4 py-2 text-sm border border-border overflow-hidden text-ellipsis whitespace-nowrap">{String(row[col])}</td>
+                          ))}
+                        </tr>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </tbody>
+                  </table>
                 </div>
-                       {/* Add more mapping inputs as needed based on agent requirements */}
-                </div>
+                {/* Column Mapping Section */}
+                <div className="space-y-4 flex-shrink-0">
+                  <h2 className="text-xl font-semibold text-foreground">Column Mapping</h2>
+                  <p className="text-sm text-muted-foreground">Map your data columns to the agent's required fields.</p>
+                  {/* Placeholder for mapping inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Example mapping input */}
+                    <div>
+                      <Label htmlFor="product-name-mapping">Product Name</Label>
+                      <Select>
+                        <SelectTrigger id="product-name-mapping" className="bg-background text-foreground border-border">
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dataColumns.map(col => (
+                            <SelectItem key={col} value={col}>{col}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Add more mapping inputs as needed based on agent requirements */}
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="mt-6 text-muted-foreground text-sm">Vui lòng upload file để xem trước dữ liệu.</div>
             )}
 
              {/* Navigation Buttons */}
             <div className="flex justify-between gap-4 mt-auto flex-shrink-0">
-              <Button variant="outline" onClick={() => setCurrentStep(0)} className="border-border text-foreground hover:bg-muted">
+              <Button variant="outline" onClick={handlePrev} className="border-border text-foreground hover:bg-muted" disabled={loading}>
                 Previous
               </Button>
-              <Button onClick={() => setCurrentStep(2)} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
+              <Button onClick={handleNext} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`} disabled={!validateStep(1)}>
                 Next
               </Button>
             </div>
@@ -365,20 +475,32 @@ const AgentTaskConfig = () => {
                 <CardTitle>Configuration Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-muted-foreground">
-                <p><strong>Scheduler:</strong> {frequency} at {time} (Days: {selectedDays.join(', ')})</p>
-                <p><strong>Data Source:</strong> {selectedDataSource === 'csv' ? 'CSV Upload' : selectedDataSource === 'excel' ? 'Excel Upload' : selectedDataSource === 'google-sheets' ? 'Google Sheets' : 'API'}</p>
-                {/* Add more summary details based on selected data source and mapping */}
-                <p><em>(More details will be shown here based on your selections)</em></p>
+                <p><strong>Scheduler:</strong> {frequency} at {time} (Days: {selectedDays.length > 0 ? selectedDays.join(', ') : 'Chưa chọn'})</p>
+                <p><strong>Time Limit:</strong> {timeLimit} phút</p>
+                <p><strong>Timezone:</strong> {useTimezone ? 'Có' : 'Không'}</p>
+                <p><strong>Prompt:</strong> {inputPrompt ? inputPrompt : <span className="italic">Chưa nhập</span>}</p>
+                <p><strong>Data Source:</strong> {
+                  selectedDataSource === 'csv' ? 'CSV Upload' :
+                  selectedDataSource === 'excel' ? 'Excel Upload' :
+                  selectedDataSource === 'google-sheets' ? 'Google Sheets' : 'API'
+                }</p>
+                {(selectedDataSource === 'csv' || selectedDataSource === 'excel') && excelFile && (
+                  <p><strong>File đã upload:</strong> {excelFile.name} ({excelData.length} dòng)</p>
+                )}
+                {(selectedDataSource === 'csv' || selectedDataSource === 'excel') && !excelFile && (
+                  <p><strong>File đã upload:</strong> <span className="italic">Chưa upload</span></p>
+                )}
+                {/* Có thể bổ sung mapping info nếu có */}
               </CardContent>
             </Card>
 
             {/* Action Buttons */}
             <div className="flex justify-between gap-4 mt-auto flex-shrink-0">
-              <Button variant="outline" onClick={() => setCurrentStep(1)} className="border-border text-foreground hover:bg-muted">
+              <Button variant="outline" onClick={handlePrev} className="border-border text-foreground hover:bg-muted" disabled={loading}>
                 Previous
               </Button>
-              <Button  className="teampal-button">
-                Save Task
+              <Button className="teampal-button" onClick={handleSaveTask} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Task'}
               </Button>
             </div>
           </div>

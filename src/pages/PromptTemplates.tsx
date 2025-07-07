@@ -79,6 +79,14 @@ function getTemplateTypeLabel(type: string) {
   return type;
 }
 
+// Helper lấy category string an toàn
+function getCategoryString(category: unknown): string {
+  if (category && typeof category === 'object' && category !== null && 'String' in category) {
+    return String((category as { String: string }).String);
+  }
+  return category ? String(category) : '';
+}
+
 export default function PromptTemplatesPage() {
   const { user } = useAuth();
   const { workspace } = useSelectedWorkspace();
@@ -151,8 +159,10 @@ export default function PromptTemplatesPage() {
 
   const fetchAgents = async () => {
     try {
-      const res = await getAgents(workspace?.id || '');
-      setAgents(res.data.map((a: Agent) => ({ id: a.id, name: a.name })));
+      const res = await getAgents(1, 100);
+      // Fix: lấy đúng mảng agents từ res.data.data
+      const agentArr = (res.data && Array.isArray(res.data.data)) ? res.data.data : [];
+      setAgents(agentArr.map((a: Agent) => ({ id: String(a.id), name: a.name })));
     } catch (e) {
       setAgents([]);
     }
@@ -274,7 +284,7 @@ export default function PromptTemplatesPage() {
                     <td className="px-3 py-2 font-semibold max-w-[180px] truncate">{template.name}</td>
                     <td className="px-3 py-2 max-w-[140px] truncate">{getAgentName(template.agent_id)}</td>
                     <td className="px-3 py-2">{getTemplateTypeLabel(template.template_type)}</td>
-                    <td className="px-3 py-2 max-w-[120px] truncate">{template.category}</td>
+                    <td className="px-3 py-2 max-w-[120px] truncate">{getCategoryString(template.category)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{new Date(template.created_at).toLocaleString()}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{new Date(template.updated_at).toLocaleString()}</td>
                     <td className="px-3 py-2 text-center">

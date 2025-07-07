@@ -417,7 +417,10 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
               {String(run.status) === 'completed' && (
                 <div className="pt-4 border-t border-border">
                   <Button 
-                    onClick={() => navigate(`/dashboard/agents/${agentId}/task/${run.task_id}/config`)}
+                    onClick={() => navigate(
+                      `/dashboard/agents/${agentId}/task/${run.task_id}/config`,
+                      { state: { inputData: run.input_data } }
+                    )}
                     className="w-full button-gradient-light dark:button-gradient-dark text-white"
                   >
                     <Settings className="mr-2 h-4 w-4" />

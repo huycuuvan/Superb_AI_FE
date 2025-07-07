@@ -19,23 +19,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreateTaskRequest, TaskType, UpdateTaskRequest } from '@/services/taskService';
+import { TaskType, UpdateTaskRequest } from '@/services/taskService';
 import { X, Upload } from 'lucide-react';
 import { getAgents } from '@/services/api';
-import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { Agent, Task } from '@/types';
+import { Agent, ApiTaskType } from '@/types';
 import { toast } from "sonner";
 
 interface EditTaskDialogProps {
-  task: Task;
+  task: ApiTaskType;
   onClose: () => void;
   onSubmit: (taskData: UpdateTaskRequest) => Promise<void>;
 }
 
 export const EditTaskDialog = ({ task, onClose, onSubmit }: EditTaskDialogProps) => {
   const { t } = useLanguage();
-  const { workspace } = useSelectedWorkspace();
-  const [name, setName] = useState(task.name || task.title || '');
+  const [name, setName] = useState(task.name || '');
   const [description, setDescription] = useState(task.description || '');
   const [taskType, setTaskType] = useState<TaskType>('pretrained_configurable');
   const [executionConfig, setExecutionConfig] = useState('');
@@ -54,17 +52,15 @@ export const EditTaskDialog = ({ task, onClose, onSubmit }: EditTaskDialogProps)
 
   useEffect(() => {
     const fetchAgents = async () => {
-      if (workspace?.id) {
         try {
-          const response = await getAgents(workspace.id);
-          setAgents(response.data || []);
+          const response = await getAgents(1, 100);
+          setAgents(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
           console.error('Lỗi khi tải danh sách agents:', error);
         }
-      }
     };
     fetchAgents();
-  }, [workspace?.id]);
+  }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

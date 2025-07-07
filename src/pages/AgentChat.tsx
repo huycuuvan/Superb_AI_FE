@@ -37,6 +37,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import LogAgentThinking from '@/components/LogAgentThinking';
 import { useInView } from 'react-intersection-observer';
 import React from 'react';
+import { WS_URL } from '@/config/api';
 
 interface TaskInput {
   id: string;
@@ -225,7 +226,7 @@ const AgentChat = () => {
         return;
       }
 
-      const wsUrl = `wss://aiemployee.site/ws?token=${token}&thread_id=${currentThread}`;
+      const wsUrl = `${WS_URL}?token=${token}&thread_id=${currentThread}`;
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {

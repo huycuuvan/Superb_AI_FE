@@ -91,10 +91,12 @@ export const createWorkspace = async (workspaceData: {
 };
 
 export const getAgents = async (
-  workspaceId: string
-): Promise<{ data: Agent[] }> => {
+  page: number = 1,
+  page_size: number = 10
+): Promise<any> => {
   const token = localStorage.getItem("token");
-  const res = await fetch(API_ENDPOINTS.agents.list, {
+  const url = `${API_BASE_URL}/agents/all?page=${page}&page_size=${page_size}`;
+  const res = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -630,27 +632,19 @@ export const getTasksByAgentId = async (
 
   return response.json();
 };
-// New function to get tasks for a specific agent
-export const getAgentTasks = async (
-  agentId: string
-): Promise<{ data: any[] }> => {
-  // TODO: Thay 'any[]' bằng kiểu dữ liệu chính xác cho tasks
+// Lấy danh sách task theo agentId
+export const getAgentTasks = async (agentId: string) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
-
-  const response = await fetch(API_ENDPOINTS.tasks.byAgent(agentId), {
+  const res = await fetch(`${API_BASE_URL}/tasks/agent/${agentId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
-
-  if (!response.ok) {
-    await handleApiError(response);
-  }
-
-  return response.json();
+  if (!res.ok) throw new Error("Lỗi khi lấy danh sách task");
+  return res.json();
 };
 
 export const createTask = async (
@@ -1368,7 +1362,9 @@ export const deleteCredential = async (id: string) => {
 
 // Lấy agents theo nhiều folder
 export const getAgentsByFolders = async (
-  folderIds: string[]
+  folderIds: string[],
+  page: number = 1,
+  pageSize: number = 10
 ): Promise<{ data: Agent[] }> => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
@@ -1378,7 +1374,7 @@ export const getAgentsByFolders = async (
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ folder_ids: folderIds }),
+    body: JSON.stringify({ folder_ids: folderIds, page, page_size: pageSize }),
   });
   if (!res.ok) {
     await handleApiError(res);
@@ -1449,4 +1445,346 @@ export const deleteThread = async (
     await handleApiError(res);
   }
   return res.json();
+};
+
+// ========== SCHEDULED TASKS API ==========
+
+// Types cho Scheduled Tasks
+export interface ScheduledTask {
+  id: string;
+  agent_id: string;
+  workspace_id: string;
+  task_id: string;
+  name: string;
+  description: string;
+  schedule_type: "daily" | "weekly" | "monthly" | "custom";
+  schedule_config: {
+    time?: string;
+    day_of_week?: number;
+    day_of_month?: number;
+    cron_expression?: string;
+  };
+  auto_create_conversation: boolean;
+  conversation_template?: {
+    input_data: Record<string, any>;
+  };
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RunningTask {
+  id: string;
+  task_id: string;
+  thread_id: string;
+  user_id: string;
+  start_time: string;
+  status: "running" | "completed" | "failed";
+  is_scheduled: boolean;
+  created_at: string;
+}
+
+export interface CreateScheduledTaskRequest {
+  agent_id: string;
+  workspace_id: string;
+  task_id: string;
+  name: string;
+  description: string;
+  schedule_type: "daily" | "weekly" | "monthly" | "custom";
+  schedule_config: {
+    time?: string;
+    day_of_week?: number;
+    day_of_month?: number;
+    cron_expression?: string;
+  };
+  auto_create_conversation: boolean;
+  conversation_template?: {
+    input_data: Record<string, any>;
+  };
+}
+
+export interface UpdateScheduledTaskRequest {
+  name?: string;
+  description?: string;
+  schedule_config?: {
+    time?: string;
+    day_of_week?: number;
+    day_of_month?: number;
+    cron_expression?: string;
+  };
+  is_enabled?: boolean;
+  conversation_template?: {
+    input_data: Record<string, any>;
+  };
+}
+
+// 1. Lấy số lượng task đang chạy
+export const getRunningTasksCount = async (): Promise<{
+  data: { running_count: number };
+}> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/tasks/running/count`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 2. Lấy danh sách task đang chạy
+export const getRunningTasksList = async (): Promise<{
+  data: RunningTask[];
+}> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/tasks/running/list`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 3. Tạo task theo lịch trình
+export const createScheduledTask = async (
+  taskData: CreateScheduledTaskRequest
+): Promise<{ data: ScheduledTask }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/tasks/scheduled`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 4. Lấy danh sách scheduled tasks
+export const getScheduledTasks = async (): Promise<{
+  data: ScheduledTask[];
+}> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(`${API_BASE_URL}/tasks/scheduled`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 5. Lấy chi tiết 1 scheduled task
+export const getScheduledTaskById = async (
+  scheduledTaskId: string
+): Promise<{ data: ScheduledTask }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 6. Chỉnh sửa scheduled task
+export const updateScheduledTask = async (
+  scheduledTaskId: string,
+  taskData: UpdateScheduledTaskRequest
+): Promise<{ data: ScheduledTask }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(taskData),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 7. Bật scheduled task
+export const enableScheduledTask = async (
+  scheduledTaskId: string
+): Promise<{ message: string }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}/enable`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 7. Tắt scheduled task
+export const disableScheduledTask = async (
+  scheduledTaskId: string
+): Promise<{ message: string }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}/disable`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 8. Chạy ngay 1 scheduled task
+export const runScheduledTaskNow = async (
+  scheduledTaskId: string
+): Promise<{
+  message: string;
+  status: number;
+  task_run_id: string;
+  thread_id: string;
+}> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}/run-now`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 9. Lấy lịch sử thực thi của 1 scheduled task
+export const getScheduledTaskRuns = async (
+  scheduledTaskId: string
+): Promise<{ data: TaskRun[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}/runs`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 10. Xóa scheduled task
+export const deleteScheduledTask = async (
+  scheduledTaskId: string
+): Promise<{ message: string }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
 };

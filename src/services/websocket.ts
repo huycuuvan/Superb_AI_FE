@@ -80,12 +80,10 @@ class WebSocketService {
           const data = JSON.parse(event.data) as WebSocketMessage;
           console.log("📥 Nhận tin nhắn WebSocket:", data);
 
-          const { type, payload } = data;
+          const { type } = data;
           if (this.messageHandlers.has(type)) {
             console.log(`🔄 Xử lý tin nhắn loại: ${type}`);
-            this.messageHandlers
-              .get(type)
-              ?.forEach((handler) => handler(payload));
+            this.messageHandlers.get(type)?.forEach((handler) => handler(data));
           } else {
             console.log(`⚠️ Không tìm thấy handler cho loại tin nhắn: ${type}`);
           }
@@ -184,6 +182,74 @@ class WebSocketService {
 
   public getConnectionState(): ConnectionState {
     return this.connectionState;
+  }
+
+  // Join vào WebSocket thread để nhận updates cho scheduled task
+  public joinThread(threadId: string) {
+    console.log(`🔗 [DEBUG] FE join thread_id:`, threadId);
+    this.send({
+      type: "join",
+      thread_id: threadId,
+    });
+  }
+
+  // Xử lý message cho scheduled task run-now
+  public handleScheduledTaskStatus(
+    callback: (data: {
+      thread_id: string;
+      task_run_id: string;
+      status: string;
+      error?: string;
+      message?: string;
+    }) => void
+  ) {
+    this.subscribe("status", (payload) => {
+      try {
+        // Xử lý payload là object có content
+        if (payload && typeof payload === "object" && "content" in payload) {
+          const data = payload as {
+            thread_id: string;
+            content: string;
+            timestamp: string;
+          };
+          const content = JSON.parse(data.content);
+          console.log("[DEBUG] FE nhận content:", content);
+          if (content.task_run_id) {
+            callback({
+              thread_id: data.thread_id,
+              task_run_id: content.task_run_id,
+              status: content.status,
+              error: content.error,
+              message: content.message,
+            });
+          }
+        } else if (typeof payload === "string") {
+          // Nếu payload là string (có thể là content luôn)
+          const content = JSON.parse(payload);
+          console.log("[DEBUG] FE nhận content:", content);
+          if (content.task_run_id) {
+            callback({
+              thread_id: "", // Không có thread_id trong trường hợp này
+              task_run_id: content.task_run_id,
+              status: content.status,
+              error: content.error,
+              message: content.message,
+            });
+          }
+        } else {
+          console.warn(
+            "[DEBUG] Không nhận diện được payload WebSocket:",
+            payload
+          );
+        }
+      } catch (error) {
+        console.error("❌ Lỗi khi xử lý scheduled task status:", error);
+      }
+    });
+    // Log toàn bộ message nhận được từ server
+    this.subscribe("*", (payload) => {
+      console.log("[DEBUG] FE nhận message từ server:", payload);
+    });
   }
 }
 

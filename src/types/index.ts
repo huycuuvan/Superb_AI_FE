@@ -87,7 +87,9 @@ export interface TaskRun {
   error_message?: string;
   started_at: string;
   start_time: string;
+  end_time?: string;
   completed_at?: string;
+  is_scheduled?: boolean;
   created_at: string;
   updated_at: string;
 }

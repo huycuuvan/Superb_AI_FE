@@ -68,7 +68,8 @@ const Dashboard = () => {
   const { t } = useTranslation();
 
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
-  const { data: agentsByFoldersData, isLoading: isLoadingAgents, error: agentsError } = useAgentsByFolders(folderIds);
+  // Lấy hết agent một lần với page_size lớn
+  const { data: agentsByFoldersData, isLoading: isLoadingAgents, error: agentsError } = useAgentsByFolders(folderIds, 1, 1000);
   let foldersWithAgents: FolderWithAgents[] = [];
   if (Array.isArray(agentsByFoldersData?.data) && agentsByFoldersData.data.length > 0 && Array.isArray(agentsByFoldersData.data[0].agents)) {
     foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];

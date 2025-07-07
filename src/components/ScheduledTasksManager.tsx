@@ -1,0 +1,437 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'react-hot-toast';
+import { 
+  Plus, 
+  MoreVertical, 
+  Play, 
+  Pause, 
+  Edit, 
+  Trash2, 
+  Clock, 
+  Calendar,
+  Zap,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2
+} from 'lucide-react';
+import { 
+  useScheduledTasks, 
+  useToggleScheduledTask, 
+  useRunScheduledTaskNow, 
+  useDeleteScheduledTask 
+} from '@/hooks/useScheduledTasks';
+import { ScheduledTask } from '@/services/api';
+import { websocketService } from '@/services/websocket';
+import { CreateScheduledTaskDialog } from './CreateScheduledTaskDialog';
+import { EditScheduledTaskDialog } from './EditScheduledTaskDialog';
+import { WS_URL } from '@/config/api'; // Thêm dòng này nếu chưa có
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+
+export const ScheduledTasksManager: React.FC = () => {
+  const [selectedTask, setSelectedTask] = useState<ScheduledTask | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [runningTasks, setRunningTasks] = useState<Set<string>>(new Set());
+  const [taskRunMapping, setTaskRunMapping] = useState<Record<string, { thread_id: string; task_run_id: string }>>({});
+  const taskRunMappingRef = useRef(taskRunMapping);
+  useEffect(() => { taskRunMappingRef.current = taskRunMapping; }, [taskRunMapping]);
+  const [taskRunStatus, setTaskRunStatus] = useState<Record<string, { status: 'idle' | 'running' | 'failed' | 'success', error?: string }>>({});
+
+  const { data: scheduledTasksData, isLoading, error } = useScheduledTasks();
+  const toggleTask = useToggleScheduledTask();
+  const runTaskNow = useRunScheduledTaskNow();
+  const deleteTask = useDeleteScheduledTask();
+
+  const scheduledTasks = scheduledTasksData?.data || [];
+
+  const handleToggleTask = (taskId: string, enabled: boolean) => {
+    toggleTask.mutate({ taskId, enabled });
+  };
+
+  // WebSocket handler cho scheduled task status
+  useEffect(() => {
+    const handler = (data: {
+      thread_id: string;
+      task_run_id: string;
+      status: string;
+      error?: string;
+      message?: string;
+    }) => {
+      const { thread_id, task_run_id, status, error, message } = data;
+      // Tìm scheduled task ID từ mapping mới nhất
+      let scheduledTaskId = Object.keys(taskRunMappingRef.current).find(
+        key => taskRunMappingRef.current[key].thread_id === thread_id
+      );
+      if (!scheduledTaskId && task_run_id) {
+        scheduledTaskId = Object.keys(taskRunMappingRef.current).find(
+          key => taskRunMappingRef.current[key].task_run_id === task_run_id
+        );
+      }
+      if (scheduledTaskId) {
+        if (status === 'completed') {
+          setTaskRunStatus(prev => ({ ...prev, [scheduledTaskId]: { status: 'success' } }));
+          setRunningTasks(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(scheduledTaskId);
+            return newSet;
+          });
+          toast.success('Task hoàn thành thành công!');
+        } else if (status === 'failed') {
+          setTaskRunStatus(prev => ({ ...prev, [scheduledTaskId]: { status: 'failed', error: message || error } }));
+          setRunningTasks(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(scheduledTaskId);
+            return newSet;
+          });
+          toast.error(message || error || 'Task thất bại');
+        }
+        // Xóa mapping khi hoàn thành
+        setTaskRunMapping(prev => {
+          const newMapping = { ...prev };
+          delete newMapping[scheduledTaskId!];
+          return newMapping;
+        });
+      }
+    };
+    websocketService.handleScheduledTaskStatus(handler);
+    return () => {
+      websocketService.unsubscribe('status', handler);
+      websocketService.disconnect(); // Đảm bảo disconnect khi unmount
+    };
+  }, []); // Đăng ký handler chỉ 1 lần khi mount
+
+  const handleRunNow = async (taskId: string) => {
+    console.log('[DEBUG] Bắt đầu handleRunNow với taskId:', taskId);
+    setTaskRunStatus(prev => ({ ...prev, [taskId]: { status: 'running' } }));
+    try {
+      const response = await runTaskNow.mutateAsync(taskId);
+      console.log('[DEBUG] API run-now trả về:', response);
+      
+      if (response.status === 200) {
+        const { thread_id, task_run_id } = response;
+        console.log('[DEBUG] handleRunNow nhận thread_id:', thread_id);
+        console.log('[DEBUG] Socket state:', websocketService.getConnectionState());
+        setTaskRunMapping(prev => {
+          const newMapping = { ...prev, [taskId]: { thread_id, task_run_id } };
+          setTimeout(() => {
+            const token = localStorage.getItem('token');
+            const wsUrl = `${WS_URL}?token=${token}&thread_id=${thread_id}`;
+            if (websocketService.getConnectionState() === 'open') {
+              console.log('[DEBUG] Socket đã open, gọi joinThread ngay');
+              websocketService.joinThread(thread_id);
+            } else {
+              console.log('[DEBUG] Socket chưa open, sẽ subscribe onOpen');
+              const onOpen = (state: string) => {
+                if (state === 'open') {
+                  console.log('[DEBUG] Socket vừa open, gọi joinThread');
+                  websocketService.joinThread(thread_id);
+                  websocketService.unsubscribeFromStateChange(onOpen);
+                }
+              };
+              websocketService.subscribeToStateChange(onOpen);
+              websocketService.connect(wsUrl);
+            }
+          }, 0);
+          return newMapping;
+        });
+        setRunningTasks(prev => new Set(prev).add(taskId));
+        // toast.success('Đã bắt đầu chạy task!'); // Bỏ toast thành công ở đây
+      }
+    } catch (error) {
+      setTaskRunStatus(prev => ({ ...prev, [taskId]: { status: 'failed', error: 'Không thể chạy task. Vui lòng thử lại.' } }));
+      console.error('[DEBUG] Lỗi khi chạy run-now:', error);
+      toast.error('Không thể chạy task. Vui lòng thử lại.');
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    deleteTask.mutate(taskId);
+  };
+
+  const handleEdit = (task: ScheduledTask) => {
+    setSelectedTask(task);
+    setShowEditDialog(true);
+  };
+
+  const getScheduleTypeLabel = (type: string) => {
+    switch (type) {
+      case 'daily': return 'Hàng ngày';
+      case 'weekly': return 'Hàng tuần';
+      case 'monthly': return 'Hàng tháng';
+      case 'custom': return 'Tùy chỉnh';
+      default: return type;
+    }
+  };
+
+  const getScheduleConfigText = (task: ScheduledTask) => {
+    const { schedule_type, schedule_config } = task;
+    const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    
+    switch (schedule_type) {
+      case 'daily':
+        return `Mỗi ngày lúc ${schedule_config.time}`;
+      case 'weekly':
+        return `${days[schedule_config.day_of_week || 0]} lúc ${schedule_config.time}`;
+      case 'monthly':
+        return `Ngày ${schedule_config.day_of_month} hàng tháng lúc ${schedule_config.time}`;
+      case 'custom':
+        return `Cron: ${schedule_config.cron_expression}`;
+      default:
+        return 'Không xác định';
+    }
+  };
+
+  const getStatusIcon = (enabled: boolean) => {
+    return enabled ? (
+      <CheckCircle className="w-4 h-4 text-green-500" />
+    ) : (
+      <XCircle className="w-4 h-4 text-gray-400" />
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-2/3" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-500">Lỗi khi tải danh sách task</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Task theo lịch trình</h2>
+          <p className="text-muted-foreground">
+            Quản lý các task tự động chạy theo lịch trình
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Tạo task mới
+        </Button>
+      </div>
+
+      {/* Task List */}
+      {scheduledTasks.length === 0 ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Chưa có task nào</h3>
+              <p className="text-muted-foreground mb-4">
+                Tạo task đầu tiên để bắt đầu tự động hóa công việc
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Tạo task đầu tiên
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {scheduledTasks.map((task) => (
+            <Card key={task.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg">{task.name}</CardTitle>
+                      <Badge variant={task.is_enabled ? "default" : "secondary"}>
+                        {task.is_enabled ? "Đang hoạt động" : "Đã tắt"}
+                      </Badge>
+                      <Badge variant="outline">
+                        {getScheduleTypeLabel(task.schedule_type)}
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-sm">
+                      {task.description}
+                    </CardDescription>
+                  </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(task)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Chỉnh sửa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleRunNow(task.id)}
+                        disabled={runTaskNow.isPending || runningTasks.has(task.id)}
+                      >
+                        {runningTasks.has(task.id) ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="w-4 h-4 mr-2" />
+                        )}
+                        {runningTasks.has(task.id) ? 'Đang chạy...' : 'Chạy ngay'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleToggleTask(task.id, !task.is_enabled)}
+                        disabled={toggleTask.isPending}
+                      >
+                        {task.is_enabled ? (
+                          <>
+                            <Pause className="w-4 h-4 mr-2" />
+                            Tắt
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-2" />
+                            Bật
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Xóa
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Xác nhận xóa task</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Bạn có chắc chắn muốn xóa task "{task.name}"? 
+                              Hành động này không thể hoàn tác.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(task.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Xóa
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {/* Schedule Info */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    <span>{getScheduleConfigText(task)}</span>
+                  </div>
+                  
+                  {/* Status */}
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(task.is_enabled)}
+                    <span className="text-sm">
+                      {task.is_enabled ? 'Đang hoạt động' : 'Đã tắt'}
+                    </span>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2">
+                    {taskRunStatus[task.id]?.status === 'failed' ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-600 rounded font-medium cursor-pointer">
+                              <AlertCircle className="w-4 h-4 mr-1 text-red-500" /> Thất bại
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {taskRunStatus[task.id]?.error || 'Task thất bại'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : taskRunStatus[task.id]?.status === 'running' ? (
+                      <Button size="sm" variant="outline" disabled>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Đang chạy...
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleRunNow(task.id)}
+                        disabled={runTaskNow.isPending || runningTasks.has(task.id)}
+                      >
+                        <Zap className="w-4 h-4 mr-1" /> Chạy ngay
+                      </Button>
+                    )}
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Trạng thái:</span>
+                      <Switch
+                        checked={task.is_enabled}
+                        onCheckedChange={(enabled) => handleToggleTask(task.id, enabled)}
+                        disabled={toggleTask.isPending}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Create Task Dialog */}
+      <CreateScheduledTaskDialog 
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
+
+      {/* Edit Task Dialog */}
+      {selectedTask && (
+        <EditScheduledTaskDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          task={selectedTask}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ScheduledTasksManager; 
