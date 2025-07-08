@@ -43,6 +43,7 @@ export default {
     notifications: "Thông báo",
     invitations: "Lời mời",
     askAI: "Trò chuyện với nhân viên của bạn",
+    none: "Không",
   },
   auth: {
     login: "Đăng nhập",
@@ -149,5 +150,10 @@ export default {
     collapse_log: "Thu gọn log",
     expand_log: "Mở rộng log",
     show_all_steps: "Hiển thị tất cả {{count}} bước",
+  },
+  scheduled_task: {
+    message_label: "Nội dung tin nhắn tự động",
+    message_placeholder: "Nhập nội dung tin nhắn sẽ gửi tự động cho agent...",
+    message_required: "Vui lòng nhập nội dung tin nhắn hoặc chọn task!",
   },
 };

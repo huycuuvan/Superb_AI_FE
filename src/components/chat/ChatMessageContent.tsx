@@ -310,7 +310,7 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
       return <ReactMarkdown {...commonMarkdownProps}>{animatedContent}</ReactMarkdown>;
     }
 
-    // 4. Tin nhắn của User (logic cũ không đổi)
+    // 4. Tin nhắn của User (logic mặc định)
     const userContent = (isLongMessage && !isExpanded)
       ? content.split('\n').slice(0, 5).join('\n') + "\n..."
       : content;

@@ -116,37 +116,54 @@ export const ScheduledTasksManager: React.FC = () => {
     try {
       const response = await runTaskNow.mutateAsync(taskId);
       console.log('[DEBUG] API run-now trả về:', response);
-      
-      if (response.status === 200) {
-        const { thread_id, task_run_id } = response;
-        console.log('[DEBUG] handleRunNow nhận thread_id:', thread_id);
-        console.log('[DEBUG] Socket state:', websocketService.getConnectionState());
-        setTaskRunMapping(prev => {
-          const newMapping = { ...prev, [taskId]: { thread_id, task_run_id } };
-          setTimeout(() => {
-            const token = localStorage.getItem('token');
-            const wsUrl = `${WS_URL}?token=${token}&thread_id=${thread_id}`;
-            if (websocketService.getConnectionState() === 'open') {
-              console.log('[DEBUG] Socket đã open, gọi joinThread ngay');
-              websocketService.joinThread(thread_id);
-            } else {
-              console.log('[DEBUG] Socket chưa open, sẽ subscribe onOpen');
-              const onOpen = (state: string) => {
-                if (state === 'open') {
-                  console.log('[DEBUG] Socket vừa open, gọi joinThread');
-                  websocketService.joinThread(thread_id);
-                  websocketService.unsubscribeFromStateChange(onOpen);
-                }
-              };
-              websocketService.subscribeToStateChange(onOpen);
-              websocketService.connect(wsUrl);
-            }
-          }, 0);
-          return newMapping;
+
+      // Lấy các trường có thể có từ response
+      const thread_id = response.thread_id;
+      const task_run_id = response.task_run_id;
+      // Kiểm tra exec_status có tồn tại không
+      const exec_status = 'exec_status' in response ? response.exec_status : undefined;
+      const execMessage = response.message;
+
+      // Nếu BE trả về exec_status completed (ví dụ với message schedule), hiển thị thành công luôn
+      if (exec_status === 'completed') {
+        setTaskRunStatus(prev => ({ ...prev, [taskId]: { status: 'success' } }));
+        setRunningTasks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(taskId);
+          return newSet;
         });
-        setRunningTasks(prev => new Set(prev).add(taskId));
-        // toast.success('Đã bắt đầu chạy task!'); // Bỏ toast thành công ở đây
+        toast.success(execMessage || 'Task hoàn thành thành công!');
+        // Không cần join websocket nếu đã completed
+        return;
       }
+
+      // Nếu chưa completed, join websocket như cũ
+      setTaskRunMapping(prev => ({
+        ...prev,
+        [taskId]: { thread_id, task_run_id }
+      }));
+
+      setTimeout(() => {
+        const token = localStorage.getItem('token');
+        const wsUrl = `${WS_URL}?token=${token}&thread_id=${thread_id}`;
+        if (websocketService.getConnectionState() === 'open') {
+          console.log('[DEBUG] Socket đã open, gọi joinThread ngay');
+          websocketService.joinThread(thread_id);
+        } else {
+          console.log('[DEBUG] Socket chưa open, sẽ subscribe onOpen');
+          const onOpen = (state: string) => {
+            if (state === 'open') {
+              console.log('[DEBUG] Socket vừa open, gọi joinThread');
+              websocketService.joinThread(thread_id);
+              websocketService.unsubscribeFromStateChange(onOpen);
+            }
+          };
+          websocketService.subscribeToStateChange(onOpen);
+          websocketService.connect(wsUrl);
+        }
+      }, 0);
+
+      setRunningTasks(prev => new Set(prev).add(taskId));
     } catch (error) {
       setTaskRunStatus(prev => ({ ...prev, [taskId]: { status: 'failed', error: 'Không thể chạy task. Vui lòng thử lại.' } }));
       console.error('[DEBUG] Lỗi khi chạy run-now:', error);

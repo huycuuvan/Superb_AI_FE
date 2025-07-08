@@ -230,7 +230,6 @@ console.error('Lỗi khi đổi tên folder:', error);
     return true;
   });
 
-console.log(agents);
 
   // State for search functionality
   const [searchAgent, setSearchAgent] = useState('');

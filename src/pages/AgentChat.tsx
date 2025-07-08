@@ -287,11 +287,12 @@ const AgentChat = () => {
           }
           
        
-          if (receivedData.type === "chat" && msgData.sender_type === "agent") {
-            setSubflowLogs([]); // Reset subflow logs khi agent bắt đầu trả lời
+          if (receivedData.type === "chat") {
+            setSubflowLogs([]); // Reset subflow logs khi có message mới
             setMessages(prevMessages => {
               const lastMessageIndex = prevMessages.length - 1;
-              if (prevMessages.length > 0 && prevMessages[lastMessageIndex].sender === 'agent' && prevMessages[lastMessageIndex].isStreaming) {
+              // Nếu là agent và đang stream, update message cuối
+              if (msgData.sender_type === 'agent' && prevMessages.length > 0 && prevMessages[lastMessageIndex].sender === 'agent' && prevMessages[lastMessageIndex].isStreaming) {
                 const lastMessage = prevMessages[lastMessageIndex];
                 const updatedContent = msgData.message_content || msgData.content;
                 const updatedLastMessage: ChatMessage = {
@@ -311,7 +312,7 @@ const AgentChat = () => {
                   agentId: msgData.sender_user_id,
                   image_url: msgData.image_url,
                   file_url: msgData.file_url,
-                  isStreaming: true,
+                  isStreaming: msgData.sender_type === 'agent',
                   parent_message_id: msgData.parent_message_id, // Đảm bảo có parent_message_id
                 };
                 if (prevMessages.some(m => m.id === newChatMessage.id)) return prevMessages;
@@ -322,6 +323,10 @@ const AgentChat = () => {
                 return [...prevMessages, newChatMessage];
               }
             });
+            // Chỉ tắt trạng thái đang nghĩ nếu message này là của agent
+            if (msgData.sender_type === "agent") {
+              setIsAgentThinking(false);
+            }
             return;
           }
       

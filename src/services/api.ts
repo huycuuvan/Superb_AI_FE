@@ -92,10 +92,14 @@ export const createWorkspace = async (workspaceData: {
 
 export const getAgents = async (
   page: number = 1,
-  page_size: number = 10
+  page_size: number = 10,
+  search?: string
 ): Promise<any> => {
   const token = localStorage.getItem("token");
-  const url = `${API_BASE_URL}/agents/all?page=${page}&page_size=${page_size}`;
+  let url = `${API_BASE_URL}/agents/all?page=${page}&page_size=${page_size}`;
+  if (search && search.trim() !== "") {
+    url += `&search=${encodeURIComponent(search.trim())}`;
+  }
   const res = await fetch(url, {
     method: "GET",
     headers: {

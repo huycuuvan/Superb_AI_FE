@@ -45,6 +45,7 @@ export default {
     notifications: "Notification",
     invitations: "Invitation",
     askAI: "Talk to your Employee",
+    none: "None",
   },
   auth: {
     login: "Login",
@@ -161,5 +162,11 @@ export default {
     collapse_log: "Collapse Log",
     expand_log: "Expand Log",
     show_all_steps: "Show all {{count}} steps",
+  },
+  scheduled_task: {
+    message_label: "Automated message content",
+    message_placeholder:
+      "Enter the message content to send automatically to the agent...",
+    message_required: "Please enter a message or select a task!",
   },
 };

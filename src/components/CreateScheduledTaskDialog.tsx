@@ -11,6 +11,7 @@ import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { getAgentTasks } from '@/services/api';
 import { useUniqueAgentsByFolders } from '@/hooks/useUniqueAgentsByFolders';
 import { Agent, ApiTaskType } from '@/types';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface CreateScheduledTaskDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
 }) => {
   const { workspace } = useSelectedWorkspace();
   const createTask = useCreateScheduledTask();
+  const { t } = useLanguage();
   
   // Form state
   const [name, setName] = useState('');
@@ -36,6 +38,7 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
   const [cronExpression, setCronExpression] = useState('');
   const [autoCreateConversation, setAutoCreateConversation] = useState(true);
   const [conversationTemplate, setConversationTemplate] = useState('');
+  const [message, setMessage] = useState('');
 
   // Thêm state cho input động theo execution_config
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
@@ -82,7 +85,7 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!workspace?.id || !agentId || !taskId || !name.trim()) {
+    if (!workspace?.id || !agentId || (!taskId && !message.trim()) || !name.trim()) {
       return;
     }
     // Validate inputValues: tất cả key phải có value
@@ -117,19 +120,24 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
         break;
     }
 
-    // Khi submit, build lại conversation_template.input_data từ inputValues
+    // Build conversation_template.input_data
+    let conversationTemplate;
+    if (taskId && Object.keys(inputValues).length > 0) {
+      conversationTemplate = { input_data: inputValues };
+    } else if (!taskId && message.trim()) {
+      conversationTemplate = { input_data: { message: message.trim() } };
+    }
+
     const taskData = {
       agent_id: agentId,
       workspace_id: workspace.id,
-      task_id: taskId,
+      task_id: taskId || undefined,
       name: name.trim(),
       description: description.trim(),
       schedule_type: scheduleType,
       schedule_config: scheduleConfig,
       auto_create_conversation: autoCreateConversation,
-      conversation_template: Object.keys(inputValues).length > 0
-        ? { input_data: inputValues }
-        : undefined
+      conversation_template: conversationTemplate
     };
 
     try {
@@ -153,6 +161,7 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
     setCronExpression('');
     setAutoCreateConversation(true);
     setConversationTemplate('');
+    setMessage('');
     setInputValues({}); // Reset input values
     
     onOpenChange(false);
@@ -293,10 +302,10 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
           {/* Agent & Task Selection */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="agent">Chọn Agent *</Label>
+              <Label htmlFor="agent">{t('agent.name')} *</Label>
               <Select value={agentId} onValueChange={setAgentId} disabled={isLoadingAgents}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingAgents ? "Đang tải..." : "Chọn agent"} />
+                  <SelectValue placeholder={isLoadingAgents ? t('common.loading') : t('agent.name')} />
                 </SelectTrigger>
                 <SelectContent>
                   {Array.isArray(agents) && agents.map(agent => (
@@ -309,12 +318,13 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="task">Chọn Task *</Label>
-              <Select value={taskId} onValueChange={setTaskId} disabled={!agentId || loadingTasks}>
+              <Label htmlFor="task">{t('tasks')}</Label>
+              <Select value={taskId === '' ? 'none' : taskId} onValueChange={value => setTaskId(value === 'none' ? '' : value)} disabled={!agentId || loadingTasks}>
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingTasks ? "Đang tải..." : "Chọn task"} />
+                  <SelectValue placeholder={loadingTasks ? t('common.loading') : t('tasks')} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">{t('common.none') || '---'}</SelectItem>
                   {tasks.map(task => (
                     <SelectItem key={task.id} value={task.id}>
                       {task.name}
@@ -345,26 +355,40 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
             {getScheduleConfigFields()}
           </div>
 
-          {/* Input động cho execution_config: Luôn hiển thị */}
-          <div className="space-y-2">
-            <Label>Nhập dữ liệu cho task</Label>
-            {Object.keys(inputValues).length === 0 && (
-              <div className="text-xs text-muted-foreground italic">Task này không yêu cầu input hoặc chưa có cấu hình.</div>
-            )}
-            {Object.keys(inputValues).map(key => (
-              <div key={key} className="mb-2">
-                <Label htmlFor={`input-${key}`}>{key}</Label>
-                <Input
-                  id={`input-${key}`}
-                  value={inputValues[key]}
-                  onChange={e => setInputValues({ ...inputValues, [key]: e.target.value })}
-                  placeholder={`Nhập ${key}`}
-                  className="bg-background text-foreground"
-                  required
-                />
-              </div>
-            ))}
-          </div>
+          {/* Input động cho execution_config: chỉ hiển thị khi có taskId */}
+          {taskId ? (
+            <div className="space-y-2">
+              <Label>{t('common.create')}</Label>
+              {Object.keys(inputValues).length === 0 && (
+                <div className="text-xs text-muted-foreground italic">Task này không yêu cầu input hoặc chưa có cấu hình.</div>
+              )}
+              {Object.keys(inputValues).map(key => (
+                <div key={key} className="mb-2">
+                  <Label htmlFor={`input-${key}`}>{key}</Label>
+                  <Input
+                    id={`input-${key}`}
+                    value={inputValues[key]}
+                    onChange={e => setInputValues({ ...inputValues, [key]: e.target.value })}
+                    placeholder={`Nhập ${key}`}
+                    className="bg-background text-foreground"
+                    required
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="message">{t('scheduled_task.message_label')}</Label>
+              <Textarea
+                id="message"
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder={t('scheduled_task.message_placeholder')}
+                rows={3}
+                required={!taskId}
+              />
+            </div>
+          )}
 
           {/* Conversation Settings */}
           <div className="space-y-4">
@@ -385,9 +409,9 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
             </Button>
             <Button 
               type="submit" 
-              disabled={createTask.isPending || !name.trim() || !agentId || !taskId}
+              disabled={createTask.isPending || !name.trim() || !agentId || (!taskId && !message.trim())}
             >
-              {createTask.isPending ? "Đang tạo..." : "Tạo task"}
+              {createTask.isPending ? t('common.loading') : t('common.create')}
             </Button>
           </div>
         </form>

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { AgentCard } from "@/components/Agents/AgentCard";
+import { useDebounce } from "@uidotdev/usehooks";
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
 
 export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const { theme } = useTheme();
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
@@ -48,9 +50,10 @@ export const Agents = () => {
   // State cho phân trang
   const [page, setPage] = useState(1);
 
+  console.log('debouncedSearchQuery:', debouncedSearchQuery);
   const { data, isLoading, error } = useQuery({
-    queryKey: ['agents', workspace?.id, page],
-    queryFn: () => getAgents(page, 12),
+    queryKey: ['agents', workspace?.id, page, debouncedSearchQuery],
+    queryFn: () => getAgents(page, 12, debouncedSearchQuery),
     enabled: !!workspace?.id,
   });
 
@@ -65,12 +68,8 @@ export const Agents = () => {
   // Group agents by category
   const categories = Array.from(new Set(agentsData.map(agent => agent.category || 'Other')));
   
-  // Filter agents based on search query
-  const filteredAgents = agentsData.filter(agent => 
-    agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
-    agent.type?.toLowerCase().includes(searchQuery.toLowerCase()) || // Use ?. for optional chaining
-    (agent.role_description && agent.role_description.toLowerCase().includes(searchQuery.toLowerCase()))
-  ) || [];
+  // Không filter FE nữa, chỉ dùng filter BE
+  const filteredAgents = agentsData;
   
   const getAgentsByCategory = (category: string) => {
     return filteredAgents.filter(agent => (agent.category || 'Other') === category);
@@ -222,10 +221,13 @@ const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => {
           </svg>
           <Input
             type="search"
-            placeholder="Search agents..."
+            placeholder="Tìm kiếm agent..."
             className="pl-9"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => {
+              setSearchQuery(e.target.value);
+              setPage(1); // Reset về trang 1 khi search mới
+            }}
           />
         </div>
       </div>
