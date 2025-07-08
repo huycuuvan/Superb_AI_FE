@@ -1817,26 +1817,65 @@ const handleSubmitTaskInputs = async () => {
                               <p className="text-xs text-muted-foreground text-center mt-2">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
                             </div>
                             {/* Desktop: giữ nguyên layout cũ */}
-                            <div className="hidden md:flex items-center justify-center mt-2 ">
-                              <div className="flex items-center gap-1 min-w-max">
-                                <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
-                                <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
-                                <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
-                                <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  title="Gợi ý prompt" 
-                                  onClick={() => setShowPromptTemplatesModal(true)}
-                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
-                                >
-                                  <Lightbulb className="h-5 w-5" />
-                                </Button>
-                              </div>
-                             
-                              <p className="text-xs text-muted-foreground ml-[18rem]">Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.</p>
-                              
-                            </div>
+                            <div className="hidden md:flex items-center justify-between mt-2 w-full">
+  {/* Actions trái */}
+  <div className="flex items-center gap-2">
+    <Button
+      variant="ghost"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium"
+      title="Đính kèm tệp"
+      onClick={() => fileInputRef.current?.click()}
+    >
+      <Paperclip className="h-5 w-5 text-muted-foreground" />
+      <span className="hidden lg:inline text-sm text-muted-foreground">Đính kèm</span>
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium"
+      title="Chọn Task"
+      onClick={() => setIsTaskModalOpen(true)}
+    >
+      <ListPlus className="h-5 w-5 text-muted-foreground" />
+      <span className="hidden lg:inline text-sm text-muted-foreground">Task</span>
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium"
+      title="Knowledge"
+    >
+      <Book className="h-5 w-5 text-muted-foreground" />
+      <span className="hidden lg:inline text-sm text-muted-foreground">Knowledge</span>
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium"
+      title="Lịch sử thực thi"
+      onClick={() => setShowTaskHistory(true)}
+    >
+      <History className="h-5 w-5 text-muted-foreground" />
+      <span className="hidden lg:inline text-sm text-muted-foreground">Lịch sử</span>
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+      title="Gợi ý prompt"
+      onClick={() => setShowPromptTemplatesModal(true)}
+    >
+      <Lightbulb className="h-5 w-5" />
+      <span className="hidden lg:inline text-sm">Gợi ý</span>
+    </Button>
+  </div>
+  {/* Cảnh báo phải */}
+  <p className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+    Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.
+  </p>
+</div>
+
                         </div>
                     </div>
                 </div>

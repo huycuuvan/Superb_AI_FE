@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import { Agent, Folder } from "@/types";
 import { MoreVertical, Edit, Pin, Trash, Plus, FolderIcon } from 'lucide-react';
@@ -32,6 +33,7 @@ import { adventurer  } from '@dicebear/collection';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 import { AgentCard } from "@/components/Agents/AgentCard";
 import AgentsForFolderCard from "@/components/Agents/AgentsForFolder";
+import AgentCardSkeleton from "@/components/skeletons/AgentCardSkeleton";
 
 // Định nghĩa type cho response mới từ API by-folders
 interface FolderWithAgents {
@@ -66,6 +68,7 @@ const Dashboard = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useTranslation();
@@ -78,14 +81,16 @@ const Dashboard = () => {
     foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];
   }
 
-  // Lọc dữ liệu dựa trên search query
+  // Lọc agents dựa trên folder được chọn và search query
   const filteredFoldersWithAgents = foldersWithAgents.map(folder => ({
     ...folder,
     agents: folder.agents.filter(agent => 
+      (searchQuery === '' || 
       agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.role_description?.toLowerCase().includes(searchQuery.toLowerCase())
+      agent.role_description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (selectedFolder === null || folder.id === selectedFolder)
     )
-  })).filter(folder => folder.agents.length > 0 || searchQuery === '');
+  })).filter(folder => folder.agents.length > 0 || (searchQuery === '' && selectedFolder === folder.id));
 
   console.log("foldersWithAgents", foldersWithAgents);
   console.log("filteredFoldersWithAgents", filteredFoldersWithAgents);
@@ -214,7 +219,28 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Separate Search Input Component */}
+      {/* Folder Chips */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Badge 
+          variant={selectedFolder === null ? "default" : "outline"}
+          className="cursor-pointer hover:bg-primary/80"
+          onClick={() => setSelectedFolder(null)}
+        >
+          Tất cả
+        </Badge>
+        {folders?.map((folder) => (
+          <Badge
+            key={folder.id}
+            variant={selectedFolder === folder.id ? "default" : "outline"}
+            className="cursor-pointer hover:bg-primary/80"
+            onClick={() => setSelectedFolder(folder.id)}
+          >
+            {folder.name}
+          </Badge>
+        ))}
+      </div>
+
+      {/* Search Input */}
       <SearchInput onSearchChange={setSearchQuery} />
 
       {/* Search Results Summary */}
@@ -242,58 +268,24 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className="grid gap-4">
-        {loadingFolders || isLoadingAgents || !workspace?.id ? (
-          <div className="space-y-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i}>
-                <Skeleton className="h-6 w-40 mb-4" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                  {[...Array(4)].map((_, j) => (
-                    <Skeleton key={j} className="h-32 w-full" />
-                  ))}
-                </div>
-              </div>
+      {/* Grid of Agents */}
+        {isLoadingAgents ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <AgentCardSkeleton key={idx} />
             ))}
           </div>
-        ) : errorFolders ? (
-          <div className="text-sm text-red-500">Lỗi khi tải thư mục: {errorFolders.message}</div>
-        ) : filteredFoldersWithAgents.length > 0 ? (
-          filteredFoldersWithAgents.map((folder) => {
-            const folderWithAgents = folder as FolderWithAgents;
-            return (
-              <div key={folderWithAgents.id} className="mb-8">
-                <div className="flex items-center gap-2 mb-2">
-                  <FolderIcon className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-lg text-foreground">{folderWithAgents.name}</span>
-                  {searchQuery && (
-                    <span className="text-sm text-muted-foreground">
-                      ({folderWithAgents.agents.length} {folderWithAgents.agents.length === 1 ? t('agent.agentsFound').replace('agents', 'agent') : t('agent.agentsFound')})
-                    </span>
-                  )}
-                </div>
-                <AgentsForFolderCard
-        folderId={folderWithAgents.id}
-      agents={folderWithAgents.agents}
-       userRole={user?.role}
-      searchQuery={searchQuery}
-      onCreateAgent={(folderId) => {
-        setSelectedFolderId(folderId);
-        setShowAddAgentDialog(true);
-      }}
-     
-    />
-              </div>
-            );
-          })
-        ) : searchQuery ? (
-          <div className="text-sm text-muted-foreground text-center py-10">
-            {t('agent.noAgentsFound', { query: searchQuery })}
-          </div>
         ) : (
-          <div className="text-sm text-muted-foreground text-center py-10">{t('folder.noFolders')}</div>
-        )}
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredFoldersWithAgents.map(folder => (
+            <React.Fragment key={folder.id}>
+              {folder.agents.map(agent => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
 
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-[425px]">

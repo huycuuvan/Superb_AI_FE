@@ -240,6 +240,14 @@ console.log(agents);
     const nameMatch = agent.name.toLowerCase().includes(searchAgent.toLowerCase());
     const roleMatch = agent.role_description.toLowerCase().includes(searchAgent.toLowerCase());
     return nameMatch || roleMatch;
+  })
+  // Sắp xếp agents theo thời gian tin nhắn cuối cùng mới nhất
+  .sort((a, b) => {
+    // Nếu không có last_message_time thì đẩy xuống cuối
+    if (!a.last_message_time) return 1;
+    if (!b.last_message_time) return -1;
+    // So sánh thời gian, mới nhất lên đầu
+    return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
   });
 
   // Hàm mở dialog xác nhận xóa lịch sử chat với agent
@@ -419,36 +427,11 @@ console.log(agents);
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium text-foreground truncate">{agent.name}</span>
-                              <div className="flex items-center gap-1">
-                                {agent.last_message_time && (
-                                  <span className="text-xs text-muted-foreground flex items-center">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {formatTimestamp(agent.last_message_time)}
-                                  </span>
-                                )}
-                              </div>
                             </div>
-                            <div className="flex items-center gap-1 mb-1">
+                            <div className="flex items-center gap-1">
                               <span className="text-xs text-muted-foreground truncate">{agent.role_description}</span>
                             </div>
-                            {agent.last_message ? (
-                              <div className="flex items-start gap-1">
-                                <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-xs text-muted-foreground truncate block">
-                                    {agent.last_message.length > 50 
-                                      ? `${agent.last_message.substring(0, 50)}...` 
-                                      : agent.last_message
-                                    }
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <MessageSquare className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">Chưa có tin nhắn</span>
-                              </div>
-                            )}
+                           
                           </div>
                         )}
                       </div>
