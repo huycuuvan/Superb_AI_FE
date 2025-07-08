@@ -368,7 +368,9 @@ export const getAgentById = async (
 export interface UpdateAgentRequest {
   name?: string;
   role_description?: string;
-  instructions?: string;
+  job_brief?: string;
+  language?: string;
+  position?: string;
   status?: string;
   model_config?: ModelConfig;
   folder_id?: string;

@@ -389,6 +389,10 @@ export const ScheduledTasksManager: React.FC = () => {
                       <Button size="sm" variant="outline" disabled>
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Đang chạy...
                       </Button>
+                    ) : taskRunStatus[task.id]?.status === 'success' ? (
+                      <Button size="sm" variant="outline" disabled className="border-green-500 text-green-600 bg-green-50">
+                        <CheckCircle className="w-4 h-4 mr-1 text-green-600" /> Thành công
+                      </Button>
                     ) : (
                       <Button 
                         size="sm" 
@@ -396,7 +400,7 @@ export const ScheduledTasksManager: React.FC = () => {
                         onClick={() => handleRunNow(task.id)}
                         disabled={runTaskNow.isPending || runningTasks.has(task.id)}
                       >
-                        <Zap className="w-4 h-4 mr-1" /> Chạy ngay
+                        <Zap className="w-4 h-4 mr-1" /> Chạy thử
                       </Button>
                     )}
                     

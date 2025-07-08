@@ -13,23 +13,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AddAgentDialog } from '@/components/AddAgentDialog';
+import AgentDialog from '@/components/AgentDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { updateFolder, deleteFolder, getAgentsByFolders } from '@/services/api';
+import { updateFolder, deleteFolder, getAgentsByFolders, createAgent   } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import React from 'react';
 import { useTranslation } from "react-i18next";
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
+import { AgentCard } from "@/components/Agents/AgentCard";
+import AgentsForFolderCard from "@/components/Agents/AgentsForFolder";
 
 // Định nghĩa type cho response mới từ API by-folders
 interface FolderWithAgents {
@@ -46,6 +48,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -112,28 +115,17 @@ const Dashboard = () => {
       return <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>;
     }
     return (
-      <>
+      <React.Fragment>
         {agents.map((agent) => (
-          <Card
+          <AgentCard
             key={agent.id}
-            className={`flex items-center p-4 space-x-4 cursor-pointer hover:bg-primary/50 transition-colors h-40 card-gradient-white ${isDark ? 'hover:bg-blue-800/20' : 'hover:bg-purple-200/20'}`}
-            onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
-          >
-            <Avatar className="w-12 h-12">
-              {agent.avatar ? (
-                <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 48, height: 48 }} />
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 48, height: 48 }} />
-              )}
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
-              <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground line-clamp-2">{agent.role_description}</CardDescription>
-            </div>
-          </Card>
+            agent={agent}
+        
+          />
         ))}
-      </>
+      </React.Fragment>
     );
+    
   });
 
   // Xử lý đổi tên folder
@@ -181,6 +173,27 @@ const Dashboard = () => {
       setIsDeleting(false);
     }
   };
+
+  const handleAddAgent = async (data: Partial<Agent> & { folder_id?: string }) => {
+    await createAgent({
+      name: data.name || '',
+      workspace_id: workspace?.id || '',
+      folder_id: data.folder_id || '',
+      role_description: data.role_description || '',
+      job_brief: data.job_brief || '',
+      language: data.language || '',
+      position: data.position || '',
+      status: data.status || 'private',
+      greeting_message: data.greeting_message || '',
+      model_config: { webhook_url: data.model_config?.webhook_url || '' },
+    });
+    queryClient.invalidateQueries({ queryKey: ['agents'] });
+    toast({
+      title: t('common.success'),
+      description: t('agent.agentCreated', { name: data.name }),
+    });
+    setShowAddAgentDialog(false);
+  }
 
   return (
     <div className="space-y-6 text-foreground">
@@ -259,25 +272,17 @@ const Dashboard = () => {
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                  {user?.role !== 'user' && searchQuery === '' && (
-                  <Card
-                    className="flex flex-col items-center justify-center h-40 p-6 text-center border-dashed border-2 border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors group"
-                    onClick={() => {
-                      setSelectedFolderId(folderWithAgents.id);
-                      setShowAddAgentDialog(true);
-                    }}
-                  >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors bg-muted group-hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text">
-                      <Plus className="h-6 w-6 text-primary " />
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{t('agent.createAgent')}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t('agent.noAgents')}</p>
-                  </Card>
-                  )}
-                  {/* Render AgentsForFolder component cho folder này */}
-                  <AgentsForFolder folderName={folderWithAgents.name} agents={folderWithAgents.agents} navigate={navigate} />
-                </div>
+                <AgentsForFolderCard
+        folderId={folderWithAgents.id}
+      agents={folderWithAgents.agents}
+       userRole={user?.role}
+      searchQuery={searchQuery}
+      onCreateAgent={(folderId) => {
+        setSelectedFolderId(folderId);
+        setShowAddAgentDialog(true);
+      }}
+     
+    />
               </div>
             );
           })
@@ -320,7 +325,7 @@ const Dashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AddAgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} />
+      <AgentDialog open={showAddAgentDialog} onOpenChange={setShowAddAgentDialog} folderId={selectedFolderId} mode="add" onSave={handleAddAgent} onCancel={() => setShowAddAgentDialog(false)} />
 
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">

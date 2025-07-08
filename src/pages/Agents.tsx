@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Agent, ModelConfig } from "@/types";
+import { Agent } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/useTheme';
-import { getAgents } from '@/services/api';
+import { createAgent, getAgents } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { AddAgentDialog } from '@/components/AddAgentDialog';
+import { AgentDialog } from '@/components/AgentDialog';
 import { MoreVertical, Edit, Trash } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,20 +19,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { updateAgent, deleteAgent } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
+import { AgentCard } from "@/components/Agents/AgentCard";
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
-// Thêm phân trang FE
-const PAGE_SIZE = 10;
 
 export const Agents = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,13 +45,12 @@ export const Agents = () => {
   const { toast } = useToast();
   const { canCreateAgent } = useAuth();
   const queryClient = useQueryClient();
-  const [editedTemperature, setEditedTemperature] = useState('0.8');
   // State cho phân trang
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['agents', workspace?.id, page],
-    queryFn: () => getAgents(page, 10),
+    queryFn: () => getAgents(page, 12),
     enabled: !!workspace?.id,
   });
 
@@ -81,76 +76,74 @@ export const Agents = () => {
     return filteredAgents.filter(agent => (agent.category || 'Other') === category);
   };
 
-  // Function to handle dialog close and potentially refresh agents
-  const handleAddAgentDialogClose = (shouldRefresh?: boolean) => {
-    setShowAddAgentDialog(false);
-    // useQuery will automatically refetch if the cache is invalidated, so no explicit fetchAgents call needed here
-  };
-
   const handleEditClick = (agent: Agent) => {
     setAgentToEdit(agent);
     setEditedAgentData({
       name: agent.name || '',
       role_description: agent.role_description || '',
-      instructions: agent.instructions || '',
       job_brief: agent.job_brief || '',
       language: agent.language || 'Tiếng Việt',
       position: agent.position || '',
       greeting_message: agent.greeting_message || '',
       status: agent.status || 'private',
       model_config: {
-        model: agent.model_config?.model || 'gpt-4',
-        temperature: agent.model_config?.temperature ?? 0.8,
         webhook_url: agent.model_config?.webhook_url || '',
-        build_prompt_webhook_url: '',
       },
     });
-    setEditedTemperature(String(agent.model_config?.temperature ?? 0.8));
     setShowEditAgentDialog(true);
   };
 
-  const handleSaveAgentEdit = async () => {
-    if (!agentToEdit || Object.keys(editedAgentData).length === 0) return;
+const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => { 
+  if (!agentToEdit) return;
 
-    setIsSavingEdit(true);
-    try {
-      const modelConfigToSend: ModelConfig = {
-        model: editedAgentData.model_config?.model || 'gpt-4',
-        temperature: parseFloat(editedTemperature || '0.8'), // Chuyển đổi ngược lại thành số
-        webhook_url: editedAgentData.model_config?.webhook_url || '',
-        build_prompt_webhook_url: '',
-      };
+  setIsSavingEdit(true);
+  try {
+    await updateAgent(agentToEdit.id, dataFromDialog); 
 
-      const dataToSend: Partial<Agent> = {
-        ...editedAgentData,
-        model_config: modelConfigToSend,
-      };
-
-      await updateAgent(agentToEdit.id, dataToSend);
-      toast({
-        title: "Thành công!",
-        description: `Đã cập nhật agent "${agentToEdit.name}".`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['agents'] }); // Invalidate cache to trigger refetch
-      setShowEditAgentDialog(false);
-      setAgentToEdit(null);
-      setEditedAgentData({});
-    } catch (error: any) {
-      console.error('Lỗi khi cập nhật agent:', error);
-      toast({
-        title: "Lỗi!",
-        description: `Không thể cập nhật agent: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
+    toast({
+      title: "Thành công!",
+      description: `Đã cập nhật agent "${dataFromDialog.name || agentToEdit.name}".`,
+    });
+    queryClient.invalidateQueries({ queryKey: ['agents'] });
+    setShowEditAgentDialog(false);
+    setAgentToEdit(null);
+  } catch (error: any) {
+    console.error('Lỗi khi cập nhật agent:', error);
+    toast({
+      title: "Lỗi!",
+      description: `Không thể cập nhật agent: ${error.message}`,
+      variant: "destructive",
+    });
+  } finally {
+    setIsSavingEdit(false);
+  }
+};
 
   const handleDeleteClick = (agent: Agent) => {
     setAgentToDelete(agent);
     setShowConfirmDeleteDialog(true);
   };
+
+  const handleAddAgent = async (data: Partial<Agent> & { folder_id?: string }) => {
+    await createAgent({
+      name: data.name || '',
+      workspace_id: workspace?.id || '',
+      folder_id: data.folder_id || '',
+      role_description: data.role_description || '',
+      job_brief: data.job_brief || '',
+      language: data.language || '',
+      position: data.position || '',
+      status: data.status || 'private',
+      greeting_message: data.greeting_message || '',
+      model_config: { webhook_url: data.model_config?.webhook_url || '' },
+    });
+    queryClient.invalidateQueries({ queryKey: ['agents'] });
+    toast({
+      title: "Thành công!",
+      description: `Đã tạo agent "${data.name}".`,
+    });
+      setShowAddAgentDialog(false);
+  }
 
   const handleDeleteAgent = async () => {
     if (!agentToDelete) return;
@@ -284,178 +277,24 @@ export const Agents = () => {
       )}
 
       {/* Add Agent Dialog */}
-      <AddAgentDialog 
+      <AgentDialog 
         open={showAddAgentDialog} 
         onOpenChange={setShowAddAgentDialog}
-        // No need for onSuccess here, useQuery handles refetch
+        mode="add"
+        onSave={handleAddAgent}
+        onCancel={() => setShowAddAgentDialog(false)}
       />
 
       {/* Edit Agent Dialog */}
-      <Dialog open={showEditAgentDialog} onOpenChange={setShowEditAgentDialog}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa Agent</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin cho agent "{agentToEdit?.name}".
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
-            <div className="grid gap-4 py-4">
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-name" className="text-right">Tên</Label>
-              <Input 
-                id="edit-agent-name"
-                className="col-span-3"
-                value={editedAgentData.name || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, name: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-role" className="text-right">Chức danh</Label>
-              <Input 
-                id="edit-agent-role"
-                className="col-span-3"
-                value={editedAgentData.role_description || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, role_description: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-agent-instructions" className="text-right">Mô tả vai trò</Label>
-              <Textarea 
-                id="edit-agent-instructions"
-                className="col-span-3"
-                value={editedAgentData.instructions || ''}
-                onChange={(e) => setEditedAgentData({ ...editedAgentData, instructions: e.target.value })}
-                rows={4}
-              />
-            </div>
-
-            {/* Thông tin cơ bản */} 
-            <div className="space-y-4">
-              <h3 className="font-medium">Thông tin cơ bản</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-job-brief" className="text-right">
-                  Mô tả công việc
-                </Label>
-                <Textarea
-                  id="edit-agent-job-brief"
-                  className="col-span-3"
-                  value={editedAgentData.job_brief || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, job_brief: e.target.value })} rows={3} placeholder="Nhập mô tả công việc của agent" />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-language" className="text-right">
-                  Ngôn ngữ
-                </Label>
-                <Input
-                  id="edit-agent-language"
-                  className="col-span-3"
-                  value={editedAgentData.language || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, language: e.target.value })} placeholder="Nhập ngôn ngữ" />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-position" className="text-right">
-                  Vị trí phòng ban
-                </Label>
-                <Input
-                  id="edit-agent-position"
-                  className="col-span-3"
-                  value={editedAgentData.position || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, position: e.target.value })} placeholder="Ví dụ: Phòng Kinh doanh, Phòng Kỹ thuật, Phòng Marketing..." />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-greeting-message" className="text-right">
-                  Lời chào
-                </Label>
-                <Textarea
-                  id="edit-agent-greeting-message"
-                  className="col-span-3"
-                  value={editedAgentData.greeting_message || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, greeting_message: e.target.value })} placeholder="Nhập lời chào mở đầu khi người dùng bắt đầu chat với agent" rows={3} />
-              </div>
-            </div>
-
-            {/* Cấu hình Model */} 
-            <div className="space-y-4">
-              <h3 className="font-medium">Cấu hình Model</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-model" className="text-right">
-                  Model
-                </Label>
-                <Select value={editedAgentData.model_config?.model || 'gpt-4'} onValueChange={(value) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, model: value } })}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Chọn model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4">GPT-4</SelectItem>
-                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-temperature" className="text-right">
-                  Temperature
-                </Label>
-                <Input
-                  id="edit-agent-temperature"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  className="col-span-3"
-                  value={editedTemperature}
-                  onChange={(e) => setEditedTemperature(e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-webhook-url" className="text-right">
-                  Webhook URL
-                </Label>
-                <Input
-                  id="edit-agent-webhook-url"
-                  className="col-span-3"
-                  value={editedAgentData.model_config?.webhook_url || ''}
-                  onChange={(e) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, webhook_url: e.target.value } })} placeholder="Nhập webhook URL" />
-              </div>
-            </div>
-
-            {/* Cấu hình khác */} 
-            <div className="space-y-4">
-              <h3 className="font-medium">Cấu hình khác</h3>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-agent-status" className="text-right">
-                  Trạng thái
-                </Label>
-                <Select value={editedAgentData.status || 'private'} onValueChange={(value: AgentStatus) => setEditedAgentData({ ...editedAgentData, status: value })}> 
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Chọn trạng thái" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Use availableStatuses from AddAgentDialog for consistency if needed, or define locally */} 
-                    {[{ value: 'private', label: 'Riêng tư' }, { value: 'workspace_shared', label: 'Chia sẻ workspace' }, { value: 'system_public', label: 'Công khai hệ thống' }].map((statusOption) => ( // Simplified for now, can be made dynamic based on user role
-                      <SelectItem key={statusOption.value} value={statusOption.value}>
-                        {statusOption.label}
-                      </SelectItem>
-                    ))} 
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-             {/* Add other fields for editing if needed */} 
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditAgentDialog(false)} disabled={isSavingEdit}>Hủy</Button>
-            <Button onClick={handleSaveAgentEdit} disabled={isSavingEdit || !editedAgentData.name}>
-              {isSavingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AgentDialog 
+        open={showEditAgentDialog} 
+        onOpenChange={setShowEditAgentDialog}
+        mode="edit"
+        agentData={agentToEdit}
+        isSaving={isSavingEdit}
+        onSave={handleSaveAgentEdit}
+        onCancel={() => setShowEditAgentDialog(false)}
+      />
 
       {/* Confirm Delete Dialog */}
       <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
@@ -482,62 +321,17 @@ export const Agents = () => {
 // Separate component for displaying the agent grid
 const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (agent: Agent) => void, onDelete: (agent: Agent) => void }) => {
   const navigate = useNavigate();
-  console.log("agents", agents);
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ">
-      {agents.map((agent: Agent) => (
-        <Card key={agent.id} className="relative card-gradient-white p-4 flex flex-col gap-3 ">
-          {/* Hàng 1: Avatar + Tên */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center  overflow-hidden">
-              {agent.avatar ? (
-                <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 64, height: 64 }} />
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 64, height: 64 }} />
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-lg">{agent.name}</div>
-              
-            </div>
-          </div>
-          {/* Hàng 2: Chức danh */}
-          <div>
-            <div className="font-semibold text-base">{agent.position}</div>
-          </div>
-          {/* Hàng 3: Mô tả vai trò */}
-          <div>
-            <div className="text-sm text-muted-foreground">{agent.job_brief}</div>
-          </div>
-          {/* Các nút chức năng giữ nguyên */}
-          <div className="flex justify-between items-center mt-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
-              className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:bg-primary hover:text-white"
-            >
-              Chat
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)} className="hover:bg-gradient-to-r from-purple-600 to-indigo-600 dark:hover:bg-primary hover:text-white">View Profile</Button>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2">
-                <MoreVertical className="h-4 w-4 hover:text-primary" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(agent)}>
-                <Edit className="mr-2 h-4 w-4 hover:text-primary" /> Chỉnh sửa
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(agent)}>
-                <Trash className="mr-2 h-4 w-4 text-destructive" /> Xóa
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </Card>
-      ))}
-    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+  {agents.map((agent) => (
+    <AgentCard
+      key={agent.id}
+      agent={agent}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  ))}
+</div>
+
   );
 };

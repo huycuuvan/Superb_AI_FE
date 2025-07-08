@@ -38,7 +38,7 @@ import LogAgentThinking from '@/components/LogAgentThinking';
 import { useInView } from 'react-intersection-observer';
 import React from 'react';
 import { WS_URL } from '@/config/api';
-
+console.log("WS_URL", WS_URL);
 interface TaskInput {
   id: string;
   label: string;

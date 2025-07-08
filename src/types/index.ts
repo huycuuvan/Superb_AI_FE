@@ -14,10 +14,7 @@ export interface Workspace {
 }
 
 export interface ModelConfig {
-  model: string;
-  temperature: number;
   webhook_url: string;
-  build_prompt_webhook_url: string;
 }
 
 export interface Agent {

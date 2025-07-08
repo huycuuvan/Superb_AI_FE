@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useFolders } from '@/contexts/FolderContext';
-import EditAgentDialog from '@/components/EditAgentDialog';
+import { AgentDialog } from '@/components/AgentDialog';
 
 const AgentProfilePage = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -465,15 +465,17 @@ const AgentProfilePage = () => {
       </Card>
 
       {/* Edit Agent Dialog */}
-      <EditAgentDialog
+      <AgentDialog
         open={isEditAgentDialogOpen}
         onOpenChange={setIsEditAgentDialogOpen}
-        agentToEdit={agent}
-        editedAgentData={editedAgentData}
-        setEditedAgentData={setEditedAgentData}
-        isSaving={isSavingAgent}
-        onSave={handleSaveAgent}
+        agent={agent}
+        mode="edit"
+        onSuccess={() => {
+          handleSaveAgent();
+          toast.success('Agent updated successfully!');
+        }}
         onCancel={() => setIsEditAgentDialogOpen(false)}
+        isSaving={isSavingAgent}
         editedTemperature={agent.model_config?.temperature?.toString() || '0'}
         setEditedTemperature={(val) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, temperature: parseFloat(val) } })}
         agentTypeOptions={agentTypeOptions}

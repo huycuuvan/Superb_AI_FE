@@ -10,12 +10,13 @@ import { Agent } from '@/types'; // Import Agent type if needed for placeholder 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
-import { AddAgentDialog } from '@/components/AddAgentDialog';
-import { getFolderDetail, FolderDetailResponse, getAgentsByFolder } from '@/services/api';
+import AgentDialog from '@/components/AgentDialog';
+import { getFolderDetail, FolderDetailResponse, getAgentsByFolder, createAgent } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
 interface FolderType {
@@ -32,7 +33,7 @@ const FolderDetail = () => {
   const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
   const { theme } = useTheme();
   const navigate = useNavigate();
-
+  const queryClient = useQueryClient();
   const [folder, setFolder] = useState<FolderType | null>(null);
   const [loadingFolderDetail, setLoadingFolderDetail] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +148,23 @@ const FolderDetail = () => {
      return <div className="text-muted-foreground p-6">Không tìm thấy chi tiết folder.</div>;
    }
 
+  const handleAddAgent = async (data: Partial<Agent> & { folder_id?: string }) => {
+    await createAgent({
+      name: data.name || '',
+      workspace_id: workspace?.id || '',
+      folder_id: data.folder_id || '',
+      role_description: data.role_description || '',
+      job_brief: data.job_brief || '',
+      language: data.language || '',
+      position: data.position || '',
+      status: data.status || 'private',
+      greeting_message: data.greeting_message || '',
+      model_config: { webhook_url: data.model_config?.webhook_url || '' },
+    });
+    queryClient.invalidateQueries({ queryKey: ['agents', 'agentsByFolders'] });
+    setShowAddAgentDialog(false);
+  }
+
   return (
     <div className="space-y-6 p-6 ">
       {/* Header Folder Detail */}
@@ -256,10 +274,13 @@ const FolderDetail = () => {
       </div>
 
       {/* Add Agent Dialog */}
-      <AddAgentDialog 
+      <AgentDialog 
         open={showAddAgentDialog} 
         onOpenChange={setShowAddAgentDialog} 
         folderId={selectedAgentFolderId}
+        mode="add"
+        onSave={handleAddAgent}
+        onCancel={() => setShowAddAgentDialog(false)}
       />
     </div>
   );

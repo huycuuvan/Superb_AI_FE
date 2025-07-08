@@ -8,48 +8,31 @@ import {
   CheckCircle, 
   Settings as SettingsIcon, 
   ChevronRight,
-  Plus,
   Cpu,
   Folder,
-  MoreVertical,
-  Edit,
-  Pin,
-  Trash,
   Book,
   Key,
+  Calendar,
   MessageSquare,
   Clock,
-  Calendar
+  Trash
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { AddFolderDialog } from '@/components/AddFolderDialog';
 import { useLanguage } from '@/hooks/useLanguage';
-import { AddAgentDialog } from '@/components/AddAgentDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import './Sidebar.css';
 import { useAuth } from '@/hooks/useAuth';
-import { updateFolder, deleteFolder, getThreadMessages, getThreadByAgentId, clearAgentThreadHistory } from '@/services/api';
+import { updateFolder, deleteFolder, clearAgentThreadHistory } from '@/services/api';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
 import { useTheme } from '@/hooks/useTheme';
-import { Skeleton } from '../ui/skeleton';
-import { useQuery } from '@tanstack/react-query';
-import { createAvatar } from '@dicebear/core';
-import { adventurer } from '@dicebear/collection';
 import gsap from 'gsap';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
-import { ApiMessage, Thread } from '@/types';
-import { RunningTasksBadge } from '@/components/RunningTasksBadge';
+import RunningTasksBadge from '../RunningTasksBadge';
+import { createAvatar } from '@dicebear/core';
+import { adventurer } from '@dicebear/collection';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 
 interface SidebarProps {
@@ -489,65 +472,9 @@ console.log(agents);
 
       </aside>
 
-      {/* DIALOGS - Không thay đổi */}
-      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-        <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
-          <DialogHeader>
-            <DialogTitle className="dark:text-white">{t('folder.renameFolderTitle')}</DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
-              {t('folder.renameFolderDescription', { name: folderToRename?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-folder-name" className="text-right dark:text-white">
-                {t('folder.newFolderName')}
-              </Label>
-              <Input
-                id="new-folder-name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                className="col-span-3 dark:bg-slate-800 dark:text-white dark:border-slate-700"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">{t('common.cancel')}</Button>
-            </DialogClose>
-            <Button onClick={handleRenameFolder} disabled={isRenaming} className={`${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>{isRenaming ? t('common.loading') : t('common.save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    
 
-      <Dialog open={showConfirmDeleteDialog} onOpenChange={setShowConfirmDeleteDialog}>
-        <DialogContent className="dark:bg-slate-900 dark:border-slate-700">
-          <DialogHeader>
-            <DialogTitle className="dark:text-white">{t('folder.deleteFolderConfirmation')}</DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
-              {t('folder.deleteFolderConfirmationDescription', { name: folderToDelete?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" className="dark:border-slate-700 dark:text-white dark:hover:bg-slate-700">Hủy</Button>
-            </DialogClose>
-            <Button onClick={handleDeleteFolder} disabled={isDeleting} variant="destructive">{isDeleting ? 'Đang xóa...' : 'Xóa'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {showAddFolderDialog && (
-        <AddFolderDialog 
-          open={showAddFolderDialog} 
-          onOpenChange={setShowAddFolderDialog} 
-          onSuccess={() => workspace?.id}
-        />
-      )}
-
-      {showAddAgentDialog.open && (
-        <AddAgentDialog open={showAddAgentDialog.open} onOpenChange={open => setShowAddAgentDialog({...showAddAgentDialog, open})} folderId={showAddAgentDialog.folderId} />
-      )}
+  
 
       {/* Dialog xác nhận xóa lịch sử chat agent */}
       <Dialog open={showClearHistoryDialog} onOpenChange={setShowClearHistoryDialog}>
