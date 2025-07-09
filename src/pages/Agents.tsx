@@ -27,6 +27,7 @@ import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { AgentCard } from "@/components/Agents/AgentCard";
 import { useDebounce } from "@uidotdev/usehooks";
+import ReactPaginate from 'react-paginate';
 
 type AgentStatus = 'private' | 'system_public' | 'workspace_shared';
 
@@ -255,26 +256,26 @@ const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => {
         </div>
       )}
 
-      {/* Phân trang ở cuối */}
+      {/* Pagination with react-paginate */}
       {pagination && (
-        <div className="flex justify-center items-center gap-2 mt-8">
-          <Button
-            variant="outline"
-            disabled={!pagination.has_prev || page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Trang trước
-          </Button>
-          <span>
-            Trang {pagination.page} / {pagination.total_pages}
-          </span>
-          <Button
-            variant="outline"
-            disabled={!pagination.has_next || page === pagination.total_pages}
-            onClick={() => setPage(page + 1)}
-          >
-            Trang sau
-          </Button>
+        <div className="flex justify-center mt-8">
+          <ReactPaginate
+            previousLabel={"< Previous"}
+            nextLabel={"Next >"}
+            breakLabel={"..."}
+            pageCount={pagination.total_pages}
+            forcePage={page - 1}
+            marginPagesDisplayed={2}
+            pageRangeDisplayed={5}
+            onPageChange={({ selected }) => setPage(selected + 1)}
+            containerClassName={"flex gap-2"}
+            pageClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+            activeClassName={"bg-primary text-white"}
+            previousClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+            nextClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+            breakClassName={"px-3 py-1 rounded bg-muted text-foreground"}
+            disabledClassName={"opacity-50 cursor-not-allowed"}
+          />
         </div>
       )}
 
@@ -325,15 +326,19 @@ const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (age
   const navigate = useNavigate();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-  {agents.map((agent) => (
-    <AgentCard
-      key={agent.id}
-      agent={agent}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
-  ))}
-</div>
-
+      {agents.map((agent) => (
+        <AgentCard
+          key={agent.id}
+          agent={agent}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          runningCount={agent.running_count !== undefined ? agent.running_count : undefined}
+          successfulRuns={agent.successful_runs}
+          totalJobs={agent.total_runs}
+          isRunning={agent.is_running}
+          isScheduled={agent.is_scheduled}
+        />
+      ))}
+    </div>
   );
 };

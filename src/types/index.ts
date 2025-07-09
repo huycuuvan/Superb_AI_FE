@@ -6,10 +6,17 @@ export interface User {
   credit?: number;
 }
 
+export interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
-  owner_id: string;
+  owner: UserInfo;
   description?: string;
 }
 
@@ -37,6 +44,13 @@ export interface Agent {
   folders: Folder[];
   image_url?: string;
   file_url?: string;
+  // Add new fields from BE
+  running_count?: number;
+  successful_runs?: number;
+  total_runs?: number;
+  failed_runs?: number;
+  is_running?: boolean;
+  is_scheduled?: boolean;
 }
 
 export interface ApiTaskType {
@@ -150,4 +164,126 @@ export interface Folder {
   path?: string;
   folder_type?: string;
   status?: string;
+}
+
+export interface CreditTransaction {
+  id: number;
+  user_id: string;
+  amount: number;
+  type: string;
+  ref_id: string;
+  description: string;
+  created_at: string;
+  status: string;
+  transactions: [];
+}
+
+export interface PayPalOrder {
+  id: string;
+  status: "CREATED" | "SAVED" | "APPROVED" | "VOIDED" | "COMPLETED";
+  intent: "CAPTURE" | "AUTHORIZE";
+  payment_source: {
+    paypal: {
+      account_id: string;
+      account_type: string;
+      name: {
+        given_name: string;
+        surname: string;
+      };
+      email_address: string;
+    };
+  };
+  purchase_units: Array<{
+    reference_id: string;
+    amount: {
+      currency_code: string;
+      value: string;
+    };
+    payee: {
+      email_address: string;
+      merchant_id: string;
+    };
+    shipping: {
+      name: {
+        full_name: string;
+      };
+      address: {
+        address_line_1: string;
+        admin_area_2: string;
+        admin_area_1: string;
+        postal_code: string;
+        country_code: string;
+      };
+    };
+    payments: {
+      captures: Array<{
+        id: string;
+        status:
+          | "COMPLETED"
+          | "DECLINED"
+          | "PARTIALLY_REFUNDED"
+          | "PENDING"
+          | "REFUNDED"
+          | "FAILED";
+        amount: {
+          currency_code: string;
+          value: string;
+        };
+        final_capture: boolean;
+        seller_protection: {
+          status: "ELIGIBLE" | "PARTIALLY_ELIGIBLE" | "NOT_ELIGIBLE";
+          dispute_categories: string[];
+        };
+        seller_receivable_breakdown: {
+          gross_amount: {
+            currency_code: string;
+            value: string;
+          };
+          paypal_fee: {
+            currency_code: string;
+            value: string;
+          };
+          net_amount: {
+            currency_code: string;
+            value: string;
+          };
+        };
+        invoice_id: string;
+        create_time: string;
+        update_time: string;
+      }>;
+    };
+  }>;
+  create_time: string;
+  update_time: string;
+  links: Array<{
+    href: string;
+    rel: string;
+    method: string;
+  }>;
+}
+
+export interface CreateOrderRequest {
+  amount: string;
+  currency?: string;
+}
+
+export interface CreateOrderResponse {
+  order_id: string;
+  approval_url: string;
+  status: string;
+}
+
+export interface CaptureOrderRequest {
+  order_id: string;
+}
+
+export interface CaptureOrderResponse {
+  success?: boolean;
+  status?: string;
+  new_credit_balance?: number;
+  new_credit?: number;
+  transaction_id?: string;
+  message?: string;
+  credit_added?: number;
 }

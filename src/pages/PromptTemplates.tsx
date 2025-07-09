@@ -21,15 +21,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sparkles } from 'lucide-react';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-  PaginationEllipsis,
-} from '@/components/ui/pagination';
+import ReactPaginate from 'react-paginate';
+import React from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Danh sách biến động và mô tả
 const PROMPT_VARIABLES = [
@@ -87,6 +81,54 @@ function getCategoryString(category: unknown): string {
   return category ? String(category) : '';
 }
 
+// Memoized row for prompt template table
+interface PromptTemplateRowProps {
+  template: PromptTemplate;
+  idx: number;
+  getAgentName: (agent_id: string) => string;
+  openEditModal: (template: PromptTemplate) => void;
+  openDeleteModal: (id: string) => void;
+}
+const PromptTemplateRow: React.FC<PromptTemplateRowProps> = React.memo(function PromptTemplateRow({ template, idx, getAgentName, openEditModal, openDeleteModal }) {
+  function getTemplateTypeLabel(type: string) {
+    if (type === 'system_prompt') return 'System Prompt';
+    if (type === 'user_prompt') return 'User Prompt';
+    return type;
+  }
+  function getCategoryString(category: unknown): string {
+    if (category && typeof category === 'object' && category !== null && 'String' in category) {
+      return String((category as { String: string }).String);
+    }
+    return category ? String(category) : '';
+  }
+  return (
+    <tr
+      className={
+        `border-b border-border transition-colors ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/60'} hover:bg-primary/10`
+      }
+    >
+      <td className="px-3 py-2 font-semibold max-w-[180px] truncate">{template.name}</td>
+      <td className="px-3 py-2 max-w-[140px] truncate">{getAgentName(template.agent_id)}</td>
+      <td className="px-3 py-2">{getTemplateTypeLabel(template.template_type)}</td>
+      <td className="px-3 py-2 max-w-[120px] truncate">{getCategoryString(template.category)}</td>
+      <td className="px-3 py-2 whitespace-nowrap">{new Date(template.created_at).toLocaleString()}</td>
+      <td className="px-3 py-2 whitespace-nowrap">{new Date(template.updated_at).toLocaleString()}</td>
+      <td className="px-3 py-2 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => openEditModal(template)} title="Sửa">
+            <span className="sr-only">Sửa</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" /></svg>
+          </Button>
+          <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => openDeleteModal(template.id)} title="Xóa">
+            <span className="sr-only">Xóa</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export default function PromptTemplatesPage() {
   const { user } = useAuth();
   const { workspace } = useSelectedWorkspace();
@@ -121,13 +163,14 @@ export default function PromptTemplatesPage() {
   const [showDeleteId, setShowDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [templateTypeFilter, setTemplateTypeFilter] = useState<string | undefined>(undefined);
 
   // Thêm ref cho textarea
   const addPromptTextareaRef = useRef(null);
   const editPromptTextareaRef = useRef(null);
 
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(5);
+  const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
@@ -136,7 +179,7 @@ export default function PromptTemplatesPage() {
       fetchAgents();
     }
     // eslint-disable-next-line
-  }, [user, workspace?.id, page]);
+  }, [user, workspace?.id, page, templateTypeFilter]);
 
   // Chỉ cho phép admin
   if (user?.role !== 'admin' && user?.role !== 'super_admin') {
@@ -146,8 +189,8 @@ export default function PromptTemplatesPage() {
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const offset = (page - 1) * pageSize;
-      const res = await getAllPromptTemplates(pageSize, offset);
+      // Call new API signature: (page, page_size, template_type)
+      const res = await getAllPromptTemplates(page, pageSize, templateTypeFilter);
       setTemplates(Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []));
       setTotalPages(res.total_pages || 1);
     } catch (e) {
@@ -253,13 +296,25 @@ export default function PromptTemplatesPage() {
         <h1 className="text-2xl font-bold">Quản lý Prompt Templates</h1>
         <Button onClick={() => setShowAddDialog(true)}>Thêm prompt mới</Button>
       </div>
+      {/* Filter by template_type */}
+      <div className="mb-4 flex items-center gap-2">
+        <Label htmlFor="template-type-filter">Loại template:</Label>
+        <Select
+          value={templateTypeFilter || 'all'}
+          onValueChange={val => setTemplateTypeFilter(val === 'all' ? undefined : val)}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Tất cả" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả</SelectItem>
+            <SelectItem value="system_prompt">System Prompt</SelectItem>
+            <SelectItem value="user_prompt">User Prompt</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid gap-4">
-        {isLoading ? (
-          <div>Đang tải...</div>
-        ) : templates.length === 0 ? (
-          <div className="text-muted-foreground">Chưa có prompt nào.</div>
-        ) : (
-          <>
+        {isLoading || templates.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-xs md:text-sm rounded-xl overflow-hidden">
               <thead>
@@ -274,67 +329,55 @@ export default function PromptTemplatesPage() {
                 </tr>
               </thead>
               <tbody>
-                {templates.map((template, idx) => (
-                  <tr
-                    key={template.id}
-                    className={
-                      `border-b border-border transition-colors ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/60'} hover:bg-primary/10`
-                    }
-                  >
-                    <td className="px-3 py-2 font-semibold max-w-[180px] truncate">{template.name}</td>
-                    <td className="px-3 py-2 max-w-[140px] truncate">{getAgentName(template.agent_id)}</td>
-                    <td className="px-3 py-2">{getTemplateTypeLabel(template.template_type)}</td>
-                    <td className="px-3 py-2 max-w-[120px] truncate">{getCategoryString(template.category)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{new Date(template.created_at).toLocaleString()}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{new Date(template.updated_at).toLocaleString()}</td>
-                    <td className="px-3 py-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => openEditModal(template)} title="Sửa">
-                          <span className="sr-only">Sửa</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" /></svg>
-                        </Button>
-                        <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => openDeleteModal(template.id)} title="Xóa">
-                          <span className="sr-only">Xóa</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/60'}>
+                      {Array.from({ length: 7 }).map((_, colIdx) => (
+                        <td key={colIdx} className="px-3 py-2">
+                          <Skeleton className="h-4 w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  templates.map((template, idx) => (
+                    <PromptTemplateRow
+                      key={template.id}
+                      template={template}
+                      idx={idx}
+                      getAgentName={getAgentName}
+                      openEditModal={openEditModal}
+                      openDeleteModal={openDeleteModal}
+                    />
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-          <Pagination className="mt-4">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={e => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
-                  className={page === 1 ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }).map((_, idx) => (
-                <PaginationItem key={idx}>
-                  <PaginationLink
-                    href="#"
-                    isActive={page === idx + 1}
-                    onClick={e => { e.preventDefault(); setPage(idx + 1); }}
-                  >
-                    {idx + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={e => { e.preventDefault(); if (page < totalPages) setPage(page + 1); }}
-                  className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-          </>
+        ) : (
+          <div className="text-muted-foreground">Chưa có prompt nào.</div>
         )}
+      </div>
+
+      {/* Pagination with react-paginate */}
+      <div className="flex justify-center mt-8">
+        <ReactPaginate
+          previousLabel={"< Previous"}
+          nextLabel={"Next >"}
+          breakLabel={"..."}
+          pageCount={totalPages}
+          forcePage={page - 1}
+          marginPagesDisplayed={2}
+          pageRangeDisplayed={5}
+          onPageChange={({ selected }) => setPage(selected + 1)}
+          containerClassName={"flex gap-2"}
+          pageClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+          activeClassName={"bg-primary text-white"}
+          previousClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+          nextClassName={"px-3 py-1 rounded bg-muted text-foreground cursor-pointer"}
+          breakClassName={"px-3 py-1 rounded bg-muted text-foreground"}
+          disabledClassName={"opacity-50 cursor-not-allowed"}
+        />
       </div>
 
       {/* Add Prompt Dialog */}

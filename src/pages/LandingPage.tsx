@@ -1085,7 +1085,7 @@ const LandingPage: React.FC = () => {
                     <div className="text-4xl font-bold mb-4">$9<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
                     <ul className="space-y-3 mb-6 text-left">
                       <li className="flex items-center gap-2">✅ 9 active agents simultaneously</li>
-                      <li className="flex items-center gap-2">✅ 99 tasks/month</li>
+                      <li className="flex items-center gap-2">✅ 99 jobs run/month</li>
                       <li className="flex items-center gap-2">✅ 999 tokens</li>
                       <li className="flex items-center gap-2">✅ Community support</li>
                     </ul>
@@ -1102,13 +1102,12 @@ const LandingPage: React.FC = () => {
                       Most Popular
                     </div>
                     <h3 className="text-2xl font-bold mb-2">Pro</h3>
-                    <div className="text-4xl font-bold mb-4">$99<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <div className="text-4xl font-bold mb-4">$39<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
                     <ul className="space-y-3 mb-6 text-left">
-                      <li className="flex items-center gap-2">✅ 99 active agents</li>
-                      <li className="flex items-center gap-2">✅ 1,999 tasks/month</li>
-                      <li className="flex items-center gap-2">✅ 19,999 tokens</li>
+                      <li className="flex items-center gap-2">✅ 39 active agents</li>
+                      <li className="flex items-center gap-2">✅ 399 jobs run/month</li>
+                      <li className="flex items-center gap-2">✅ 3999 + 999 (bonus) tokens</li>
                       <li className="flex items-center gap-2">✅ Priority support</li>
-                      <li className="flex items-center gap-2">✅ Custom integrations</li>
                     </ul>
                     <button className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105">
                       Start Free Trial
@@ -1125,7 +1124,7 @@ const LandingPage: React.FC = () => {
                     <div className="text-4xl font-bold mb-4">Custom</div>
                     <ul className="space-y-3 mb-6 text-left">
                       <li className="flex items-center gap-2">✅ Unlimited agents</li>
-                      <li className="flex items-center gap-2">✅ Unlimited tasks</li>
+                      <li className="flex items-center gap-2">✅ Unlimited jobs run</li>
                       <li className="flex items-center gap-2">✅ Custom deployment</li>
                       <li className="flex items-center gap-2">✅ Dedicated support</li>
                       <li className="flex items-center gap-2">✅ SLA guarantees</li>

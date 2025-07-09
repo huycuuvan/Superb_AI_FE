@@ -85,4 +85,9 @@ export const API_ENDPOINTS = {
     update: (id: string) => `${API_BASE_URL}/credentials/${id}`,
     delete: (id: string) => `${API_BASE_URL}/credentials/${id}`,
   },
+  payment: {
+    createOrder: `${API_BASE_URL}/payment/create-order`,
+    captureOrder: `${API_BASE_URL}/payment/capture-order`,
+    getTransactionHistory: `${API_BASE_URL}/payment/transactions`,
+  },
 };

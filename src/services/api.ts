@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
+import { AgentsByFoldersFilters } from "@/hooks/useAgentsByFolders";
 import {
   Workspace,
   Agent,
@@ -10,6 +11,11 @@ import {
   ApiTaskType,
   User,
   TaskRun,
+  CreateOrderRequest,
+  CreateOrderResponse,
+  CaptureOrderRequest,
+  CaptureOrderResponse,
+  CreditTransaction,
 } from "@/types";
 import { handleApiError } from "@/utils/errorHandler";
 
@@ -1192,10 +1198,20 @@ export const renderPromptTemplate = async (
   return res.json();
 };
 
-export const getAllPromptTemplates = async (limit = 100, offset = 0) => {
+// Update getAllPromptTemplates to use new API params
+export const getAllPromptTemplates = async (
+  page = 1,
+  page_size = 10,
+  template_type?: string
+) => {
   const token = localStorage.getItem("token");
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(page_size),
+  });
+  if (template_type) params.append("template_type", template_type);
   const res = await fetch(
-    `${API_BASE_URL}/prompt-templates/all?limit=${limit}&offset=${offset}`,
+    `${API_BASE_URL}/prompt-templates/all?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -1370,7 +1386,8 @@ export const deleteCredential = async (id: string) => {
 export const getAgentsByFolders = async (
   folderIds: string[],
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  filters?: AgentsByFoldersFilters
 ): Promise<{ data: Agent[] }> => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
@@ -1380,7 +1397,12 @@ export const getAgentsByFolders = async (
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ folder_ids: folderIds, page, page_size: pageSize }),
+    body: JSON.stringify({
+      folder_ids: folderIds,
+      page,
+      page_size: pageSize,
+      filters,
+    }),
   });
   if (!res.ok) {
     await handleApiError(res);
@@ -1792,5 +1814,72 @@ export const deleteScheduledTask = async (
     await handleApiError(response);
   }
 
+  return response.json();
+};
+
+// ========== PAYMENT API ==========
+export const createPayPalOrder = async (
+  data: CreateOrderRequest
+): Promise<CreateOrderResponse> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.payment.createOrder, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const capturePayPalOrder = async (
+  data: CaptureOrderRequest
+): Promise<CaptureOrderResponse> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(API_ENDPOINTS.payment.captureOrder, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const getTransactionHistory = async (
+  page = 1,
+  page_size = 20,
+  type?: string
+) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  let url = `${API_ENDPOINTS.payment.getTransactionHistory}?page=${page}&page_size=${page_size}`;
+  if (type && type !== "all") url += `&type=${type}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    await handleApiError(response);
+  }
   return response.json();
 };

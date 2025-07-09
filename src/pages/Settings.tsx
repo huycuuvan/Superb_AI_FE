@@ -6,20 +6,119 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { workspaces } from "@/services/mockData";
 import { useTheme, Theme } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
+import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
+import { TransactionHistory } from "@/components/TransactionHistory";
 import toast, { Toaster } from "react-hot-toast";
+import { Coins, Plus } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getWorkspace, getWorkspaceProfile } from "@/services/api";
+import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
 
 const Settings = () => {
-  const workspace = workspaces[0];
-  const [workspaceName, setWorkspaceName] = useState(workspace.name);
+  // Lấy workspace đầu tiên và profile
+  const { data: wsData } = useQuery({ queryKey: ['workspaces'], queryFn: getWorkspace });
+  const workspace = wsData && 'data' in wsData && Array.isArray(wsData.data) ? wsData.data[0] : undefined;
+  const workspaceId = workspace?.id;
+  const { data: profileData } = useQuery({ queryKey: ['workspaceProfile', workspaceId], queryFn: () => workspaceId ? getWorkspaceProfile(workspaceId) : Promise.resolve({ data: null }), enabled: !!workspaceId });
+  const workspaceProfile = profileData && 'data' in profileData ? profileData.data : undefined;
+  const [workspaceName, setWorkspaceName] = useState(workspace?.name || "");
   const { theme, setTheme } = useTheme();
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme || 'light');
+  const { user, updateUser } = useAuth();
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false);
+
+  // State for account form
+  const [accountForm, setAccountForm] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      setAccountForm(prev => ({
+        ...prev,
+        name: user.name || "",
+        email: user.email || ""
+      }));
+    }
+  }, [user]);
 
   const handleSaveAppearance = () => {
     setTheme(selectedTheme);
     localStorage.setItem("theme", selectedTheme);
     toast.success("Saved successfully!");
+  };
+
+  const handleAccountFormChange = (field: string, value: string) => {
+    setAccountForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleUpdateAccount = () => {
+    // Validate form
+    if (!accountForm.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+
+    if (!accountForm.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(accountForm.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // If password change is requested, validate passwords
+    if (accountForm.newPassword || accountForm.confirmPassword) {
+      if (!accountForm.currentPassword) {
+        toast.error("Current password is required to change password");
+        return;
+      }
+      if (accountForm.newPassword !== accountForm.confirmPassword) {
+        toast.error("New passwords do not match");
+        return;
+      }
+      if (accountForm.newPassword.length < 6) {
+        toast.error("New password must be at least 6 characters long");
+        return;
+      }
+    }
+
+    // Update user data
+    if (user) {
+      const updatedUser = {
+        ...user,
+        name: accountForm.name.trim(),
+        email: accountForm.email.trim()
+      };
+      
+      updateUser(updatedUser);
+      toast.success("Account updated successfully!");
+      
+      // Clear password fields
+      setAccountForm(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      }));
+    }
   };
   
   return (
@@ -34,90 +133,38 @@ const Settings = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
+          
+          <TabsTrigger value="credit">Credit</TabsTrigger>
+          
         </TabsList>
         
         <TabsContent value="workspace">
           <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Workspace Information</CardTitle>
-                <CardDescription>
-                  Update your workspace details and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-name">Workspace Name</Label>
-                  <Input 
-                    id="workspace-name" 
-                    value={workspaceName} 
-                    onChange={(e) => setWorkspaceName(e.target.value)} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-description">Description</Label>
-                  <Textarea 
-                    id="workspace-description" 
-                    placeholder="Describe what this workspace is used for..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-website">Website</Label>
-                  <Input 
-                    id="workspace-website" 
-                    placeholder="https://example.com"
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="teampal-button">Save Changes</Button>
-              </CardFooter>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Workspace Appearance</CardTitle>
-                <CardDescription>
-                  Customize how your workspace looks
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Workspace Logo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded bg-teampal-500 flex items-center justify-center text-white text-xl font-bold">
-                      TP
-                    </div>
-                    <Button variant="outline">Change Logo</Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Theme</Label>
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'light' ? 'border-primary' : 'border-transparent'}`}
-                      onClick={() => setSelectedTheme('light')}
-                    >
-                      <div className="w-16 h-16 rounded-md border shadow-md bg-white"></div>
-                      <span className="text-sm text-muted-foreground mt-1">Light Theme</span>
-                    </div>
-                    <div
-                      className={`flex flex-col items-center cursor-pointer p-2 border-2 rounded-md ${selectedTheme === 'dark' ? 'border-primary' : 'border-transparent'}`}
-                      onClick={() => setSelectedTheme('dark')}
-                    >
-                      <div className="w-16 h-16 rounded-md border shadow-md bg-black"></div>
-                      <span className="text-sm text-muted-foreground mt-1">Dark Theme</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="teampal-button" onClick={handleSaveAppearance}>Save Appearance</Button>
-              </CardFooter>
-            </Card>
+            {workspace && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Workspace</CardTitle>
+                  <CardDescription>Thông tin cơ bản workspace</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  
+                  <div><b>Name:</b> {workspace.name}</div>
+                  <div><b>Owner:</b> {workspace.owner.name}</div>
+                  {workspace.description && <div><b>Description:</b> {workspace.description}</div>}
+                </CardContent>
+              </Card>
+            )}
+            {workspaceId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Workspace Profile</CardTitle>
+                  <CardDescription>Thông tin profile workspace</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WorkspaceProfileForm workspaceId={workspaceId} initialData={workspaceProfile || undefined} />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
         
@@ -132,131 +179,144 @@ const Settings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" value="AI Automation" />
+                <Input 
+                  id="name" 
+                  value={accountForm.name}
+                  onChange={(e) => handleAccountFormChange("name", e.target.value)}
+                  placeholder="Enter your name"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value="admin@superb.ai" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value="********" />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="superb-button">Update Account</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Configure how you receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Email Notifications</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email-tasks" className="flex-1">Task updates</Label>
-                    <Switch id="email-tasks" defaultChecked />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email-agents" className="flex-1">Agent status changes</Label>
-                    <Switch id="email-agents" defaultChecked />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email-workflow" className="flex-1">Workflow completions</Label>
-                    <Switch id="email-workflow" />
-                  </div>
-                </div>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={accountForm.email}
+                  onChange={(e) => handleAccountFormChange("email", e.target.value)}
+                  placeholder="Enter your email"
+                />
               </div>
               
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">In-app Notifications</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="app-tasks" className="flex-1">Task updates</Label>
-                    <Switch id="app-tasks" defaultChecked />
+              {/* User Role Display */}
+              {user?.role && (
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="capitalize">
+                      {user.role}
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="app-agents" className="flex-1">Agent status changes</Label>
-                    <Switch id="app-agents" defaultChecked />
+                </div>
+              )}
+
+              {/* User ID Display */}
+              {user?.id && (
+                <div className="space-y-2">
+                  <Label>User ID</Label>
+                  <Input 
+                    value={user.id}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
+              )}
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-4">Change Password</h4>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <Input 
+                      id="currentPassword" 
+                      type="password" 
+                      value={accountForm.currentPassword}
+                      onChange={(e) => handleAccountFormChange("currentPassword", e.target.value)}
+                      placeholder="Enter current password"
+                    />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="app-workflow" className="flex-1">Workflow completions</Label>
-                    <Switch id="app-workflow" defaultChecked />
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input 
+                      id="newPassword" 
+                      type="password" 
+                      value={accountForm.newPassword}
+                      onChange={(e) => handleAccountFormChange("newPassword", e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      type="password" 
+                      value={accountForm.confirmPassword}
+                      onChange={(e) => handleAccountFormChange("confirmPassword", e.target.value)}
+                      placeholder="Confirm new password"
+                    />
                   </div>
                 </div>
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="teampal-button">Save Preferences</Button>
+              <Button 
+                className="superb-button"
+                onClick={handleUpdateAccount}
+                disabled={!user}
+              >
+                Update Account
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
+   
         
-        <TabsContent value="billing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing Information</CardTitle>
-              <CardDescription>
-                Manage your subscription and billing details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-border p-4 mb-4">
-                <div className="flex items-center justify-between mb-3">
+        <TabsContent value="credit">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-yellow-500" />
+                  Credit Balance
+                </CardTitle>
+                <CardDescription>
+                  Quản lý credit và lịch sử giao dịch
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                   <div>
-                    <h3 className="font-medium">Professional Plan</h3>
-                    <p className="text-sm text-muted-foreground">$49/month</p>
-                  </div>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Next billing date: June 15, 2025
-                </p>
-                <div className="flex gap-3">
-                  <Button variant="outline" size="sm">Change Plan</Button>
-                  <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10">Cancel Plan</Button>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Payment Method</h3>
-                <div className="flex items-center justify-between p-3 border border-border rounded-md">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gray-100 p-2 rounded">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-                        <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-medium">Visa ending in 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                    <p className="text-sm text-muted-foreground">Credit hiện tại</p>
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-4 w-4 text-yellow-500" />
+                      <span className="text-2xl font-bold">{user?.credit || 0}</span>
+                      <span className="text-sm text-muted-foreground">credits</span>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">Edit</Button>
+                  <Button 
+                    onClick={() => setShowCreditPurchase(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nạp Credit
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col items-start gap-4">
-              <div className="w-full">
-                <Button variant="outline" className="w-full">View Billing History</Button>
-              </div>
-              <div className="flex justify-between w-full text-sm">
-                <span className="text-muted-foreground">Need help with billing?</span>
-                <a href="#" className="text-teampal-500 hover:underline">Contact Support</a>
-              </div>
-            </CardFooter>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <TransactionHistory />
+          </div>
         </TabsContent>
+        
+        
       </Tabs>
+
+      <CreditPurchaseDialog
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={(newCreditBalance) => {
+          toast.success(`Đã nạp thành công! Credit mới: ${newCreditBalance}`);
+        }}
+      />
     </div>
   );
 };

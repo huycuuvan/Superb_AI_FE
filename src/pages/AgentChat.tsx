@@ -6,7 +6,7 @@ import {
   ListPlus, Book, Clock,
   Rocket, Lightbulb,
       ChevronsDown, BrainCircuit,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, Coins
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
+import { CreditPurchaseDialog } from '@/components/CreditPurchaseDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import LogAgentThinking from '@/components/LogAgentThinking';
 import { useInView } from 'react-intersection-observer';
@@ -1150,6 +1151,7 @@ const handleSubmitTaskInputs = async () => {
   }, [isAgentThinking]);
 
   const [isCreditError, setIsCreditError] = useState(false);
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false);
 
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
@@ -1918,10 +1920,31 @@ const handleSubmitTaskInputs = async () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsCreditError(false)} autoFocus>Đóng</AlertDialogAction>
+            <AlertDialogAction onClick={() => setIsCreditError(false)}>Đóng</AlertDialogAction>
+            <Button 
+              onClick={() => {
+                setIsCreditError(false);
+                setShowCreditPurchase(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Coins className="h-4 w-4" />
+              Nạp Credit
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreditPurchaseDialog
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={(newCreditBalance) => {
+          toast({ 
+            title: "Nạp credit thành công", 
+            description: `Credit mới: ${newCreditBalance}` 
+          });
+        }}
+      />
 
       {/* AlertDialog xác nhận xóa thread */}
       <AlertDialog open={showDeleteThreadModal} onOpenChange={setShowDeleteThreadModal}>

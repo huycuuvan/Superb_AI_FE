@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, Share2, Loader2 } from "lucide-react";
+import { Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, Share2, Loader2, Coins } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -46,6 +46,7 @@ import React from "react";
 import { toast } from "sonner";
 import './Header.css'; // <<<< Import file CSS mới
 import { LanguageToggle } from "../LanguageToggle";
+import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 
 interface DetailedInvitation extends Invitation {
   WorkspaceName?: string;
@@ -74,6 +75,7 @@ const Header = React.memo(() => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
   const [memberToRemoveId, setMemberToRemoveId] = useState<string | null>(null);
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false);
   const workspaceIdForMembers = workspace?.id || null;
 
   const {
@@ -277,10 +279,20 @@ const Header = React.memo(() => {
 
           <LanguageToggle />
           
-          {/* FIXED: Applied gradient classes as requested */}
-          <Button variant="outline" size="sm" className="hidden md:inline-flex dark:hover:bg-primary hover:bg-gradient-to-r from-purple-600 to-indigo-600">
-            {t('common.editBrand')}
-          </Button>
+          {/* Hiển thị nút nạp credit khi credit thấp */}
+          {user && (user.credit || 0) < 50 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowCreditPurchase(true)}
+              className="hidden md:inline-flex text-orange-600 border-orange-600 hover:bg-orange-50"
+            >
+              <Coins className="h-4 w-4 mr-1" />
+              Nạp Credit
+            </Button>
+          )}
+          
+      
 
           {workspace && (
             <DropdownMenu>
@@ -383,6 +395,14 @@ const Header = React.memo(() => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreditPurchaseDialog
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={(newCreditBalance) => {
+          toast.success(`Đã nạp thành công! Credit mới: ${newCreditBalance}`);
+        }}
+      />
     </header>
   );
 });

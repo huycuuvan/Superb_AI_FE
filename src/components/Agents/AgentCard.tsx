@@ -15,9 +15,15 @@ interface AgentCardProps {
   agent: Agent;
   onEdit?: (agent: Agent) => void;
   onDelete?: (agent: Agent) => void;
+  jobCount?: number; // legacy, can be removed if not used
+  runningCount?: number;
+  successfulRuns?: number;
+  totalJobs?: number;
+  isRunning?: boolean;
+  isScheduled?: boolean;
 }
 
-export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
+export const AgentCard = ({ agent, onEdit, onDelete, runningCount, successfulRuns, totalJobs, isRunning, isScheduled }: AgentCardProps) => {
   const navigate = useNavigate();
   return (
     <div
@@ -80,19 +86,31 @@ export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
 
       {/* Job brief */}
       <div className="flex-1 mb-2 mt-1 flex items-start">
-  <div className="text-xs text-muted-foreground line-clamp-3 min-h-[45px] w-full break-words">
-    {agent.job_brief && agent.job_brief.trim() !== ''
-      ? agent.job_brief
-      : <span className="italic text-zinc-400">Chưa có mô tả công việc</span>
-    }
-  </div>
-</div>
+        <div className="text-xs text-muted-foreground line-clamp-3 min-h-[45px] w-full break-words">
+          {agent.job_brief && agent.job_brief.trim() !== ''
+            ? agent.job_brief
+            : <span className="italic text-zinc-400">Chưa có mô tả công việc</span>
+          }
+        </div>
+      </div>
+
+      {/* Job stats */}
+      <div className="mb-2 space-y-0.5">
+       
+     
+        <span className="text-xs font-medium text-green-600 block">
+          Đã thực thi: {successfulRuns !== undefined ? successfulRuns : '-'} lần
+        </span>
+        <span className="text-xs font-medium text-gray-600 block">
+          Tổng số job: {totalJobs !== undefined ? totalJobs : '-'}
+        </span>
+      </div>
 
       {/* Actions */}
       <div className="flex gap-2 mt-auto">
         <Button
           className="flex-1 bg-indigo-600 text-white rounded-xl py-1.5 text-xs font-bold transition hover:bg-indigo-700"
-          onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
+          onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true&newChat=1`)}
         >
           Chat
         </Button>

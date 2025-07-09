@@ -42,6 +42,7 @@ import PromptTemplatesPage from '@/pages/PromptTemplates';
 import CredentialsPage from '@/pages/Credentials';
 import DepartmentsPage from '@/pages/Departments';
 import ScheduledTasksPage from '@/pages/ScheduledTasks';
+import { PayPalCallback } from '@/components/PayPalCallback';
 
 const routes: RouteObject[] = [
   {
@@ -71,6 +72,10 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/payment/callback',
+    element: <PayPalCallback />,
   },
 
   {
