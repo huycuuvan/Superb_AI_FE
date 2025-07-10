@@ -1386,7 +1386,7 @@ const handleSubmitTaskInputs = async () => {
       </aside>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-background">
+      <div className="flex-1 flex flex-col bg-background md:w-[calc(100%-256px)]">
         {isLoading ? (
           <div className="flex-1 p-4 space-y-4">
             <div className="flex items-start space-x-3">
