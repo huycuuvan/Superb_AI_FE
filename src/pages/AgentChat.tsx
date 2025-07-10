@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, getSubflowLogs, deleteThread } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, deleteThread, getSubflowLogPairs } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -283,6 +283,12 @@ const AgentChat = () => {
             // CHỈ tắt trạng thái đang nghĩ nếu message này là của agent
             if (msgData.sender_type === "agent") {
               setIsAgentThinking(false);
+              // Reset realtimeLogs cho message agent này
+              setRealtimeLogs(prev => {
+                const newLogs = { ...prev };
+                if (msgData.id) delete newLogs[msgData.id];
+                return newLogs;
+              });
             }
             return; // Kết thúc
           }
@@ -305,6 +311,8 @@ const AgentChat = () => {
                 updatedMessages[lastMessageIndex] = updatedLastMessage;
                 return updatedMessages;
               } else {
+                // Nếu là message agent mà không có id từ BE, bỏ qua (không tạo id tạm)
+                if (!msgData.id && msgData.sender_type === 'agent') return prevMessages;
                 const newChatMessage: ChatMessage = {
                   id: msgData.id || `ws-${Date.now()}`,
                   content: msgData.message_content || msgData.content,
@@ -327,6 +335,12 @@ const AgentChat = () => {
             // Chỉ tắt trạng thái đang nghĩ nếu message này là của agent
             if (msgData.sender_type === "agent") {
               setIsAgentThinking(false);
+              // Reset realtimeLogs cho message agent này
+              setRealtimeLogs(prev => {
+                const newLogs = { ...prev };
+                if (msgData.id) delete newLogs[msgData.id];
+                return newLogs;
+              });
             }
             return;
           }
@@ -347,6 +361,15 @@ const AgentChat = () => {
                 return updatedMessages;
               }
               return prevMessages;
+            });
+            // Reset realtimeLogs cho message agent cuối cùng
+            setRealtimeLogs(prev => {
+              const newLogs = { ...prev };
+              const lastMsg = messages[messages.length - 1];
+              if (lastMsg && lastMsg.sender === 'agent' && lastMsg.id) {
+                delete newLogs[lastMsg.id];
+              }
+              return newLogs;
             });
             return;
           }
@@ -384,17 +407,29 @@ const AgentChat = () => {
           }
 
           // Xử lý subflow_log từ backend
-          if (receivedData.type === "subflow_log") {
-            console.log("Nhận subflow log:", receivedData);
+          if (receivedData.type === "subflow_log" || receivedData.type === "subflow_result") {
+            const log = { ...receivedData, is_result: receivedData.type === "subflow_result" };
+            const msgId = log.message_id;
+            const logType = receivedData.log_type || (receivedData.type === "subflow_result" ? "result" : "execute");
+            if (msgId) {
+              setRealtimeLogs(prev => ({
+                ...prev,
+                [msgId]: {
+                  ...prev[msgId],
+                  [logType]: log
+                }
+              }));
+            }
+            setSubflowLogs(prevLogs => [...prevLogs, log]);
+            return;
+          }
+
+          // Xử lý subflow_result từ backend (log kết quả)
+          if (receivedData.type === "subflow_result") {
             setSubflowLogs(prevLogs => {
-              // Thêm log mới vào cuối danh sách
-              const newLog: SubflowLog = {
-                type: "subflow_log",
-                thread_id: receivedData.thread_id,
-                content: receivedData.content,
-                timestamp: receivedData.timestamp,
-                created_at: receivedData.created_at,
-                updated_at: receivedData.updated_at
+              const newLog: any = {
+                ...receivedData,
+                is_result: true // Ép cứng log kết quả
               };
               return [...prevLogs, newLog];
             });
@@ -1127,20 +1162,13 @@ const handleSubmitTaskInputs = async () => {
     }
   }, [messages]);
 
-  const [messageLogs, setMessageLogs] = useState<Record<string, SubflowLog[]>>({});
+  const [messageLogs, setMessageLogs] = useState<Record<string, any[][]>>({});
   const [loadingLog, setLoadingLog] = useState<Record<string, boolean>>({});
 
   // Thêm hàm fetch log khi click:
   const handleShowLog = async (agentMsgId: string, userMsgId: string) => {
-    if (messageLogs[agentMsgId] || loadingLog[agentMsgId]) return;
-    setLoadingLog(prev => ({ ...prev, [agentMsgId]: true }));
-    try {
-      const res = await getSubflowLogs(userMsgId);
-      // Luôn set, kể cả khi log rỗng
-      setMessageLogs(prev => ({ ...prev, [agentMsgId]: Array.isArray(res?.data) ? res.data : [] }));
-    } finally {
-      setLoadingLog(prev => ({ ...prev, [agentMsgId]: false }));
-    }
+    // Không làm gì cả, vì log đã được fetch toàn bộ theo thread_id
+    return;
   };
 
   // Tự động focus lại input chat khi agent trả lời xong
@@ -1194,6 +1222,61 @@ const handleSubmitTaskInputs = async () => {
     if (["json"].includes(ext)) return { color: "bg-pink-500", label: "JSON" };
     return { color: "bg-pink-500", label: "FILE" };
   }
+
+  // Thay đổi: fetch toàn bộ log pairs khi có threadId
+  useEffect(() => {
+    if (!currentThread || messages.length === 0) return;
+    (async () => {
+      try {
+        const res = await getSubflowLogPairs(currentThread);
+        // res.data là mảng các object { message_id, execute_logs: [], result_logs: [] }
+        if (Array.isArray(res?.data)) {
+          const logMap: Record<string, any[]> = {};
+          res.data.forEach((item: any) => {
+            const logs: any[] = [];
+            if (Array.isArray(item.execute_logs)) {
+              logs.push(...item.execute_logs.map(l => ({ ...l, is_result: false })));
+            }
+            if (Array.isArray(item.result_logs)) {
+              logs.push(...item.result_logs.map(l => ({ ...l, is_result: true })));
+            }
+            // Sắp xếp logs theo thời gian
+            logs.sort((a, b) => {
+              const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+              const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+              return timeA - timeB;
+            });
+            if (logs.length > 0 && item.message_id) {
+              logMap[item.message_id] = logs;
+            }
+          });
+          setMessageLogs(logMap); // luôn cập nhật lại messageLogs khi currentThread thay đổi
+        } else {
+          setMessageLogs({});
+        }
+      } catch (e) {
+        setMessageLogs({});
+      }
+    })();
+  }, [currentThread, messages.length]);
+
+  const [realtimeLogs, setRealtimeLogs] = useState<Record<string, { execute?: any; result?: any }>>({});
+
+  // Normalize messageLogs để loại bỏ duplicate log nếu có dữ liệu cũ dạng mảng các mảng
+  useEffect(() => {
+    setMessageLogs(prev => {
+      const newLogs: Record<string, any[]> = {};
+      for (const key in prev) {
+        if (Array.isArray(prev[key]) && Array.isArray(prev[key][0])) {
+          // Nếu là mảng các mảng, gộp lại thành 1 mảng logs duy nhất
+          newLogs[key] = prev[key].flat();
+        } else {
+          newLogs[key] = prev[key];
+        }
+      }
+      return newLogs;
+    });
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1421,7 +1504,9 @@ const handleSubmitTaskInputs = async () => {
               if (msg.sender === 'agent') {
                 // Chỉ fetch log nếu có parent_message_id, nhưng luôn render message agent
                 const userMsgId = msg.parent_message_id;
-                // Không còn fallback slice/index, chỉ lấy đúng parent_message_id
+                // Ưu tiên lấy log theo msg.id, nếu không có thì thử lấy theo parent_message_id
+                const logArrs = messageLogs[msg.id] || (userMsgId ? messageLogs[userMsgId] : undefined);
+                const realtimePair = realtimeLogs[msg.id] || (userMsgId ? realtimeLogs[userMsgId] : undefined);
                 return (
                   <AgentMessageWithLog
                     key={msg.id}
@@ -1450,8 +1535,37 @@ const handleSubmitTaskInputs = async () => {
                         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                       >
                         {/* Log subflow nếu có */}
-                        {msg.sender === 'agent' && !msg.isStreaming && Array.isArray(messageLogs[msg.id]) && messageLogs[msg.id].length > 0 && (
-                          <LogAgentThinking logs={messageLogs[msg.id]} />
+                        {msg.sender === 'agent' && !msg.isStreaming && Array.isArray(logArrs) && logArrs.length > 0 ? (
+                          <div className="border border-blue-400 dark:border-blue-700 rounded-2xl shadow-md p-2 mb-2 bg-blue-50 dark:bg-blue-900/20 max-h-48 overflow-y-auto no-scrollbar">
+                            <LogAgentThinking logs={logArrs} />
+                          </div>
+                        ) : (
+                          realtimePair &&
+                            ((realtimePair.execute && realtimePair.execute.content) || (realtimePair.result && realtimePair.result.content)) &&
+                            (() => {
+                              const logs = [
+                                realtimePair.execute && realtimePair.execute.content ? {
+                                  ...realtimePair.execute,
+                                  is_result: realtimePair.execute.log_type === 'result' ? true : false
+                                } : null,
+                                realtimePair.result && realtimePair.result.content ? {
+                                  ...realtimePair.result,
+                                  is_result: realtimePair.result.log_type === 'result' ? true : false
+                                } : null
+                              ].filter(Boolean).sort((a, b) => {
+                                const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+                                const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+                                return timeA - timeB;
+                              });
+                              return logs.length > 0 ? (
+                                <div className="border border-blue-400 dark:border-blue-700 rounded-2xl shadow-md p-2 mb-2 bg-blue-50 dark:bg-blue-900/20 max-h-48 overflow-y-auto no-scrollbar">
+                                  <LogAgentThinking 
+                                    logs={logs}
+                                    isCollapsed={true}
+                                  />
+                                </div>
+                              ) : null;
+                            })()
                         )}
                         <ChatMessageContent
                           content={msg.content}

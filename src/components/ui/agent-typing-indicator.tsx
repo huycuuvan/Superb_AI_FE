@@ -4,6 +4,7 @@ import { createAvatar } from '@dicebear/core';
 import { adventurer  } from '@dicebear/collection';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LogMessage } from '@/components/LogAgentThinking';
 
 interface SubflowLog {
   type: "subflow_log";
@@ -55,7 +56,13 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
 
       return (
         <div className="relative mt-1 w-full max-w-full">
-          <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 space-y-2">
+          <div
+            className={
+              "rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 space-y-2 " +
+              (isExpanded ? "max-h-96" : "max-h-48") +
+              " overflow-y-auto no-scrollbar"
+            }
+          >
             <div className="flex items-center justify-between gap-2 text-xs text-blue-500 font-semibold mb-1">
               <span className="flex items-center">
                 <BrainCircuit className="w-4 h-4 mr-1" style={{ marginTop: 2 }} />
@@ -71,8 +78,8 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
               </button>
             </div>
             {(isExpanded ? subflowLogs : subflowLogs.slice(-2)).map((log, idx) => (
-              <div key={`${log.timestamp || idx}`} className="flex items-start gap-2 text-xs text-blue-900 dark:text-blue-200">
-                <span>{log.content}</span>
+              <div key={`${log.timestamp || idx}`} className="flex items-start gap-2 text-xs">
+                <LogMessage log={log} />
               </div>
             ))}
             {!isExpanded && subflowLogs.length > 2 && (

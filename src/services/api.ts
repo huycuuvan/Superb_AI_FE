@@ -1431,10 +1431,10 @@ export const scrapWorkspaceProfile = async ({
   return res.json();
 };
 
-export const getSubflowLogs = async (message_id: string) => {
+export const getSubflowLogPairs = async (thread_id: string) => {
   const token = localStorage.getItem("token");
   const res = await fetch(
-    `${API_BASE_URL}/logs/subflow?message_id=${message_id}`,
+    `${API_BASE_URL}/logs/subflow/pairs?thread_id=${thread_id}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -1442,7 +1442,7 @@ export const getSubflowLogs = async (message_id: string) => {
       },
     }
   );
-  if (!res.ok) throw new Error("Không thể lấy log subflow");
+  if (!res.ok) throw new Error("Không thể lấy log subflow pairs");
   return res.json();
 };
 

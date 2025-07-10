@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
+import { isImageUrl, getDirectImageUrl, sanitizeMarkdownImages } from '@/utils/imageUtils';
 
 interface ChatMessageContentProps {
   content: string;
@@ -138,62 +139,6 @@ const TableRenderer = ({ node, ...props }: any) => {
 const isVideoUrl = (url: string) =>
   /^https?:\/\/.*\.(mp4|webm|ogg)(\?.*)?$/i.test(url.trim());
 
-// Thêm hàm nhận diện link ảnh - cải thiện để xử lý mọi trường hợp
-const isImageUrl = (url: string) => {
-  const cleanUrl = url.trim();
-  // Kiểm tra các định dạng ảnh phổ biến
-  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(\?.*)?$/i;
-  // Kiểm tra các domain phổ biến có ảnh
-  const imageDomains = /(dropbox\.com|drive\.google\.com|imgur\.com|flickr\.com|500px\.com|unsplash\.com|pexels\.com|pixabay\.com)/i;
-  
-  return imageExtensions.test(cleanUrl) || 
-         (cleanUrl.includes('http') && imageDomains.test(cleanUrl) && imageExtensions.test(cleanUrl));
-};
-
-// Hàm trích xuất URL từ markdown link
-const extractUrlFromMarkdown = (text: string): string | null => {
-  const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi;
-  const match = markdownLinkRegex.exec(text);
-  return match ? match[2] : null;
-};
-
-// Hàm trích xuất URL từ text (có thể chứa link ảnh)
-const extractImageUrlsFromText = (text: string): string[] => {
-  const urlRegex = /(https?:\/\/[^\s]+)/gi;
-  const urls = text.match(urlRegex) || [];
-  return urls.filter(url => isImageUrl(url));
-};
-
-// Hàm chuyển đổi markdown link thành markdown ảnh
-const convertMarkdownLinksToImages = (text: string): string => {
-  return text.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi,
-    (match, alt, url) => {
-      if (isImageUrl(url)) {
-        return `![](${url})`;
-      }
-      return match; // Giữ nguyên nếu không phải link ảnh
-    }
-  );
-};
-
-// Hàm chuyển đổi link ảnh thuần thành markdown ảnh
-const convertPlainImageLinksToMarkdown = (text: string): string => {
-  const lines = text.split('\n');
-  return lines.map(line => {
-    const imageUrls = extractImageUrlsFromText(line);
-    if (imageUrls.length > 0) {
-      // Thay thế link ảnh thuần bằng markdown ảnh
-      let processedLine = line;
-      imageUrls.forEach(url => {
-        processedLine = processedLine.replace(url, `![](${url})`);
-      });
-      return processedLine;
-    }
-    return line;
-  }).join('\n');
-};
-
 // Hàm đệ quy hiển thị JSON dạng bảng lồng bảng
 function renderJsonAsTable(data: any): JSX.Element {
   if (Array.isArray(data)) {
@@ -233,20 +178,6 @@ function renderJsonAsTable(data: any): JSX.Element {
   // primitive
   return <span>{String(data)}</span>;
 }
-
-// Hàm chuyển link Dropbox share sang direct link
-const toDirectDropboxLink = (url: string) => {
-  // www.dropbox.com/s/abc/file.png?dl=0 => dl.dropboxusercontent.com/s/abc/file.png
-  if (url.includes('dropbox.com')) {
-    // Xử lý cả www.dropbox.com và dropbox.com/scl/fi/
-    return url
-      .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-      .replace('dropbox.com', 'dl.dropboxusercontent.com')
-      .replace(/\?dl=\d?/, '')
-      .replace(/\?raw=\d?/, '');
-  }
-  return url;
-};
 
 // --- COMPONENT CHÍNH ĐÃ ĐƯỢC SỬA LỖI ---
 export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }: ChatMessageContentProps) => {
@@ -322,26 +253,18 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
 
   // --- FIX: Logic render nội dung được tối ưu ---
   const renderContent = () => {
-    // FIX: Các điều kiện kiểm tra (isVideoUrl, JSON.parse) phải dùng `content` (chuỗi đầy đủ).
-    // Nhưng component render ra thì dùng `animatedContent` để có hiệu ứng typing.
-
     // 1. Kiểm tra Video và Ảnh
     const contentLines = content.trim().split('\n');
     const isPotentiallyVideo = contentLines.some(line => isVideoUrl(line));
     const isPotentiallyImage = contentLines.some(line => {
       // Kiểm tra cả link thuần và markdown link
-      const plainUrls = extractImageUrlsFromText(line);
-      const markdownUrl = extractUrlFromMarkdown(line);
-      return plainUrls.length > 0 || (markdownUrl && isImageUrl(markdownUrl));
+      return line.match(/https?:\/\/[^\s)]+/gi)?.some(url => isImageUrl(getDirectImageUrl(url))) || false;
     });
 
     // --- XỬ LÝ: Chuyển đổi mọi loại link ảnh thành markdown ảnh để hiển thị trực tiếp ---
     let processedContent = animatedContent;
     if (isAgent) {
-      // Bước 1: Chuyển markdown link ảnh thành markdown ảnh
-      processedContent = convertMarkdownLinksToImages(processedContent);
-      // Bước 2: Chuyển link ảnh thuần thành markdown ảnh
-      processedContent = convertPlainImageLinksToMarkdown(processedContent);
+      processedContent = sanitizeMarkdownImages(processedContent);
     }
 
     if (isAgent && (isPotentiallyVideo || isPotentiallyImage)) {
@@ -350,7 +273,6 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
         <div className="space-y-2">
           {animatedLines.map((line, idx) => {
             const originalLine = contentLines[idx] || '';
-            
             // Kiểm tra video
             if (isVideoUrl(originalLine)) {
               return (
@@ -363,17 +285,14 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
                 />
               );
             }
-            
             // Kiểm tra ảnh (cả link thuần và markdown)
-            const plainImageUrls = extractImageUrlsFromText(originalLine);
-            const markdownImageUrl = extractUrlFromMarkdown(originalLine);
-            
-            if (plainImageUrls.length > 0 || (markdownImageUrl && isImageUrl(markdownImageUrl))) {
-              const imageUrl = plainImageUrls[0] || markdownImageUrl;
+            const urls = originalLine.match(/https?:\/\/[^\s)]+/gi) || [];
+            const imageUrl = urls.find(url => isImageUrl(getDirectImageUrl(url)));
+            if (imageUrl) {
               return (
                 <img
                   key={idx}
-                  src={toDirectDropboxLink(imageUrl)}
+                  src={getDirectImageUrl(imageUrl)}
                   alt="Ảnh sản phẩm"
                   className="max-w-xs rounded shadow mx-auto my-2"
                   style={{ maxHeight: 320 }}
@@ -384,7 +303,6 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
                 />
               );
             }
-            
             // Render markdown cho các dòng khác
             return (
               <ReactMarkdown key={idx} {...commonMarkdownProps}>{line}</ReactMarkdown>
