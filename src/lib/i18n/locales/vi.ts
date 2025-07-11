@@ -44,6 +44,9 @@ export default {
     invitations: "Lời mời",
     askAI: "Trò chuyện với nhân viên của bạn",
     none: "Không",
+    all: "Tất cả",
+    public: "Công khai",
+    private: "Riêng tư",
   },
   auth: {
     login: "Đăng nhập",

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAgentsByFolders } from "@/services/api";
+import { getPublicAgents } from "@/services/api";
 export interface AgentsByFoldersFilters {
   search?: string; // Tìm kiếm theo tên, role, position (không phân biệt hoa thường)
   status?: string; // Trạng thái agent (vd: 'private', 'public', ...)
@@ -29,5 +30,12 @@ export function useAgentsByFolders(
         ? getAgentsByFolders(folderIds, page, pageSize, filters)
         : Promise.resolve({ data: [] }),
     enabled: folderIds.length > 0,
+  });
+}
+
+export function usePublicAgents(page = 1, pageSize = 10, search = "") {
+  return useQuery({
+    queryKey: ["publicAgents", page, pageSize, search],
+    queryFn: () => getPublicAgents(page, pageSize, search),
   });
 }

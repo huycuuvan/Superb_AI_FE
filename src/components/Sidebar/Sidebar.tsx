@@ -27,7 +27,8 @@ import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import gsap from 'gsap';
-import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
+import { usePublicAgents } from '@/hooks/useAgentsByFolders';
+import { Agent } from '@/types';
 import RunningTasksBadge from '../RunningTasksBadge';
 import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
@@ -78,25 +79,10 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
 
   // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
-  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = useAgentsByFolders(folderIds, 1, 1000);
+  const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = usePublicAgents(1, 1000);
   // Chỉ hiển thị mỗi agent 1 lần duy nhất (theo agent.id)
-  const agents = Array.isArray(agentsData?.data)
-    ? Array.from(
-        new Map(
-          agentsData.data
-            .flatMap(folder =>
-              Array.isArray(folder.agents)
-                ? folder.agents.map(agent => ({
-                    ...agent,
-                    folderName: folder.name,
-                    folderId: folder.id
-                  }))
-                : []
-            )
-            .filter(agent => agent && agent.id)
-            .map(agent => [agent.id, agent])
-        ).values()
-      )
+  const agents = Array.isArray(agentsData?.data?.data)
+    ? Array.from(new Map((agentsData.data.data as Agent[]).map((agent) => [agent.id, agent])).values())
     : [];
 
   // Giữ lại hàm formatTimestamp
@@ -234,20 +220,18 @@ console.error('Lỗi khi đổi tên folder:', error);
   // State for search functionality
   const [searchAgent, setSearchAgent] = useState('');
 
-  // Filter agents based on search
-  const filteredAgents = agents.filter(agent => {
-    const nameMatch = agent.name.toLowerCase().includes(searchAgent.toLowerCase());
-    const roleMatch = agent.role_description.toLowerCase().includes(searchAgent.toLowerCase());
-    return nameMatch || roleMatch;
-  })
-  // Sắp xếp agents theo thời gian tin nhắn cuối cùng mới nhất
-  .sort((a, b) => {
-    // Nếu không có last_message_time thì đẩy xuống cuối
-    if (!a.last_message_time) return 1;
-    if (!b.last_message_time) return -1;
-    // So sánh thời gian, mới nhất lên đầu
-    return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
-  });
+  // Filter agents based on search và sort theo last_message_time mới nhất
+  const filteredAgents = agents
+    .filter(agent => {
+      const nameMatch = agent.name.toLowerCase().includes(searchAgent.toLowerCase());
+      const roleMatch = agent.role_description.toLowerCase().includes(searchAgent.toLowerCase());
+      return nameMatch || roleMatch;
+    })
+    .sort((a, b) => {
+      if (!a.last_message_time) return 1;
+      if (!b.last_message_time) return -1;
+      return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+    });
 
   // Hàm mở dialog xác nhận xóa lịch sử chat với agent
   const handleOpenClearHistoryModal = (agentId: string) => {

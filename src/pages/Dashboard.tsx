@@ -8,8 +8,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/hooks/useTheme';
 import { useState, useEffect, useRef } from 'react';
 import {
-
-} from '@/components/ui/dropdown-menu';
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination';
 import AgentDialog from '@/components/AgentDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -24,20 +29,16 @@ import { useAuth } from '@/hooks/useAuth';
 import React from 'react';
 import { useTranslation } from "react-i18next";
 
-import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
+import { usePublicAgents, useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 import { AgentCard } from "@/components/Agents/AgentCard";
 import AgentCardSkeleton from "@/components/skeletons/AgentCardSkeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDebounce } from 'use-debounce';
 
-
-interface FolderWithAgents {
-  id: string;
-  name: string;
-  agents: Agent[];
-}
 
 const Dashboard = () => {
   const { theme } = useTheme();
-  const { folders, loadingFolders, errorFolders, fetchFolders, setFolders } = useFolders();
+  const { folders } = useFolders();
   const { workspace } = useSelectedWorkspace();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -46,29 +47,62 @@ const Dashboard = () => {
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
-  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 400);
+  const [filterPosition, setFilterPosition] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(12); // 4 cột x 3 hàng, có thể chỉnh nếu muốn
 
   const { t } = useTranslation();
+  // State để lưu agents và phân trang
+  const isAllAgents = selectedFolderId === 'all' || selectedFolderId == null;
+  const {
+    data: publicAgentsData,
+    isLoading: isLoadingPublicAgents,
+    error: errorPublicAgents
+  } = usePublicAgents(page, pageSize, debouncedSearchTerm);
+  const {
+    data: byFoldersData,
+    isLoading: isLoadingByFolders,
+    error: errorByFolders
+  } = useAgentsByFolders(
+    isAllAgents ? [] : [selectedFolderId!],
+    page,
+    pageSize,
+    debouncedSearchTerm ? { search: debouncedSearchTerm } : undefined
+  );
 
-  const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
-  const { data: agentsByFoldersData, isLoading: isLoadingAgents, error: agentsError } = useAgentsByFolders(folderIds, 1, 1000);
-  let foldersWithAgents: FolderWithAgents[] = [];
-  if (Array.isArray(agentsByFoldersData?.data) && agentsByFoldersData.data.length > 0 && Array.isArray(agentsByFoldersData.data[0].agents)) {
-    foldersWithAgents = agentsByFoldersData.data as FolderWithAgents[];
+  // Lấy agents và phân trang phù hợp
+  let agents: Agent[] = [];
+  let pagination: any = undefined;
+  let isLoadingAgents = false;
+  if (isAllAgents) {
+    agents = Array.isArray(publicAgentsData?.data?.data) ? (publicAgentsData.data.data as Agent[]) : [];
+    pagination = publicAgentsData?.data?.pagination;
+    isLoadingAgents = isLoadingPublicAgents;
+  } else {
+    // byFoldersData.data là mảng các folder, mỗi folder có agents
+    const folderAgents = Array.isArray(byFoldersData?.data)
+      ? byFoldersData.data.find((f: any) => f.id === selectedFolderId)
+      : undefined;
+    agents = Array.isArray(folderAgents?.agents) ? folderAgents.agents : [];
+    // Lấy pagination đúng từ folderAgents
+    pagination = folderAgents?.pagination;
+    isLoadingAgents = isLoadingByFolders;
   }
-  useEffect(() => {
-    if (folders && folders.length > 0) {
-      const allAgentsFolder = folders.find(f => f.name === 'All Agents' || f.id === 'all');
-      if (allAgentsFolder) {
-        setSelectedFolderId(allAgentsFolder.id);
-      }
-    }
-  }, [folders]);
+  const totalPages = pagination?.total_pages || 1;
+  const currentPage = pagination?.page || page;
+
+
+  // Reset về trang 1 khi searchTerm thay đổi
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
 
 
   const handleAddAgent = async (data: Partial<Agent> & { folder_id?: string }) => {
@@ -94,6 +128,17 @@ const Dashboard = () => {
 
  
 
+  // Lấy tất cả các vị trí (position) có trong agents để làm filter
+  const allPositions = React.useMemo(() => {
+    const positions = new Set<string>();
+    agents.forEach(agent => {
+      if (agent.position) positions.add(agent.position);
+    });
+    return Array.from(positions);
+  }, [agents]);
+
+  // Không cần filter FE nữa, BE đã trả về đúng kết quả
+
   return (
     <div className="space-y-6 text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
@@ -111,15 +156,33 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+      {/* Search & Filter UI */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <Input
+          placeholder="Tìm kiếm agent..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="sm:w-64"
+        />
+  
+      </div>
 
       {/* Folder Chips */}
       <div className="flex flex-wrap gap-2 mb-4">
+        <Badge
+          key="all"
+          variant={isAllAgents ? 'default' : 'outline'}
+          className="cursor-pointer hover:bg-primary/80"
+          onClick={() => { setSelectedFolderId('all'); setPage(1); }}
+        >
+          {t('common.all')}
+        </Badge>
         {folders?.map(folder => (
           <Badge
             key={folder.id}
             variant={selectedFolderId === folder.id ? 'default' : 'outline'}
             className="cursor-pointer hover:bg-primary/80"
-            onClick={() => setSelectedFolderId(folder.id)}
+            onClick={() => { setSelectedFolderId(folder.id); setPage(1); }}
           >
             {folder.name}
           </Badge>
@@ -130,39 +193,59 @@ const Dashboard = () => {
   {/* Skeleton khi loading */}
   {isLoadingAgents ? (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {Array.from({ length: 8 }).map((_, idx) => (
+      {Array.from({ length: pageSize }).map((_, idx) => (
         <AgentCardSkeleton key={idx} />
       ))}
     </div>
   ) : (
-    foldersWithAgents.length === 0 ? (
+    agents.length === 0 ? (
       <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>
     ) : (
-      (selectedFolderId == null
-        ? foldersWithAgents
-        : foldersWithAgents.filter(folder => folder.id === selectedFolderId)
-      ).map(folder => (
-        <div key={folder.id} className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">{folder.name}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {folder.agents.length === 0 ? (
-              <div className="text-muted-foreground col-span-full">{t('agent.noAgents')}</div>
-            ) : (
-              folder.agents.map(agent => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  runningCount={agent.running_count}
-                  successfulRuns={agent.successful_runs}
-                  totalJobs={agent.total_runs}
-                  isRunning={agent.is_running}
-                  isScheduled={agent.is_scheduled}
-                />
-              ))
-            )}
-          </div>
+      <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {(selectedFolderId == null
+            ? agents
+            : agents // agent public không có folder_id, luôn trả về toàn bộ
+          ).map(agent => (
+            <AgentCard key={agent.id} agent={agent} />
+          ))}
         </div>
-      ))
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={e => { e.preventDefault(); if (currentPage > 1) setPage(currentPage - 1); }}
+                  aria-disabled={currentPage === 1}
+                  className={currentPage === 1 ? 'opacity-50 pointer-events-none' : ''}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }).map((_, idx) => (
+                <PaginationItem key={idx}>
+                  <PaginationLink
+                    href="#"
+                    isActive={currentPage === idx + 1}
+                    className={currentPage === idx + 1 ? 'bg-indigo-600 text-white border-indigo-600' : ''}
+                    onClick={e => { e.preventDefault(); setPage(idx + 1); }}
+                  >
+                    {idx + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={e => { e.preventDefault(); if (currentPage < totalPages) setPage(currentPage + 1); }}
+                  aria-disabled={currentPage === totalPages}
+                  className={currentPage === totalPages ? 'opacity-50 pointer-events-none' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </>
     )
   )}
 </div>

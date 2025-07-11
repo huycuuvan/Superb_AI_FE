@@ -18,9 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useFolders } from '@/contexts/FolderContext';
+import { useAuth } from '@/hooks/useAuth';
 import { AgentDialog } from '@/components/AgentDialog';
+import { createAvatar } from '@dicebear/core';
+import { adventurer } from '@dicebear/collection';
+import { useTranslation } from 'react-i18next';
 
 const AgentProfilePage = () => {
+  const { t } = useTranslation();
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -29,6 +34,7 @@ const AgentProfilePage = () => {
   const [error, setError] = useState<string | null>(null);
   const { workspace } = useSelectedWorkspace();
   const { folders, fetchFolders, loadingFolders } = useFolders();
+  const { user } = useAuth();
 
   const [isEditAgentDialogOpen, setIsEditAgentDialogOpen] = useState(false);
   const [editedAgentData, setEditedAgentData] = useState<Partial<Agent>>({});
@@ -311,33 +317,53 @@ const AgentProfilePage = () => {
     <div className="min-h-[calc(100vh-64px)] bg-background p-6 md:p-10">
       <Card className="w-full max-w-4xl mx-auto bg-card text-card-foreground shadow-xl rounded-2xl p-0 md:p-0">
         <CardHeader className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 p-6 border-b border-border">
-          <Avatar className="h-28 w-28">
-            {agent.avatar ? (
-              <AvatarImage src={agent.avatar} alt={agent.name || ''} />
-            ) : (
-              <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
-                {agent.name?.charAt(0) || 'AI'}
-              </AvatarFallback>
-            )}
-          </Avatar>
+        <div className="w-40 h-40 rounded-full border-2 border-indigo-500 overflow-hidden flex-shrink-0 bg-white flex items-center justify-center">
+          <div
+            dangerouslySetInnerHTML={{
+              __html: agent.avatar
+                ? agent.avatar
+                : createAvatar(adventurer, { seed: agent.name || 'Agent' }).toString(),
+            }}
+            style={{ width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          />
+        </div>
           <div className="text-center sm:text-left flex-1">
             <div className="flex justify-center sm:justify-start items-center space-x-2 mb-1">
               <CardTitle className="text-4xl font-extrabold tracking-tight">
                 {agent.name}
               </CardTitle>
-              <Button variant="ghost" size="icon" onClick={handleEditAgentClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
-                <Edit className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleAssignToFolderClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
-                <FolderPlus className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleDeleteAgentClick} className="hover:bg-destructive/10 hover:text-destructive rounded-full p-2">
-                <Trash2 className="h-5 w-5 text-destructive hover:opacity-80" />
-              </Button>
+              {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                <>
+                  <Button variant="ghost" size="icon" onClick={handleEditAgentClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
+                    <Edit className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={handleAssignToFolderClick} className="hover:bg-accent hover:text-accent-foreground rounded-full p-2">
+                    <FolderPlus className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={handleDeleteAgentClick} className="hover:bg-destructive/10 hover:text-destructive rounded-full p-2">
+                    <Trash2 className="h-5 w-5 text-destructive hover:opacity-80" />
+                  </Button>
+                </>
+              ) : null}
             </div>
             <CardDescription className="text-xl text-muted-foreground mb-2">
               {agent.role_description || agent.type}
             </CardDescription>
+            {/* Agent Info (Model, Job Brief, Language, Position) */}
+            <div className="mt-2 text-left w-full max-w-2xl mx-auto">
+              {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                <p className="mb-1"><span className="font-semibold">Model:</span> {agent.model_config?.webhook_url}</p>
+              ) : null}
+              {agent.job_brief && (
+                <p className="mb-1"><span className="font-semibold">Job Brief:</span> {agent.job_brief}</p>
+              )}
+              {agent.language && (
+                <p className="mb-1"><span className="font-semibold">Language:</span> {agent.language}</p>
+              )}
+              {agent.position && (
+                <p className="mb-1"><span className="font-semibold">Position:</span> {agent.position}</p>
+              )}
+            </div>
             {agent.instructions && (
               <p className="text-md text-muted-foreground mb-4">
                 <span className="font-semibold text-foreground">Instructions:</span> {agent.instructions}
@@ -351,30 +377,13 @@ const AgentProfilePage = () => {
               )}
               {agent.status && (
                 <Badge variant="outline" className="text-md px-3 py-1 rounded-full ml-2">
-                  Status: {agent.status}
+                  {agent.status === 'system_public' ? t('common.public') : agent.status === 'private' ? t('common.private') : agent.status}
                 </Badge>
               )}
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* Agent Model Configuration */}
-          {agent.model_config && (
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold">Model Configuration</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <p><span className="font-semibold text-foreground">Model:</span> {agent.model_config.model}</p>
-                <p><span className="font-semibold text-foreground">Temperature:</span> {agent.model_config.temperature}</p>
-                {agent.model_config.webhook_url && (
-                  <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Webhook URL:</span> {agent.model_config.webhook_url}</p>
-                )}
-                {agent.model_config.build_prompt_webhook_url && (
-                  <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Build Prompt Webhook URL:</span> {agent.model_config.build_prompt_webhook_url}</p>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Agent Details */}
           <div className="space-y-4">
             <h3 className="text-xl font-semibold">Agent Details</h3>
@@ -391,6 +400,22 @@ const AgentProfilePage = () => {
             </div>
           </div>
 
+          {/* Model Configuration chỉ hiển thị cho admin hệ thống */}
+          {user?.role === 'admin' || user?.role === 'super_admin' ? (
+            agent.model_config && (
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">Model Configuration</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                
+                  {agent.model_config.webhook_url && (
+                    <p className="col-span-1 md:col-span-2"><span className="font-semibold text-foreground">Webhook URL:</span> {agent.model_config.webhook_url}</p>
+                  )}
+                
+                </div>
+              </div>
+            )
+          ) : null}
+
           <Separator />
 
           {/* Associated Tasks */}
@@ -399,9 +424,11 @@ const AgentProfilePage = () => {
               <h3 className="text-xl font-semibold flex items-center">
                 <ListPlus className="mr-2 text-primary" /> Associated Tasks ({tasks?.length || 0})
               </h3>
-              <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className={`flex items-center space-x-2 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
-                <PlusCircle className="h-4 w-4" /> <span>Create New Task</span>
-              </Button>
+              {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                <Button variant="secondary" size="sm" onClick={handleCreateTaskClick} className={`flex items-center space-x-2 ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white`}>
+                  <PlusCircle className="h-4 w-4" /> <span>Create New Task</span>
+                </Button>
+              )}
             </div>
             {tasks && tasks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -417,14 +444,16 @@ const AgentProfilePage = () => {
                       <Badge variant="secondary" className="bg-gray-100 text-gray-800 hover:bg-gray-200">Type: {task.task_type}</Badge>
                       {task.status && <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Status: {task.status}</Badge>}
                     </div>
-                    <div className="absolute top-2 right-2 flex space-x-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-accent hover:text-accent-foreground" onClick={() => handleEditTaskClick(task)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteTaskClick(task)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      <div className="absolute top-2 right-2 flex space-x-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-accent hover:text-accent-foreground" onClick={() => handleEditTaskClick(task)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteTaskClick(task)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
@@ -433,34 +462,7 @@ const AgentProfilePage = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className={`p-4 ${isDark ? 'bg-card-dark' : 'bg-card-light'} rounded-lg`}>
-              <CardTitle className="text-lg mb-2">Agent Info</CardTitle>
-              <div className="space-y-2">
-                {agent.model_config && (
-                  <p><span className="font-semibold">Model:</span> {agent.model_config.model}</p>
-                )}
-                {agent.job_brief && (
-                  <p><span className="font-semibold">Job Brief:</span> {agent.job_brief}</p>
-                )}
-                {agent.language && (
-                  <p><span className="font-semibold">Language:</span> {agent.language}</p>
-                )}
-                {agent.position && (
-                  <p><span className="font-semibold">Position:</span> {agent.position}</p>
-                )}
-              </div>
-              <div className="mt-4">
-                <Button 
-                  variant="default" 
-                  className={`w-full ${isDark ? 'bg-primary hover:bg-primary/80' : 'bg-primary hover:bg-primary/80'}`}
-                  onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true`)}
-                >
-                  Chat with {agent.name}
-                </Button>
-              </div>
-            </Card>
-          </div>
+          {/* Bỏ card Agent Info ở dưới, chỉ còn tasks */}
         </CardContent>
       </Card>
 
@@ -468,19 +470,11 @@ const AgentProfilePage = () => {
       <AgentDialog
         open={isEditAgentDialogOpen}
         onOpenChange={setIsEditAgentDialogOpen}
-        agent={agent}
+        agentData={agent}
         mode="edit"
-        onSuccess={() => {
-          handleSaveAgent();
-          toast.success('Agent updated successfully!');
-        }}
+        onSave={handleSaveAgent}
         onCancel={() => setIsEditAgentDialogOpen(false)}
         isSaving={isSavingAgent}
-        editedTemperature={agent.model_config?.temperature?.toString() || '0'}
-        setEditedTemperature={(val) => setEditedAgentData({ ...editedAgentData, model_config: { ...editedAgentData.model_config, temperature: parseFloat(val) } })}
-        agentTypeOptions={agentTypeOptions}
-        agentCategoryOptions={agentCategoryOptions}
-        agentStatusOptions={agentStatusOptions}
       />
 
       {/* Delete Agent Confirmation Dialog */}

@@ -1924,3 +1924,19 @@ export const getTransactionHistory = async (
   }
   return response.json();
 };
+
+export const getPublicAgents = async (page = 1, pageSize = 10, search = "") => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(
+    `${API_BASE_URL}/agents/public?page=${page}&page_size=${pageSize}&search=${encodeURIComponent(
+      search
+    )}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) throw new Error("Failed to fetch public agents");
+  return res.json();
+};

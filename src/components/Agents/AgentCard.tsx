@@ -23,7 +23,7 @@ interface AgentCardProps {
   isScheduled?: boolean;
 }
 
-export const AgentCard = ({ agent, onEdit, onDelete, runningCount, successfulRuns, totalJobs, isRunning, isScheduled }: AgentCardProps) => {
+export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
   const navigate = useNavigate();
   return (
     <div
@@ -86,7 +86,7 @@ export const AgentCard = ({ agent, onEdit, onDelete, runningCount, successfulRun
 
       {/* Job brief */}
       <div className="flex-1 mb-2 mt-1 flex items-start">
-        <div className="text-xs text-muted-foreground line-clamp-3 min-h-[45px] w-full break-words">
+        <div className="text-xs text-muted-foreground line-clamp-5 min-h-[45px] w-full break-words">
           {agent.job_brief && agent.job_brief.trim() !== ''
             ? agent.job_brief
             : <span className="italic text-zinc-400">Chưa có mô tả công việc</span>
@@ -96,14 +96,13 @@ export const AgentCard = ({ agent, onEdit, onDelete, runningCount, successfulRun
 
       {/* Job stats */}
       <div className="mb-2 space-y-0.5">
-       
-     
         <span className="text-xs font-medium text-green-600 block">
-          Đã thực thi: {successfulRuns !== undefined ? successfulRuns : '-'} lần
+          Đã thực thi: {agent.successful_runs !== undefined ? agent.successful_runs : '-'} lần
         </span>
         <span className="text-xs font-medium text-gray-600 block">
-          Tổng số job: {totalJobs !== undefined ? totalJobs : '-'}
+          Tổng số job: {agent.total_runs !== undefined ? agent.total_runs : '-'}
         </span>
+   
       </div>
 
       {/* Actions */}

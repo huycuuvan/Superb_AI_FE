@@ -235,9 +235,11 @@ const DepartmentsPage = () => {
           <h1 className="text-3xl font-bold">{t('folder.departments') || 'Phòng ban'}</h1>
           <p className="text-muted-foreground">Tạo và quản lý các phòng ban trong workspace.</p>
         </div>
-        <Button variant="primary" onClick={() => setShowAddFolderDialog(true)}>
-          {t('folder.createFolder') || 'Tạo phòng ban'}
-        </Button>
+        {(user?.role === 'admin' || user?.role === 'super_admin') && (
+          <Button variant="primary" onClick={() => setShowAddFolderDialog(true)}>
+            {t('folder.createFolder') || 'Tạo phòng ban'}
+          </Button>
+        )}
       </div>
       
       {/* Search Bar */}

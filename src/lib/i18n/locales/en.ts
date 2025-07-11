@@ -46,6 +46,9 @@ export default {
     invitations: "Invitation",
     askAI: "Talk to your Employee",
     none: "None",
+    all: "All",
+    public: "Public",
+    private: "Private",
   },
   auth: {
     login: "Login",
