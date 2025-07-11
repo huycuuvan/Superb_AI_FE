@@ -14,6 +14,8 @@ const DashboardLayout = () => {
   // Logic này để xác định khi nào có padding, khi nào không, rất tốt!
   const isAgentChatPage = location.pathname.includes('/agents/');
   const navigate = useNavigate();
+  const isDashboardRoot = location.pathname === '/dashboard';
+  const isAgentChat = location.pathname.startsWith('/dashboard/agents/');
 
   return (
     <ProtectedRoute>
@@ -60,8 +62,8 @@ const DashboardLayout = () => {
           )}
           <div className="flex flex-col flex-1 w-full overflow-hidden">
             <Header />
-            {/* Nút back: chỉ hiển thị nếu không phải trang dashboard gốc */}
-            {location.pathname !== '/dashboard' && (
+            {/* Nút back: chỉ hiển thị nếu không phải trang dashboard gốc và không phải màn chat */}
+            {!isDashboardRoot && !isAgentChat && (
               <button
                 className="flex items-center gap-2 mt-2 ml-4 w-fit text-muted-foreground hover:text-primary transition-colors"
                 onClick={() => navigate(-1)}

@@ -31,7 +31,8 @@ export default function CredentialsPage() {
     setListError('');
     try {
       const res = await getCredentials();
-      setCredentials(Array.isArray(res) ? res : (res.data || []));
+      // Đảm bảo luôn là mảng, tránh lỗi khi res hoặc res.data là null
+      setCredentials(Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []));
     } catch (err: unknown) {
       setListError(err instanceof Error ? err.message : 'Lỗi khi tải danh sách credential');
     } finally {

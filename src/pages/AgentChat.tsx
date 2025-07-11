@@ -6,7 +6,7 @@ import {
   ListPlus, Book, Clock,
   Rocket, Lightbulb,
       ChevronsDown, BrainCircuit,
-  ChevronUp, ChevronDown, Coins
+  ChevronUp, ChevronDown, Coins, Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,14 +39,15 @@ import LogAgentThinking from '@/components/LogAgentThinking';
 import { useInView } from 'react-intersection-observer';
 import React from 'react';
 import { WS_URL } from '@/config/api';
-console.log("WS_URL", WS_URL);
-interface TaskInput {
-  id: string;
-  label: string;
-  type: 'text' | 'number' | 'select';
-  options?: string[];
-  required?: boolean;
-}
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+import { isAgentResImageObject, getAgentResImageUrl } from '@/utils/imageUtils';
+
 
 // Define a more specific type for execution_config
 interface ExecutionConfig {
@@ -142,6 +143,8 @@ const AgentChat = () => {
   const [isSending, setIsSending] = useState(false);
   const [isCreatingThread, setIsCreatingThread] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  // Thêm state để ngăn chặn tạo thread đồng thời
+  const [isThreadCreationInProgress, setIsThreadCreationInProgress] = useState(false);
   // Agent and workspace info
   const [currentThread, setCurrentThread] = useState<string | null>(threadFromUrl || null);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
@@ -152,6 +155,7 @@ const AgentChat = () => {
   // Ref to prevent duplicate thread creation
   const isInitializingRef = useRef(false);
   const hasInitializedRef = useRef(false);
+  const previousAgentIdRef = useRef<string | null>(null);
   
   // Chat display states
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -484,12 +488,20 @@ const AgentChat = () => {
     if (textareaRef.current) textareaRef.current.style.height = '40px';
     hasInitializedRef.current = false;
     isInitializingRef.current = false;
+    setIsThreadCreationInProgress(false); // Reset state khi đổi agent
+    previousAgentIdRef.current = null; // Reset agentId trước đó
 
-    // Luôn gọi lại initializeChat khi agentId đổi
-    if (agentId && workspace?.id) {
+    // Gọi lại initializeChat khi agentId thay đổi hoặc khi workspace thay đổi mà chưa có thread
+    if (agentId && workspace?.id && (agentId !== previousAgentIdRef.current || !currentThread)) {
       const initializeChat = async () => {
-        if (isInitializingRef.current) return;
+        // Ngăn chặn việc chạy nhiều lần đồng thời
+        if (isInitializingRef.current || isThreadCreationInProgress) return;
+        
+        // Nếu đã khởi tạo thành công và có thread hiện tại, không cần khởi tạo lại
+        if (hasInitializedRef.current && currentThread && agentId === previousAgentIdRef.current) return;
+        
         isInitializingRef.current = true;
+        
         try {
           setIsLoading(true);
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -520,58 +532,25 @@ const AgentChat = () => {
           }
 
           if (threadCheck && threadCheck.exists && threadCheck.thread_id) {
+            // Sử dụng thread đã tồn tại
             threadId = threadCheck.thread_id;
-            try {
-              const messagesResponse = await getThreadMessages(threadId);
-              initialMessages = (messagesResponse.data && Array.isArray(messagesResponse.data) ? messagesResponse.data : []).map(msg => ({
-                  id: msg.id,
-                  content: msg.message_content,
-                  sender: msg.sender_type,
-                  timestamp: msg.created_at,
-                  agentId: msg.sender_agent_id,
-                  image_url: msg.image_url,
-                  file_url: msg.file_url,
-                  parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
-              })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-              if (initialMessages.length === 0 && agentData.data.greeting_message) {
-                const welcomeMessage: ChatMessage = {
-                  id: Date.now().toString(),
-                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
-                  sender: 'agent',
-                  timestamp: new Date().toISOString(),
-                  agentId: agentData.data.id,
-                  image_url: agentData.data.image_url,
-                  file_url: agentData.data.file_url,
-                };
-                initialMessages.push(welcomeMessage);
-              }
-            } catch (fetchError) {
-              console.error('Error fetching initial messages:', fetchError);
-            }
           } else {
             // Tạo thread mới khi không tồn tại thread nào
-            const threadData = {
-              agent_id: agentId,
-              workspace_id: currentWorkspaceId,
-              title: ""
-            };
-            const threadResponse = await createThread(threadData);
-            threadId = threadResponse.data.id;
-
-            const welcomeMessage: ChatMessage = {
-              id: Date.now().toString(),
-              content: agentData.data.greeting_message || 'Hello! How can I help you?',
-              sender: 'agent',
-              timestamp: new Date().toISOString(),
-              agentId: agentData.data.id,
-              image_url: agentData.data.image_url,
-              file_url: agentData.data.file_url,
-            };
-            initialMessages = [welcomeMessage];
+            setIsThreadCreationInProgress(true);
+            try {
+              const threadData = {
+                agent_id: agentId,
+                workspace_id: currentWorkspaceId,
+                title: ""
+              };
+              const threadResponse = await createThread(threadData);
+              threadId = threadResponse.data.id;
+            } finally {
+              setIsThreadCreationInProgress(false);
+            }
           }
 
-          // Nếu threadId đã có, fetch messages
+          // Fetch messages cho thread (dù mới tạo hay đã tồn tại)
           if (threadId) {
             try {
               const messagesResponse = await getThreadMessages(threadId);
@@ -583,9 +562,10 @@ const AgentChat = () => {
                   agentId: msg.sender_agent_id,
                   image_url: msg.image_url,
                   file_url: msg.file_url,
-                  parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
+                  parent_message_id: msg.parent_message_id,
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
+              // Chỉ thêm welcome message nếu không có tin nhắn nào
               if (initialMessages.length === 0 && agentData.data.greeting_message) {
                 const welcomeMessage: ChatMessage = {
                   id: Date.now().toString(),
@@ -600,11 +580,26 @@ const AgentChat = () => {
               }
             } catch (fetchError) {
               console.error('Error fetching initial messages:', fetchError);
+              // Nếu không fetch được messages, vẫn tạo welcome message
+              if (agentData.data.greeting_message) {
+                const welcomeMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: agentData.data.greeting_message || 'Hello! How can I help you?',
+                  sender: 'agent',
+                  timestamp: new Date().toISOString(),
+                  agentId: agentData.data.id,
+                  image_url: agentData.data.image_url,
+                  file_url: agentData.data.file_url,
+                };
+                initialMessages = [welcomeMessage];
+              }
             }
           }
 
           setCurrentThread(threadId);
           setMessages(initialMessages);
+          hasInitializedRef.current = true; // Đánh dấu đã khởi tạo thành công
+          previousAgentIdRef.current = agentId; // Cập nhật agentId trước đó
         } catch (error) {
           console.error('Error initializing chat:', error);
         } finally {
@@ -774,6 +769,7 @@ const AgentChat = () => {
   }
 
   setIsCreatingThread(true); // Start loading
+  setIsThreadCreationInProgress(true); // Ngăn chặn tạo thread đồng thời
 
   // Close mobile sidebar on thread click (already there, keep it)
   setShowMobileSidebar(false);
@@ -822,6 +818,7 @@ const AgentChat = () => {
       queryClient.invalidateQueries({ queryKey: ['threads', agentId] });
       
       setIsCreatingThread(false); // End loading on success
+      setIsThreadCreationInProgress(false); // Reset state
 
       // Hiển thị thông báo thành công
       toast({
@@ -837,6 +834,7 @@ const AgentChat = () => {
       variant: "destructive",
     });
     setIsCreatingThread(false); // End loading on error
+    setIsThreadCreationInProgress(false); // Reset state
   }
 };
 const handleRetryTask = async (runToRetry: TaskRun) => {
@@ -975,8 +973,9 @@ const handleSubmitTaskInputs = async () => {
       }
       // Update the currentThread state
       setCurrentThread(threadId);
-
       
+      // Reset initialization flag khi chuyển thread
+      hasInitializedRef.current = true;
 
       // Navigate to the thread-specific URL
       // This will also trigger the main useEffect if the URL changes
@@ -992,6 +991,8 @@ const handleSubmitTaskInputs = async () => {
       // Optionally, clear messages or show an empty state if loading fails
       setMessages([]);
       setCurrentThread(threadId); // Set threadId anyway so WS might connect, but messages are empty
+      // Reset initialization flag khi chuyển thread (ngay cả khi có lỗi)
+      hasInitializedRef.current = true;
       // navigate(`/dashboard/agents/${agentId}/${threadId}`); // Xóa hoặc comment dòng này
     }
   };
@@ -1278,6 +1279,7 @@ const handleSubmitTaskInputs = async () => {
     });
   }, []);
 
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       
@@ -1329,9 +1331,18 @@ const handleSubmitTaskInputs = async () => {
                   </div>
                 </div>
                 <div className="p-4 border-b hover:primary-gradient ">
-                  <Button variant='primary' className="w-full flex items-center justify-center space-x-2 " onClick={() => handleNewChat(currentAgent?.id)} >
-                    <Plus className="h-4 w-4" />
-                    <span>New chat</span>
+                  <Button 
+                    variant='primary' 
+                    className="w-full flex items-center justify-center space-x-2" 
+                    onClick={() => handleNewChat(currentAgent?.id)}
+                    disabled={isCreatingThread || isThreadCreationInProgress || isLoading}
+                  >
+                    {isCreatingThread || isThreadCreationInProgress ? (
+                      <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    <span>{isCreatingThread || isThreadCreationInProgress ? 'Creating...' : 'New chat'}</span>
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 text-white">
@@ -1398,14 +1409,16 @@ const handleSubmitTaskInputs = async () => {
                         dark:bg-transparent dark:text-primary-foreground dark:shadow-2xl dark:border-primary
                       `}
                       onClick={() => handleNewChat(currentAgent?.id)}
-                      disabled={isCreatingThread || isLoading || (!!currentThread && !hasUserMessage)}
+                      disabled={isCreatingThread || isThreadCreationInProgress || isLoading || (!!currentThread && !hasUserMessage)}
                     >
-                      {isCreatingThread ? (
+                      {isCreatingThread || isThreadCreationInProgress ? (
                         <span className="loading-spinner animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></span>
                       ) : (
                         <Plus className="h-4 w-4" />
                       )}
-                      <span className={cn(isCreatingThread ? ' text-primary-text' : ' text-primary-text')}>{isCreatingThread ? 'Creating...' : 'New chat'}</span>
+                      <span className={cn((isCreatingThread || isThreadCreationInProgress) ? ' text-primary-text' : ' text-primary-text')}>
+                        {isCreatingThread || isThreadCreationInProgress ? 'Creating...' : 'New chat'}
+                      </span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center">
@@ -1567,11 +1580,29 @@ const handleSubmitTaskInputs = async () => {
                               ) : null;
                             })()
                         )}
-                        <ChatMessageContent
-                          content={msg.content}
-                          isAgent={true}
-                          stream={msg.isStreaming ?? false}
-                        />
+                        {/* Hiển thị ảnh agent_res nếu có */}
+                        {(() => {
+  if (isAgentResImageObject(msg.content)) {
+    const url = getAgentResImageUrl(msg.content);
+    return url ? (
+      <div className="flex flex-col items-center gap-2">
+        <img
+          src={url}
+          alt="Ảnh kết quả"
+          className="max-w-xs rounded shadow mx-auto"
+        />
+      </div>
+    ) : null;
+  }
+  return (
+    <ChatMessageContent
+      content={msg.content}
+      isAgent={true}
+      stream={msg.isStreaming ?? false}
+    />
+  );
+})()}
+                        
                         {(msg.image_url || msg.file_url) && (
                           <div className="mt-2">
                             {msg.image_url ? (
@@ -1743,64 +1774,74 @@ const handleSubmitTaskInputs = async () => {
 
 
                {aboveInputContent === 'taskInputs' && selectedTask && (
-    <Card className="mb-3 animate-in fade-in-50 duration-300">
-        <CardHeader>
-            <div className="flex justify-between items-center">
-                <CardTitle>
-                    Điền thông tin cho Task: <span className="text-primary">{selectedTask.name}</span>
-                </CardTitle>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setAboveInputContent('none')}>
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Đóng</span>
-                </Button>
-            </div>
-            <CardDescription>
-                Vui lòng cung cấp các thông tin cần thiết để thực thi task này.
-            </CardDescription>  
-        </CardHeader>
-        <CardContent className="space-y-4 max-h-60 overflow-y-auto pr-3">
-            {/* Select credential */}
-            <div className="space-y-2">
-              <Label htmlFor="credential-select" className="font-semibold">Chọn Credential (nếu cần)</Label>
-              <select
-                id="credential-select"
-                className="w-full border border-border rounded-lg px-3 py-2 bg-background text-foreground focus:ring-2 focus:ring-primary/40 focus:outline-none transition"
-                value={selectedCredentialId}
-                onChange={e => setSelectedCredentialId(e.target.value)}
-                disabled={loadingCredentials || credentials.length === 0}
-              >
-                <option value="">Không gửi credential</option>
-                {credentials.map(cred => (
-                  <option key={cred.id} value={cred.id}>
-                    {cred.provider} - {String(cred.id).slice(0, 6)}...{String(cred.id).slice(-4)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Các input khác */}
-            {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
-              <div key={key} className="space-y-2">
-                <Label htmlFor={key} className="capitalize font-semibold">
-                  {key.replace(/_/g, ' ')}
-                </Label>
-                <Textarea
-                  id={key}
-                  value={selectedTaskInputs[key] || ''}
-                  onChange={(e) => handleInputChange(key, e.target.value)}
-                  placeholder={`Nhập ${key.replace(/_/g, ' ')}...`}
-                  className="font-mono text-sm bg-muted/50"
-                  rows={key.toLowerCase().includes('script') ? 4 : 2}
-                />
-              </div>
+  <Card className="mb-3 animate-in fade-in-50 duration-300 shadow-xl rounded-2xl border border-border">
+    <CardHeader className="pb-2">
+      <div className="flex justify-between items-center">
+        <CardTitle className="text-2xl font-bold">
+          <span className="text-foreground">Điền thông tin cho Task:</span> <span className="text-primary">{selectedTask.name}</span>
+        </CardTitle>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAboveInputContent('none')}>
+          <X className="h-5 w-5" />
+          <span className="sr-only">Đóng</span>
+        </Button>
+      </div>
+      <CardDescription className="text-base text-muted-foreground mt-1">
+        Vui lòng cung cấp các thông tin cần thiết để thực thi task này.
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-6 max-h-80 overflow-y-auto pr-2">
+      {/* Select credential */}
+      <div className="space-y-1">
+        <Label htmlFor="credential-select" className="font-semibold flex items-center gap-2">
+          <Key className="h-4 w-4 mr-1 text-primary" />
+          Chọn Credential (nếu cần)
+        </Label>
+        <Select
+          value={selectedCredentialId || "none"}
+          onValueChange={val => setSelectedCredentialId(val === "none" ? "" : val)}
+          disabled={loadingCredentials || credentials.length === 0}
+        >
+          <SelectTrigger className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground">
+            <SelectValue placeholder="Không gửi credential" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Không gửi credential</SelectItem>
+            {credentials.map(cred => (
+              <SelectItem key={cred.id} value={cred.id}>
+                {cred.provider.charAt(0).toUpperCase() + cred.provider.slice(1)}
+              </SelectItem>
             ))}
-        </CardContent>
-        <CardFooter>
-            <Button className="w-full" onClick={handleSubmitTaskInputs}>
-                <Rocket className="mr-2 h-4 w-4" />
-                Bắt đầu thực thi
-            </Button>
-        </CardFooter>
-    </Card>
+          </SelectContent>
+        </Select>
+        {credentials.length === 0 && (
+          <div className="text-xs text-muted-foreground mt-1 pl-1">Bạn chưa có credential nào, có thể bỏ qua bước này.</div>
+        )}
+      </div>
+      {/* Các input động */}
+      {Object.entries(selectedTask.execution_config ?? {}).map(([key, defaultValue]) => (
+        <div key={key} className="space-y-1">
+          <Label htmlFor={key} className="capitalize font-semibold flex items-center gap-2">
+            {key.replace(/_/g, ' ')}
+          </Label>
+          <Textarea
+            id={key}
+            value={selectedTaskInputs[key] || ''}
+            onChange={(e) => handleInputChange(key, e.target.value)}
+            placeholder={`Nhập ${key.replace(/_/g, ' ')}...`}
+            className="font-mono text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/40 focus:outline-none transition"
+            rows={key.toLowerCase().includes('script') ? 4 : 2}
+            autoFocus={key === Object.keys(selectedTask.execution_config ?? {})[0]}
+          />
+        </div>
+      ))}
+    </CardContent>
+    <CardFooter className="pt-2">
+      <Button className="w-full py-3 text-lg font-semibold flex items-center justify-center gap-2" onClick={handleSubmitTaskInputs}>
+        <Rocket className="mr-2 h-5 w-5" />
+        Bắt đầu thực thi
+      </Button>
+    </CardFooter>
+  </Card>
 )}
 
                {/* Knowledge File Selection (Placeholder) */}

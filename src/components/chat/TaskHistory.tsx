@@ -131,6 +131,55 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
 
   // Hàm render output custom UI cho từng loại dữ liệu
   const renderOutput = (output: any) => {
+    // Nếu là link gradio file
+    if (typeof output === "string" && output.includes("/gradio_api/file=")) {
+      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(output);
+      if (isImage) {
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <img
+              src={output}
+              alt="Ảnh kết quả"
+              className="max-w-xs rounded shadow mx-auto"
+            />
+          </div>
+        );
+      } else {
+        return (
+          <a
+            href={output}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-blue-600 font-semibold underline hover:text-blue-800"
+          >
+            <FileImage size={18} />
+            Mở file kết quả
+          </a>
+        );
+      }
+    }
+
+    // Nếu là object chỉ có 1 key là agent_res và là link ảnh gradio
+    if (
+      typeof output === "object" &&
+      output !== null &&
+      Object.keys(output).length === 1 &&
+      output.agent_res &&
+      typeof output.agent_res === "string" &&
+      output.agent_res.includes("/gradio_api/file=") &&
+      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(output.agent_res)
+    ) {
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <img
+            src={output.agent_res}
+            alt="Ảnh kết quả"
+            className="max-w-xs rounded shadow mx-auto"
+          />
+        </div>
+      );
+    }
+
     // Nếu là link Google Drive
     if (typeof output === "string" && output.includes("drive.google.com")) {
       return (
@@ -270,98 +319,63 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
  
   return (
     <div className="space-y-4">
-      {/* Phần tiêu đề và Accordion giữ nguyên */}
       <Accordion type="single" collapsible className="w-full">
         {runs.map((run) => (
-          <AccordionItem key={`${run.id}-${run.updated_at}-${run.status}`} value={run.id}>
-            <AccordionTrigger className="hover:no-underline">
-              {/* AccordionTrigger layout giữ nguyên */}
-              <div className="flex justify-between items-center w-full pr-4 gap-4">
+          <AccordionItem key={`${run.id}-${run.updated_at}-${run.status}`} value={run.id}
+            className="mb-4 border border-border rounded-xl shadow-sm bg-background/80 overflow-hidden">
+            <AccordionTrigger className="hover:no-underline px-6 py-4 bg-muted/40 rounded-t-xl">
+              <div className="flex justify-between items-center w-full gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex flex-col gap-1">
-                    <StatusBadge status={run.status} />
-                   
-                  </div>
-                  <span className="font-mono text-xs text-muted-foreground hidden md:inline truncate">
-                    Run ID: {run.id}
-                  </span>
+                  <StatusBadge status={run.status} />
+                  <span className="font-mono text-xs text-muted-foreground hidden md:inline truncate">Run ID: {run.id}</span>
                 </div>
-                <span className="text-sm text-muted-foreground font-normal flex-shrink-0">
-                  {new Date(run.start_time).toLocaleString('vi-VN', {
-                    hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-                  })}
-                </span>
+                <span className="text-xs text-muted-foreground font-normal flex-shrink-0">{new Date(run.start_time).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-4 space-y-4 bg-muted/30 max-h-[60vh] overflow-y-auto no-scrollbar">
-              
-            {(run.status === 'error' || run.status === 'failed') && (
-              <div className="my-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <XCircle size={32} className="text-destructive" />
-                  <div>
-                    <h4 className="font-bold text-lg text-destructive flex items-center gap-2">Đã xảy ra lỗi khi thực thi Task</h4>
-                    <span className="text-xs text-muted-foreground">Mã lỗi: <span className="font-mono">{
-                      String((run.output_data && typeof run.output_data === 'object' && !Array.isArray(run.output_data) && (run.output_data.error_code || run.output_data.code)) || 'N/A')
-                    }</span></span>
+            <AccordionContent className="p-6 space-y-6 bg-background rounded-b-xl">
+              {(run.status === 'error' || run.status === 'failed') && (
+                <div className="my-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <XCircle size={32} className="text-destructive" />
+                    <div>
+                      <h4 className="font-bold text-lg text-destructive flex items-center gap-2">Đã xảy ra lỗi khi thực thi Task</h4>
+                      <span className="text-xs text-muted-foreground">Mã lỗi: <span className="font-mono">{String((run.output_data && typeof run.output_data === 'object' && !Array.isArray(run.output_data) && (run.output_data.error_code || run.output_data.code)) || 'N/A')}</span></span>
+                    </div>
                   </div>
-                </div>
-                <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm font-mono whitespace-pre-wrap break-all select-all">
-                  {/* Hiển thị message lỗi chính */}
-                  {run.error ||
-                   run.error_message ||
-                   (run.output_data && typeof run.output_data === 'object' && 'error_message' in run.output_data && String(run.output_data.error_message)) ||
-                   (run.output_data && typeof run.output_data === 'object' && 'error' in run.output_data &&
-                    (typeof run.output_data.error === 'string' ? run.output_data.error :
-                     JSON.stringify(run.output_data.error, null, 2))
-                   ) ||
-                   'Đã xảy ra lỗi không xác định'}
-                </div>
-                {/* Nếu là lỗi Workflow Webhook Error thì gợi ý thêm */}
-                {(run.error || run.error_message || '').toLowerCase().includes('workflow webhook error') && (
-                  <div className="mt-3 p-3 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-900 text-xs">
-                    <b>Gợi ý:</b> Lỗi Workflow Webhook Error thường do webhook cấu hình sai hoặc server không phản hồi.<br/>
-                    - Kiểm tra lại URL webhook, xác thực và trạng thái server.<br/>
-                    - Nếu vẫn gặp lỗi, vui lòng liên hệ bộ phận hỗ trợ kỹ thuật.
+                  <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm font-mono whitespace-pre-wrap break-all select-all">
+                    {run.error || run.error_message || (run.output_data && typeof run.output_data === 'object' && 'error_message' in run.output_data && String(run.output_data.error_message)) || (run.output_data && typeof run.output_data === 'object' && 'error' in run.output_data && (typeof run.output_data.error === 'string' ? run.output_data.error : JSON.stringify(run.output_data.error, null, 2))) || 'Đã xảy ra lỗi không xác định'}
                   </div>
-                )}
-                {/* Nếu có raw_response thì cho phép xem/copy */}
-                {run.output_data &&
-                  typeof run.output_data === 'object' &&
-                  !Array.isArray(run.output_data) &&
-                  'raw_response' in run.output_data &&
-                  run.output_data.raw_response && (
+                  {(run.error || run.error_message || '').toLowerCase().includes('workflow webhook error') && (
+                    <div className="mt-3 p-3 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-900 text-xs">
+                      <b>Gợi ý:</b> Lỗi Workflow Webhook Error thường do webhook cấu hình sai hoặc server không phản hồi.<br />- Kiểm tra lại URL webhook, xác thực và trạng thái server.<br />- Nếu vẫn gặp lỗi, vui lòng liên hệ bộ phận hỗ trợ kỹ thuật.
+                    </div>
+                  )}
+                  {run.output_data && typeof run.output_data === 'object' && !Array.isArray(run.output_data) && 'raw_response' in run.output_data && run.output_data.raw_response && (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Xem raw response</summary>
                       <pre className="bg-muted rounded p-2 select-all max-h-60 overflow-auto">{String(run.output_data.raw_response)}</pre>
                     </details>
-                )}
-                <Button 
-                  variant="outline"
-                  className="w-full mt-4"
-                  onClick={() => onRetry(run)}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Thử lại Task này
-                </Button>
-              </div>
-            )}
-            
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center gap-2"><Code size={16} /> Dữ liệu đầu vào (Input)</h4>
-                <div className="p-3 rounded-md bg-background text-xs space-y-2 font-mono">
+                  )}
+                  <Button variant="outline" className="w-full mt-4" onClick={() => onRetry(run)}>
+                    <RefreshCw className="mr-2 h-4 w-4" />Thử lại Task này
+                  </Button>
+                </div>
+              )}
+
+              {/* Input */}
+              <div className="rounded-lg bg-muted/60 p-4 mb-2 border border-border">
+                <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary"><Code size={16} /> Dữ liệu đầu vào (Input)</h4>
+                <div className="space-y-2 font-mono text-sm">
                   {Object.entries(run.input_data).map(([key, value]) => {
                     const valueStr = String(value);
                     const isUrl = valueStr.startsWith('http://') || valueStr.startsWith('https://');
                     return (
-                      <div key={`${run.id}-input-${key}`} className="grid grid-cols-[120px_1fr] gap-2 items-start">
+                      <div key={`${run.id}-input-${key}`} className="grid grid-cols-[100px_1fr] gap-2 items-start">
                         <span className="text-muted-foreground truncate font-semibold">{key}:</span>
                         {isUrl ? (
-                           <a href={valueStr} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
-                             {valueStr}
-                           </a>
+                          <a href={valueStr} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">{valueStr}</a>
                         ) : (
-                           <span className="break-all text-white">{valueStr}</span>
+                          <span className="break-all text-white">{valueStr}</span>
                         )}
                       </div>
                     )
@@ -369,62 +383,48 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                 </div>
               </div>
 
-              {/* --- CẬP NHẬT: Phần hiển thị kết quả đầu ra --- */}
-              <div key={`output-${run.id}-${run.status}-${run.updated_at}`}>
-                <h4 className="font-semibold mb-2 flex items-center gap-2"><FileVideo size={16} /> Kết quả (Output)</h4>
+              {/* Output */}
+              <div className="rounded-lg bg-muted/40 p-4 border border-border">
+                <h4 className="font-semibold mb-2 flex items-center gap-2 text-green-500"><FileVideo size={16} /> Kết quả (Output)</h4>
                 {(run.status === 'error' || run.status === 'failed') ? null :
-                  (
-                    (!run.output_data || Object.keys(run.output_data).length === 0) ? (
-                      <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
-                    ) : (
-                      <div className="space-y-1/2">
-                        {/* Debug hiển thị cấu trúc output_data để phát hiện vấn đề */}
-                        <div className="text-xs text-foreground mb-2">
-                          <code className="text-foreground">Output type: {typeof run.output_data}</code>
-                        </div>
-                        {/* Debug hiển thị dữ liệu gốc */}
-                        <details className="text-xs mb-4">
-                          <summary className="cursor-pointer text-foreground hover:text-white">
-                            Dữ liệu gốc
-                          </summary>
-                          <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">
-                            {JSON.stringify(run.output_data, null, 2)}
-                          </pre>
-                        </details>
-                        {/* Xử lý trường hợp output_data là mảng */}
-                        {Array.isArray(run.output_data) ? (
-                          <div className="space-y-4">
-                            {run.output_data.map((item, index) => (
-                              <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
-                                <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
-                                {renderOutput(item)}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          /* Xử lý trường hợp output_data là đối tượng đơn */
-                          <div key={`${run.id}-output-object-${run.updated_at}`}>
-                            {renderOutput(run.output_data)}
-                          </div>
-                        )}
+                  ((!run.output_data || Object.keys(run.output_data).length === 0) ? (
+                    <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs text-foreground mb-2">
+                        <code className="text-foreground">Output type: {typeof run.output_data}</code>
                       </div>
-                    )
-                  )
+                      {/* Dữ liệu gốc collapse */}
+                      <details className="text-xs mb-2">
+                        <summary className="cursor-pointer text-foreground hover:text-white font-semibold">Dữ liệu gốc (JSON)</summary>
+                        <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">{JSON.stringify(run.output_data, null, 2)}</pre>
+                      </details>
+                      {/* Hiển thị output đẹp */}
+                      {Array.isArray(run.output_data) ? (
+                        <div className="space-y-4">
+                          {run.output_data.map((item, index) => (
+                            <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
+                              <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
+                              {renderOutput(item)}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div key={`${run.id}-output-object-${run.updated_at}`}>
+                          {renderOutput(run.output_data)}
+                        </div>
+                      )}
+
+                    </div>
+                  ))
                 }
               </div>
 
-              {/* Nút thiết lập tự động (giữ nguyên) */}
+              {/* Nút thiết lập tự động */}
               {String(run.status) === 'completed' && (
                 <div className="pt-4 border-t border-border">
-                  <Button 
-                    onClick={() => navigate(
-                      `/dashboard/agents/${agentId}/task/${run.task_id}/config`,
-                      { state: { inputData: run.input_data } }
-                    )}
-                    className="w-full button-gradient-light dark:button-gradient-dark text-white"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Thiết lập tự động
+                  <Button onClick={() => navigate(`/dashboard/agents/${agentId}/task/${run.task_id}/config`, { state: { inputData: run.input_data } })} className="w-full button-gradient-light dark:button-gradient-dark text-white">
+                    <Settings className="mr-2 h-4 w-4" />Thiết lập tự động
                   </Button>
                 </div>
               )}

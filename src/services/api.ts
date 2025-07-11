@@ -1480,6 +1480,7 @@ export const deleteThread = async (
 // Types cho Scheduled Tasks
 export interface ScheduledTask {
   id: string;
+  user_id: string;
   agent_id: string;
   workspace_id: string;
   task_id: string;
@@ -1492,11 +1493,17 @@ export interface ScheduledTask {
     day_of_month?: number;
     cron_expression?: string;
   };
-  auto_create_conversation: boolean;
+  status: "active" | "paused";
+  is_enabled: boolean;
+  last_run_at?: string;
+  next_run_at?: string;
+  total_runs?: number;
+  successful_runs?: number;
+  failed_runs?: number;
   conversation_template?: {
     input_data: Record<string, any>;
   };
-  is_enabled: boolean;
+  auto_create_conversation: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -1541,6 +1548,7 @@ export interface UpdateScheduledTaskRequest {
     cron_expression?: string;
   };
   is_enabled?: boolean;
+  status?: "active" | "paused";
   conversation_template?: {
     input_data: Record<string, any>;
   };
@@ -1677,6 +1685,39 @@ export const updateScheduledTask = async (
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(taskData),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+// 6.1. Cập nhật status của scheduled task
+export const updateScheduledTaskStatus = async (
+  scheduledTaskId: string,
+  status: "active" | "paused",
+  is_enabled?: boolean
+): Promise<{ data: ScheduledTask }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const payload: any = { status };
+  if (is_enabled !== undefined) {
+    payload.is_enabled = is_enabled;
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/scheduled/${scheduledTaskId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
     }
   );
 

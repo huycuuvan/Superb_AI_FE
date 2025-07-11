@@ -23,6 +23,8 @@ export const ScheduledTaskRuns: React.FC<ScheduledTaskRunsProps> = ({ task }) =>
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'running':
         return <Play className="w-4 h-4 text-blue-500 animate-pulse" />;
+      case 'paused':
+        return <AlertCircle className="w-4 h-4 text-orange-500" />;
       default:
         return <AlertCircle className="w-4 h-4 text-yellow-500" />;
     }
@@ -36,6 +38,8 @@ export const ScheduledTaskRuns: React.FC<ScheduledTaskRunsProps> = ({ task }) =>
         return <Badge variant="destructive">Thất bại</Badge>;
       case 'running':
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Đang chạy</Badge>;
+      case 'paused':
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-800">Tạm dừng</Badge>;
       default:
         return <Badge variant="outline">Không xác định</Badge>;
     }

@@ -27,7 +27,8 @@ import {
   useScheduledTasks, 
   useToggleScheduledTask, 
   useRunScheduledTaskNow, 
-  useDeleteScheduledTask 
+  useDeleteScheduledTask,
+  useUpdateScheduledTaskStatus
 } from '@/hooks/useScheduledTasks';
 import { ScheduledTask } from '@/services/api';
 import { websocketService } from '@/services/websocket';
@@ -51,11 +52,20 @@ export const ScheduledTasksManager: React.FC = () => {
   const toggleTask = useToggleScheduledTask();
   const runTaskNow = useRunScheduledTaskNow();
   const deleteTask = useDeleteScheduledTask();
+  const updateTaskStatus = useUpdateScheduledTaskStatus();
 
   const scheduledTasks = scheduledTasksData?.data || [];
 
   const handleToggleTask = (taskId: string, enabled: boolean) => {
-    toggleTask.mutate({ taskId, enabled });
+    const task = scheduledTasks.find(t => t.id === taskId);
+    
+    // Nếu task đang bị paused và muốn kích hoạt lại
+    if (task?.status === 'paused' && enabled) {
+      updateTaskStatus.mutate({ taskId, status: 'active', is_enabled: true });
+    } else {
+      // Xử lý bật/tắt bình thường
+      toggleTask.mutate({ taskId, enabled });
+    }
   };
 
   // WebSocket handler cho scheduled task status
@@ -208,12 +218,33 @@ export const ScheduledTasksManager: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (enabled: boolean) => {
-    return enabled ? (
+  const getStatusIcon = (task: ScheduledTask) => {
+    if (task.status === 'paused') {
+      return <AlertCircle className="w-4 h-4 text-orange-500" />;
+    }
+    return task.is_enabled ? (
       <CheckCircle className="w-4 h-4 text-green-500" />
     ) : (
       <XCircle className="w-4 h-4 text-gray-400" />
     );
+  };
+
+  const getStatusBadge = (task: ScheduledTask) => {
+    if (task.status === 'paused') {
+      return <Badge variant="secondary" className="bg-orange-100 text-orange-800">Tạm dừng</Badge>;
+    }
+    return (
+      <Badge variant={task.is_enabled ? "default" : "secondary"}>
+        {task.is_enabled ? "Đang hoạt động" : "Đã tắt"}
+      </Badge>
+    );
+  };
+
+  const getStatusText = (task: ScheduledTask) => {
+    if (task.status === 'paused') {
+      return 'Tạm dừng do lỗi';
+    }
+    return task.is_enabled ? 'Đang hoạt động' : 'Đã tắt';
   };
 
   if (isLoading) {
@@ -290,9 +321,7 @@ export const ScheduledTasksManager: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <CardTitle className="text-lg">{task.name}</CardTitle>
-                      <Badge variant={task.is_enabled ? "default" : "secondary"}>
-                        {task.is_enabled ? "Đang hoạt động" : "Đã tắt"}
-                      </Badge>
+                      {getStatusBadge(task)}
                       <Badge variant="outline">
                         {getScheduleTypeLabel(task.schedule_type)}
                       </Badge>
@@ -324,22 +353,36 @@ export const ScheduledTasksManager: React.FC = () => {
                         )}
                         {runningTasks.has(task.id) ? 'Đang chạy...' : 'Chạy ngay'}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleToggleTask(task.id, !task.is_enabled)}
-                        disabled={toggleTask.isPending}
-                      >
-                        {task.is_enabled ? (
-                          <>
-                            <Pause className="w-4 h-4 mr-2" />
-                            Tắt
-                          </>
-                        ) : (
-                          <>
+                      {task.status === 'paused' ? (
+                        <DropdownMenuItem 
+                          onClick={() => handleToggleTask(task.id, true)}
+                          disabled={updateTaskStatus.isPending}
+                        >
+                          {updateTaskStatus.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
                             <Play className="w-4 h-4 mr-2" />
-                            Bật
-                          </>
-                        )}
-                      </DropdownMenuItem>
+                          )}
+                          {updateTaskStatus.isPending ? 'Đang kích hoạt...' : 'Kích hoạt lại'}
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem 
+                          onClick={() => handleToggleTask(task.id, !task.is_enabled)}
+                          disabled={toggleTask.isPending}
+                        >
+                          {task.is_enabled ? (
+                            <>
+                              <Pause className="w-4 h-4 mr-2" />
+                              Tắt
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4 mr-2" />
+                              Bật
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -373,6 +416,36 @@ export const ScheduledTasksManager: React.FC = () => {
               
               <CardContent className="pt-0">
                 <div className="space-y-3">
+                  {/* Paused Warning */}
+                  {task.status === 'paused' && (
+                    <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-orange-800">Task đã bị tạm dừng</p>
+                        <p className="text-orange-700">
+                          Task này đã thất bại {task.failed_runs} lần liên tiếp và đã được tạm dừng tự động. 
+                          Vui lòng kiểm tra cấu hình và thử lại.
+                        </p>
+                        <div className="mt-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                            onClick={() => handleToggleTask(task.id, true)}
+                            disabled={updateTaskStatus.isPending}
+                          >
+                            {updateTaskStatus.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Play className="w-4 h-4 mr-1" />
+                            )}
+                            {updateTaskStatus.isPending ? 'Đang kích hoạt...' : 'Kích hoạt lại ngay'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Schedule Info */}
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4" />
@@ -381,11 +454,33 @@ export const ScheduledTasksManager: React.FC = () => {
                   
                   {/* Status */}
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(task.is_enabled)}
+                    {getStatusIcon(task)}
                     <span className="text-sm">
-                      {task.is_enabled ? 'Đang hoạt động' : 'Đã tắt'}
+                      {getStatusText(task)}
                     </span>
                   </div>
+                  
+                  {/* Statistics */}
+                  {(task.total_runs !== undefined || task.last_run_at) && (
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {task.total_runs !== undefined && (
+                        <div className="flex items-center gap-1">
+                          <span>Tổng: {task.total_runs}</span>
+                          {task.successful_runs !== undefined && (
+                            <span className="text-green-600">✓ {task.successful_runs}</span>
+                          )}
+                          {task.failed_runs !== undefined && (
+                            <span className="text-red-600">✗ {task.failed_runs}</span>
+                          )}
+                        </div>
+                      )}
+                      {task.last_run_at && (
+                        <div>
+                          Lần cuối: {new Date(task.last_run_at).toLocaleString('vi-VN')}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-2">
@@ -415,7 +510,7 @@ export const ScheduledTasksManager: React.FC = () => {
                         size="sm" 
                         variant="outline"
                         onClick={() => handleRunNow(task.id)}
-                        disabled={runTaskNow.isPending || runningTasks.has(task.id)}
+                        disabled={runTaskNow.isPending || runningTasks.has(task.id) || task.status === 'paused'}
                       >
                         <Zap className="w-4 h-4 mr-1" /> Chạy thử
                       </Button>
@@ -426,7 +521,7 @@ export const ScheduledTasksManager: React.FC = () => {
                       <Switch
                         checked={task.is_enabled}
                         onCheckedChange={(enabled) => handleToggleTask(task.id, enabled)}
-                        disabled={toggleTask.isPending}
+                        disabled={toggleTask.isPending || updateTaskStatus.isPending || task.status === 'paused'}
                       />
                     </div>
                   </div>

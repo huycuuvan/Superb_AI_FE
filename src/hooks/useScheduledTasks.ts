@@ -4,6 +4,7 @@ import {
   getScheduledTaskById,
   createScheduledTask,
   updateScheduledTask,
+  updateScheduledTaskStatus,
   enableScheduledTask,
   disableScheduledTask,
   runScheduledTaskNow,
@@ -212,6 +213,41 @@ export const useDeleteScheduledTask = () => {
       toast({
         title: "Lỗi!",
         description: `Không thể xóa task: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+// Hook để cập nhật status của scheduled task
+export const useUpdateScheduledTaskStatus = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      status,
+      is_enabled,
+    }: {
+      taskId: string;
+      status: "active" | "paused";
+      is_enabled?: boolean;
+    }) => updateScheduledTaskStatus(taskId, status, is_enabled),
+    onSuccess: (_, { taskId, status }) => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-task", taskId] });
+      toast({
+        title: "Thành công!",
+        description: `Đã cập nhật trạng thái task thành ${
+          status === "active" ? "hoạt động" : "tạm dừng"
+        }.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi!",
+        description: `Không thể cập nhật trạng thái task: ${error.message}`,
         variant: "destructive",
       });
     },

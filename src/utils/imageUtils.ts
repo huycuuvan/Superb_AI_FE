@@ -59,3 +59,41 @@ export const sanitizeMarkdownImages = (text: string) => {
   });
   return text;
 };
+
+// Kiểm tra object agent_res gradio image
+export function isAgentResImageObject(content: unknown): boolean {
+  try {
+    const obj = typeof content === "string" ? JSON.parse(content) : content;
+    return (
+      obj &&
+      typeof obj === "object" &&
+      Object.keys(obj).length === 1 &&
+      obj.agent_res &&
+      typeof obj.agent_res === "string" &&
+      obj.agent_res.includes("/gradio_api/file=") &&
+      isImageUrl(obj.agent_res)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function getAgentResImageUrl(content: unknown): string | null {
+  try {
+    const obj = typeof content === "string" ? JSON.parse(content) : content;
+    if (
+      obj &&
+      typeof obj === "object" &&
+      Object.keys(obj).length === 1 &&
+      obj.agent_res &&
+      typeof obj.agent_res === "string" &&
+      obj.agent_res.includes("/gradio_api/file=") &&
+      isImageUrl(obj.agent_res)
+    ) {
+      return obj.agent_res;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
