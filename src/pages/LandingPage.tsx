@@ -1193,20 +1193,20 @@ const LandingPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
                     <EmailIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
-                    <a href="mailto:support@superbai.com" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                      support@superbai.com
+                    <a href="mailto:support@xcel.bot" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                    support@xcel.bot
                     </a>
                   </div>
                   <div className="flex items-center space-x-3">
                     <PhoneIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
-                    <a href="tel:+84123456789" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                      +84 123 456 789
+                    <a href="tel:+84969333515" className={`${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      +84 969 333 515
                     </a>
                   </div>
                   <div className="flex items-center space-x-3">
                     <LocationIcon className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} flex-shrink-0`} />
                     <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-sm`}>
-                      Ho Chi Minh City, Vietnam
+                      Xuân Đỉnh, Bắc Từ Liêm, Hà Nội, Việt Nam
                     </span>
                   </div>
                 </div>
@@ -1276,18 +1276,26 @@ const LandingPage: React.FC = () => {
               <div>
                 <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'} mb-4 text-sm`}>Legal</h3>
                 <ul className="space-y-2">
-                  {[
-                    { name: 'Privacy Policy', href: '#' },
-                    { name: 'Terms of Service', href: '#' },
-                    { name: 'Cookie Policy', href: '#' },
-                    { name: 'GDPR', href: '#' }
-                  ].map((link) => (
-                    <li key={link.name}>
-                      <a href={link.href} className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
-                        {link.name}
-                      </a>
-                    </li>
-                  ))}
+                  <li>
+                    <Link to="/privacy" className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/terms" className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      Terms of Service
+                    </Link>
+                  </li>
+                  <li>
+                    <a href="#" className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      Cookie Policy
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'} transition-colors text-sm`}>
+                      GDPR
+                    </a>
+                  </li>
                 </ul>
               </div>
             </div>

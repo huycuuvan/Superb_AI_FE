@@ -60,12 +60,7 @@ export default function WorkspaceProfilePage() {
           "bg-white/40 border border-white/20",
           "dark:bg-zinc-900/60 dark:border-zinc-700/50"
         )}>
-          <CardHeader className="space-y-1.5 p-4 sm:p-6 border-b border-white/20 dark:border-zinc-700/50">
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800 dark:text-zinc-100">Update Workspace Profile</CardTitle>
-            <CardDescription className="text-center text-slate-600 dark:text-zinc-400 text-sm sm:text-base">
-              Please update your workspace information.
-            </CardDescription>
-          </CardHeader>
+      
           <CardContent className="p-4 sm:p-6">
             <WorkspaceProfileForm workspaceId={workspaceId} />
           </CardContent>

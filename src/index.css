@@ -268,3 +268,7 @@
   z-index: 1;
   border-radius: inherit;
 }
+
+html {
+  font-size: 85%;
+}

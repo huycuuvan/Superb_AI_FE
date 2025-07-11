@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById } from "@/services/api";
+import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById, getFolderDetail } from "@/services/api";
 
 import React from "react";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ const Header = React.memo(() => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { workspace } = useSelectedWorkspace();
-  const { agentId } = useParams<{ agentId: string; threadId?: string }>();
+  const { agentId, folderId } = useParams<{ agentId: string; threadId?: string; folderId?: string }>();
 
   const { data: agentData } = useQuery({
     queryKey: ['agent', agentId],
@@ -148,7 +148,13 @@ const Header = React.memo(() => {
   const isKnowledgePage = location.pathname.startsWith('/dashboard/knowledge');
   const isSettingsPage = location.pathname.startsWith('/dashboard/settings');
   const isCredentialPage = location.pathname.startsWith('/dashboard/credential');
-
+  const isFolderDetailPage = location.pathname.startsWith('/dashboard/folder/');  
+  const { data: folderData } = useQuery({
+    queryKey: ['folder', folderId],
+    queryFn: () => getFolderDetail(folderId!, workspace?.id ?? ""),
+    enabled: !!user && !!folderId && !!workspace?.id,
+  });
+  const folder = folderData?.data || null;
   return (
     // CLEANED: Using `bg-background` for the header to match the layout.
     <header className="bg-background border-b border-border relative z-10 background-gradient-white">
@@ -226,6 +232,19 @@ const Header = React.memo(() => {
                       <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
                       <BreadcrumbItem><BreadcrumbPage>Credential</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+            if (isFolderDetailPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>{folder?.name}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>

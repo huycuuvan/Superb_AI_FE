@@ -8,9 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import gsap from 'gsap';
-import { loginWithGoogle } from "@/services/api";
 import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/useTheme';
+import { useGoogleLogin } from '@/hooks/useGoogleLogin';
 import { cn } from '@/lib/utils';
 
 // Simple Superb AI Logo Component (Không thay đổi)
@@ -54,8 +54,8 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loading, user, hasWorkspace, updateUser } = useAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loading, user, hasWorkspace } = useAuth();
+  const { googleLoading, error: googleError, handleGoogleLogin } = useGoogleLogin();
   const queryClient = useQueryClient();
   const from = location.state?.from?.pathname || "/dashboard";
   const { theme } = useTheme();
@@ -86,26 +86,7 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = async (idToken: string) => {
-    setGoogleLoading(true);
-    setError("");
-    try {
-      const response = await loginWithGoogle(idToken);
-      if (response.token && response.refresh_token && response.user) {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("refresh_token", response.refresh_token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-        updateUser(response.user);
-        queryClient.invalidateQueries();
-      } else {
-        setError("Không nhận được token hoặc user từ server");
-      }
-    } catch (err) {
-      setError("Đăng nhập bằng Google thất bại. Vui lòng thử lại.");
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+
 
   const loginCardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -193,7 +174,7 @@ const Login = () => {
                   className="text-base rounded-md placeholder:text-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-400/50 bg-white/60 border-white/40 text-slate-800 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-purple-500"
                 />
               </div>
-              {error && <div className="text-red-500 dark:text-red-400 text-sm text-center pt-1 font-medium">{error}</div>}
+              {(error || googleError) && <div className="text-red-500 dark:text-red-400 text-sm text-center pt-1 font-medium">{error || googleError}</div>}
               
               <Button type="submit" className="w-full bg-primary text-white hover:bg-primary-gradient shadow-lg hover:shadow-primary/40 dark:shadow-primary/80" size="lg" disabled={loading}>
                 {loading ? "Logging in..." : "Log In"}

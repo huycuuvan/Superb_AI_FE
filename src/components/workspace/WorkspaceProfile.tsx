@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createWorkspaceProfile, WorkspaceProfile, updateWorkspaceProfile, scrapWorkspaceProfile } from "@/services/api";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import countries from '@/data/countries.json';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WorkspaceProfileFormProps {
   workspaceId: string;
@@ -35,6 +43,14 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
   const [step, setStep] = useState(1);
   // State lưu kết quả scrap (nếu có)
   const [scrapResult, setScrapResult] = useState<Record<string, unknown> | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const [languageOptions, setLanguageOptions] = useState<{code: string, name: string}[]>([]);
+  const [languageOptionsLoading, setLanguageOptionsLoading] = useState(true);
+  const [languageOptionsError, setLanguageOptionsError] = useState(false);
+  const [countryOptions, setCountryOptions] = useState<{code: string, name: string}[]>([]);
+  const [countryOptionsLoading, setCountryOptionsLoading] = useState(true);
+  const [countryOptionsError, setCountryOptionsError] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -52,26 +68,67 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
     }
   }, [initialData]);
 
+  useEffect(() => {
+    setLanguageOptionsLoading(true);
+    fetch('https://libretranslate.com/languages')
+      .then(res => res.json())
+      .then(data => {
+        setLanguageOptions(data);
+        setLanguageOptionsLoading(false);
+      })
+      .catch(() => {
+        setLanguageOptionsError(true);
+        setLanguageOptionsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    setCountryOptionsLoading(true);
+    try {
+      setCountryOptions(countries);
+      setCountryOptionsLoading(false);
+    } catch {
+      setCountryOptionsError(true);
+      setCountryOptionsLoading(false);
+    }
+  }, []);
+
   // Xử lý scrap-url
   const handleScrapUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!websiteInput) return toast.error("Vui lòng nhập website công ty");
     setScrapLoading(true);
+    setProfileLoading(true); // chuyển sang loading profile
+    setStep(2); // chuyển luôn sang màn profile
     try {
       const res = await scrapWorkspaceProfile({ workspace_id: workspaceId, website_url: websiteInput });
       if (res && typeof res === "object" && res.data) {
         setScrapResult(res.data);
+        // Map tên sang code nếu cần
+        let langCode = "en";
+        let countryCode = "VN";
+        if (res.data.default_language_code) {
+          const lang = languageOptions.find(l => l.name === res.data.default_language_code || l.code === res.data.default_language_code);
+          langCode = lang ? lang.code : "en";
+        }
+        if (res.data.default_location_code) {
+          const country = countryOptions.find(c => c.name === res.data.default_location_code || c.code === res.data.default_location_code);
+          countryCode = country ? country.code : "VN";
+        }
         setFormData((prev) => ({
           ...prev,
           ...res.data,
+          default_language_code: langCode,
+          default_location_code: countryCode,
           website_url: websiteInput,
         }));
-        setStep(2);
+        setProfileLoading(false); // tắt loading khi xong
         toast.success("Lấy thông tin doanh nghiệp thành công!");
       } else {
         toast.error("Không lấy được thông tin doanh nghiệp");
       }
     } catch (err) {
+      setProfileLoading(false);
       toast.error("Không thể lấy thông tin doanh nghiệp từ website");
     } finally {
       setScrapLoading(false);
@@ -111,7 +168,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -154,110 +211,152 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
       {step === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle>Workspace Profile</CardTitle>
+            <CardTitle>{formTitle}</CardTitle>
             <CardDescription>Thông tin hồ sơ workspace của bạn</CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="brand_name">Brand Name</Label>
-                <Input
-                  id="brand_name"
-                  name="brand_name"
-                  value={formData.brand_name}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter brand name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="business_type">Business Type</Label>
-                <Input
-                  id="business_type"
-                  name="business_type"
-                  value={formData.business_type}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter business type"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {profileLoading ? (
+            <SkeletonProfileForm />
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="default_language_code">Language Code</Label>
+                  <Label htmlFor="brand_name">Brand Name</Label>
                   <Input
-                    id="default_language_code"
-                    name="default_language_code"
-                    value={formData.default_language_code}
+                    id="brand_name"
+                    name="brand_name"
+                    value={formData.brand_name}
                     onChange={handleChange}
                     required
-                    placeholder="en"
+                    placeholder="Enter brand name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="default_location_code">Country Code</Label>
+                  <Label htmlFor="business_type">Business Type</Label>
                   <Input
-                    id="default_location_code"
-                    name="default_location_code"
-                    value={formData.default_location_code}
+                    id="business_type"
+                    name="business_type"
+                    value={formData.business_type}
                     onChange={handleChange}
                     required
-                    placeholder="VN"
+                    placeholder="Enter business type"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand_description">Brand Description</Label>
-                <Textarea
-                  id="brand_description"
-                  name="brand_description"
-                  value={formData.brand_description}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter brand description"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand_products_services">Products/Services</Label>
-                <Textarea
-                  id="brand_products_services"
-                  name="brand_products_services"
-                  value={formData.brand_products_services}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter products and services"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="website_url">Website URL (Optional)</Label>
-                <Input
-                  id="website_url"
-                  name="website_url"
-                  value={formData.website_url}
-                  onChange={handleChange}
-                  placeholder="https://example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand_logo_url">Logo URL (Optional)</Label>
-                <Input
-                  id="brand_logo_url"
-                  name="brand_logo_url"
-                  value={formData.brand_logo_url}
-                  onChange={handleChange}
-                  placeholder="https://example.com/logo.png"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full superb-button" disabled={isLoading}>
-                {isLoading ? "Processing..." : initialData ? "Update Information" : "Save Information"}
-              </Button>
-            </CardFooter>
-          </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="default_language_code">Language Code</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          {languageOptionsLoading ? 'Loading...' :
+                            languageOptionsError ? 'Error loading languages' :
+                            (languageOptions.find(l => l.code === formData.default_language_code)?.name + ' (' + formData.default_language_code + ')') || 'Select language'}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full max-h-72 overflow-y-auto">
+                        {languageOptions.map(lang => (
+                          <DropdownMenuItem
+                            key={lang.code}
+                            onSelect={() => setFormData(prev => ({ ...prev, default_language_code: lang.code }))}
+                          >
+                            {lang.name} ({lang.code})
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="default_location_code">Country Code</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          {countryOptionsLoading ? 'Loading...' :
+                            countryOptionsError ? 'Error loading countries' :
+                            (countryOptions.find(c => c.code === formData.default_location_code)?.name + ' (' + formData.default_location_code + ')') || 'Select country'}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full max-h-72 overflow-y-auto">
+                        {countryOptions.map(c => (
+                          <DropdownMenuItem
+                            key={c.code}
+                            onSelect={() => setFormData(prev => ({ ...prev, default_location_code: c.code }))}
+                          >
+                            {c.name} ({c.code})
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand_description">Brand Description</Label>
+                  <Textarea
+                    id="brand_description"
+                    name="brand_description"
+                    value={formData.brand_description}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter brand description"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand_products_services">Products/Services</Label>
+                  <Textarea
+                    id="brand_products_services"
+                    name="brand_products_services"
+                    value={formData.brand_products_services}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter products and services"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website_url">Website URL (Optional)</Label>
+                  <Input
+                    id="website_url"
+                    name="website_url"
+                    value={formData.website_url}
+                    onChange={handleChange}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand_logo_url">Logo URL (Optional)</Label>
+                  <Input
+                    id="brand_logo_url"
+                    name="brand_logo_url"
+                    value={formData.brand_logo_url}
+                    onChange={handleChange}
+                    placeholder="https://example.com/logo.png"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full superb-button" disabled={isLoading}>
+                  {isLoading ? "Processing..." : initialData ? "Update Information" : "Save Information"}
+                </Button>
+              </CardFooter>
+            </form>
+          )}
         </Card>
       )}
+    </div>
+  );
+}
+
+function SkeletonProfileForm() {
+  return (
+    <div className="p-6 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-20 w-full" />
+      <Skeleton className="h-20 w-full" />
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
     </div>
   );
 } 
