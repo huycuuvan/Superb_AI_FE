@@ -25,7 +25,7 @@ import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
-import { useTheme } from '@/hooks/useTheme';
+
 import gsap from 'gsap';
 import { usePublicAgents } from '@/hooks/useAgentsByFolders';
 import { Agent } from '@/types';
@@ -34,6 +34,8 @@ import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/useTheme';
+import { Input } from '../ui/input';
 
 
 interface SidebarProps {
@@ -52,25 +54,12 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useLanguage();
-  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
-  const [showAddAgentDialog, setShowAddAgentDialog] = useState<{open: boolean, folderId?: string}>({open: false, folderId: undefined});
   const { user } = useAuth();
-  const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
+  const { workspace } = useSelectedWorkspace();
   const { toast } = useToast();
-  const { folders, loadingFolders } = useFolders();
+  const { folders } = useFolders();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
-  // State for rename functionality
-  const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [isRenaming, setIsRenaming] = useState(false);
-
-  // State for delete functionality
-  const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
-  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // State cho dialog xác nhận xóa lịch sử chat agent
   const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
@@ -84,21 +73,6 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
   const agents = Array.isArray(agentsData?.data?.data)
     ? Array.from(new Map((agentsData.data.data as Agent[]).map((agent) => [agent.id, agent])).values())
     : [];
-
-  // Giữ lại hàm formatTimestamp
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor(diffInHours * 60);
-      return `${diffInMinutes}m`;
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h`;
-    } else {
-      return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' });
-    }
-  };
 
   const asideRef = useRef<HTMLDivElement>(null);
 
@@ -118,70 +92,8 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
     }
   }, [collapsed]);
 
-  // Auto-fetch messages when threads data is available
-  // ĐÃ BỎ auto-g/polling vì đã dùng WebSocket cho chat real-time
 
-  // Handle Rename action
-  const handleRenameClick = (folder: FolderType) => {
-    setFolderToRename(folder);
-    setNewFolderName(folder.name);
-    setShowRenameDialog(true);
-  };
-
-  const handleRenameFolder = async () => {
-    if (!folderToRename || !newFolderName.trim()) return;
-
-    setIsRenaming(true);
-    try {
-await updateFolder(folderToRename.id, { name: newFolderName.trim() });
-toast({
-  title: t('success'),
-  description: t('folderRenamed', { name: newFolderName.trim() }),
-});
-setShowRenameDialog(false);
-    } catch (error: any) {
-console.error('Lỗi khi đổi tên folder:', error);
-      toast({
- title: t('error'),
- description: t('folderRenameFailed', { name: newFolderName.trim() }),
- variant: "destructive",
- });
-    } finally {
- setIsRenaming(false);
-    }
-  };
-
-  // Handle Delete action
-  const handleDeleteClick = (folder: FolderType) => {
-    setFolderToDelete(folder);
-    setShowConfirmDeleteDialog(true);
-  };
-
-  const handleDeleteFolder = async () => {
-    if (!folderToDelete) return;
-
-    setIsDeleting(true);
-    try {
- await deleteFolder(folderToDelete.id);
- toast({
-   title: t('success'),
-   description: t('folderDeleted', { name: folderToDelete.name }),
- });
- setShowConfirmDeleteDialog(false);
- if (location.pathname === `/dashboard/folder/${folderToDelete.id}`) {
-   navigate('/dashboard');
- }
-    } catch (error: any) {
-      console.error('Lỗi khi xóa folder:', error);
-      toast({
-        title: t('error'),
-        description: t('folderDeleteFailed', { name: folderToDelete.name }),
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+ 
 
   const menuItems = [
     { icon: Home, label: t('common.home'), path: '/dashboard' },
@@ -355,15 +267,15 @@ console.error('Lỗi khi đổi tên folder:', error);
               <span>Agents</span>
             </div>
           )}
-          <div className="px-2 pt-1 pb-0">
+          <div className="px-2 pb-0 box-shadow-bottom">
             {!collapsed && (
-              <input
+              <Input
                 type="text"
                 placeholder="Tìm kiếm agent..."
                 className="px-2 py-1 rounded border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary w-full"
                 value={searchAgent}
                 onChange={e => setSearchAgent(e.target.value)}
-                style={{ marginTop: 4, marginBottom: 2 }}
+               
               />
             )}
           </div>

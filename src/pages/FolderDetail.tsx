@@ -2,102 +2,81 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Folder, Search, MoreVertical, Edit, Pin, Trash, Plus } from 'lucide-react';
-import { Agent } from '@/types'; // Import Agent type if needed for placeholder structure
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Folder, Search, Plus } from 'lucide-react';
+import { Agent } from '@/types';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/hooks/useTheme';
 import AgentDialog from '@/components/AgentDialog';
-import { getFolderDetail, FolderDetailResponse, getAgentsByFolder, createAgent } from '@/services/api';
-import { useAuth } from '@/hooks/useAuth'; // Import useAuth
-import { createAvatar } from '@dicebear/core';
-import { adventurer  } from '@dicebear/collection';
+import { createAgent } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 import { useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 import { useQueryClient } from '@tanstack/react-query';
+import { AgentCard } from '@/components/Agents/AgentCard';
+import { useTheme } from '@/hooks/useTheme';
 
-// Tạm thời định nghĩa kiểu FolderType cho hiển thị tên
-interface FolderType {
+interface Pagination {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+interface FolderWithAgents {
   id: string;
   name: string;
   workspace_id: string;
-  description?: string;
+  agents: Agent[];
+  pagination: Pagination;
+}
+
+interface AgentsByFoldersResponse {
+  data: FolderWithAgents[];
 }
 
 const PAGE_SIZE = 12;
 
 const FolderDetail = () => {
   const { folderId } = useParams<{ folderId: string }>();
-  const { workspace, isLoading: isLoadingWorkspace } = useSelectedWorkspace();
+  const { workspace } = useSelectedWorkspace();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [folder, setFolder] = useState<FolderType | null>(null);
-  const [loadingFolderDetail, setLoadingFolderDetail] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [searchQuery, setSearchQuery] = useState('');
-
   const [showAddAgentDialog, setShowAddAgentDialog] = useState(false);
   const [selectedAgentFolderId, setSelectedAgentFolderId] = useState<string | undefined>(undefined);
-  const { canCreateAgent } = useAuth(); // Lấy canCreateAgent từ useAuth
+  const { canCreateAgent } = useAuth();
 
   const [page, setPage] = useState(1);
-  const [allAgents, setAllAgents] = useState([]);
+  const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const loaderRef = useRef(null);
 
-  // Logic fetch folder detail
-  useEffect(() => {
-    const fetchFolderDetail = async () => {
-      if (folderId && workspace?.id) {
-        setLoadingFolderDetail(true);
-        setError(null);
-        try {
-          const data = await getFolderDetail(folderId, workspace.id);
-          setFolder(data.data);
-        } catch (err: unknown) {
-          setError(err instanceof Error ? err.message : 'Lỗi khi lấy chi tiết folder');
-        } finally {
-          setLoadingFolderDetail(false);
-        }
-      } else if (!folderId) {
-        setError('Không tìm thấy Folder ID.');
-        setLoadingFolderDetail(false);
-      } else if (!workspace?.id) {
-        setError('Không tìm thấy Workspace ID.');
-        setLoadingFolderDetail(false);
-      }
-    };
-
-    if (!isLoadingWorkspace) {
-      fetchFolderDetail();
-    }
-  }, [folderId, workspace?.id, isLoadingWorkspace]);
-
-  // Thay thế logic fetch agents bằng hook by-folders với phân trang
+  // Fetch agents by folder
   const folderIds = folderId ? [folderId] : [];
   const { data: agentsByFoldersData, isLoading: loadingAgents } = useAgentsByFolders(folderIds, page, PAGE_SIZE);
-  const folderAgentsGroup = Array.isArray(agentsByFoldersData?.data)
-    ? agentsByFoldersData.data.find(group => group.id === folderId)
-    : null;
-  const agents = folderAgentsGroup?.agents || [];
+  
+  // Get folder info from agentsByFoldersData
+  const folderInfo = agentsByFoldersData?.data?.[0];
+  const agents = folderInfo?.agents || [];
+  const pagination = folderInfo?.pagination;
 
-  // Gộp dữ liệu các trang
+  // Gộp dữ liệu các trang và kiểm tra có trang tiếp theo
   useEffect(() => {
-    if (agents && agents.length > 0) {
+    if (page === 1) {
+      setAllAgents(agents);
+    } else if (agents && agents.length > 0) {
       setAllAgents(prev => {
-        // Tránh trùng lặp agent khi refetch
         const ids = new Set(prev.map(a => a.id));
-        return [...prev, ...agents.filter(a => !ids.has(a.id))];
+        const newAgents = [...prev, ...agents.filter(a => !ids.has(a.id))];
+        return newAgents;
       });
     }
-  }, [agents]);
+  }, [agents, page]);
 
   // Reset khi folderId đổi
   useEffect(() => {
-    setAllAgents([]);
     setPage(1);
   }, [folderId]);
 
@@ -106,7 +85,7 @@ const FolderDetail = () => {
     if (!loaderRef.current) return;
     const observer = new window.IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && !loadingAgents && agents.length === PAGE_SIZE) {
+        if (entries[0].isIntersecting && !loadingAgents && pagination?.has_next) {
           setPage(prev => prev + 1);
         }
       },
@@ -114,39 +93,24 @@ const FolderDetail = () => {
     );
     observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [loadingAgents, agents]);
+  }, [loadingAgents, pagination]);
 
   // Filter agents based on search query
   const filteredAgents = allAgents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (agent.role_description && agent.role_description.toLowerCase().includes(searchQuery.toLowerCase()))
+    agent.role_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agent.job_brief?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agent.position?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loadingFolderDetail) {
-     return (
-       <div className="flex flex-col space-y-4 p-6">
-         <Skeleton className="h-8 w-1/4" />
-         <Skeleton className="h-6 w-1/3" />
-         <Skeleton className="h-4 w-1/2" />
-         <Skeleton className="h-10 w-full mt-4" />
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <Skeleton key={idx} className={`h-32 md:h-40 rounded-xl ${theme === 'teampal-pink' ? 'bg-teampal-100' : theme === 'blue' ? 'bg-blue-100' : theme === 'purple' ? 'bg-purple-100' : 'bg-muted'}`}
-            />
-          ))}
-         </div>
-       </div>
-     );
-   }
-
-   if (error) {
-     return <div className="text-red-500 p-6">Error: {error}</div>;
-   }
-
-   if (!folder) {
-     return <div className="text-muted-foreground p-6">Không tìm thấy chi tiết folder.</div>;
-   }
+  console.log('Debug FolderDetail:', {
+    folderIds,
+    agentsByFoldersData,
+    folderInfo,
+    agents,
+    allAgents,
+    filteredAgents
+  });
 
   const handleAddAgent = async (data: Partial<Agent> & { folder_id?: string }) => {
     await createAgent({
@@ -161,48 +125,66 @@ const FolderDetail = () => {
       greeting_message: data.greeting_message || '',
       model_config: { webhook_url: data.model_config?.webhook_url || '' },
     });
-    queryClient.invalidateQueries({ queryKey: ['agents', 'agentsByFolders'] });
+    queryClient.invalidateQueries({ queryKey: ['agents', 'agents-by-folders'] });
     setShowAddAgentDialog(false);
   }
 
+  if (loadingAgents && allAgents.length === 0) {
+    return (
+      <div className="flex flex-col space-y-4 p-6">
+        <Skeleton className="h-8 w-1/4" />
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-10 w-full mt-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <Skeleton key={idx} className={`h-32 md:h-40 rounded-xl ${theme === 'teampal-pink' ? 'bg-teampal-100' : theme === 'blue' ? 'bg-blue-100' : theme === 'purple' ? 'bg-purple-100' : 'bg-muted'}`} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!folderInfo) {
+    return <div className="text-muted-foreground p-6">Không tìm thấy thông tin folder.</div>;
+  }
+
   return (
-    <div className="space-y-6 p-6 ">
+    <div className="space-y-6 p-6">
       {/* Header Folder Detail */}
       <div className="flex items-center gap-2 mb-4">
         <Folder className="h-6 w-6 text-primary-text" />
-        <h1 className="text-2xl font-bold text-primary-text">{folder.name}</h1> {/* Hiển thị tên folder từ API */}
-        {/* Thêm Dropdown menu cho folder actions nếu cần */}
+        <h1 className="text-2xl font-bold text-primary-text">{folderInfo.name}</h1>
       </div>
 
       {/* Agents Section Header with Search and Create Button */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-         <h2 className="text-xl font-semibold text-primary-text">Agents ({filteredAgents.length})</h2>
-         <div className="flex flex-col sm:flex-row gap-4">
-           <div className="relative w-full sm:w-64">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input
-               type="search"
-               placeholder="Find agent in this folder"
-               className="pl-8 bg-muted/50"
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-             />
-           </div>
-           {/* Thêm dropdown filter/sort nếu cần */}
-           {/* <DropdownMenu>...</DropdownMenu> */}
-            {/* Sử dụng canCreateAgent để điều kiện hiển thị button */}
-            {canCreateAgent && (
-              <Button
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
-                 onClick={() => {
-                  setSelectedAgentFolderId(folder?.id);
-                  setShowAddAgentDialog(true);
-                 }}
-              >
-                <span className="text-lg">+</span> Create agent
-              </Button>
-            )}
-         </div>
+        <h2 className="text-xl font-semibold text-primary-text">
+          Agents ({pagination?.total || filteredAgents.length})
+        </h2>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Find agent in this folder"
+              className="pl-8 bg-muted/50"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {canCreateAgent && (
+            <Button
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-teampal-500 text-white font-medium hover:opacity-90 transition w-full sm:w-auto"
+              onClick={() => {
+                setSelectedAgentFolderId(folderInfo?.id);
+                setShowAddAgentDialog(true);
+              }}
+            >
+              <span className="text-lg">+</span> Create agent
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Agents List Grid */}
@@ -215,59 +197,33 @@ const FolderDetail = () => {
         ) : filteredAgents.length === 0 ? (
           // Empty state
           <>
-            {/* Sử dụng canCreateAgent để điều kiện hiển thị Card thêm agent */}
-            {canCreateAgent && folder?.id && (
+            {canCreateAgent && folderInfo?.id && (
               <Card 
-                className="bg-teampal-50/50 border-dashed border-2 border-teampal-200 rounded-xl hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-colors cursor-pointer group"
+                className="bg-card/50 border-2 border-dashed border-primary/20 rounded-xl cursor-pointer hover:border-primary/40 hover:bg-card/80"
                 onClick={() => {
-                  setSelectedAgentFolderId(folder.id);
+                  setSelectedAgentFolderId(folderInfo.id);
                   setShowAddAgentDialog(true);
                 }}
               >
                 <CardContent className="flex flex-col items-center justify-center h-32 md:h-40 p-6 text-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center mb-3 group-hover:bg-teampal-200 transition-colors">
-                    <Plus className="h-6 w-6 text-teampal-500" />
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:bg-primary/20">
+                    <Plus className="h-6 w-6" />
                   </div>
-                  <p className="text-sm text-teampal-600 font-medium">Thêm agent mới</p>
-                  <p className="text-xs text-teampal-500 mt-1">Chưa có agent nào trong thư mục này.</p>
+                  <p className="text-sm font-medium text-foreground">Thêm agent mới</p>
+                  <p className="text-xs text-muted-foreground mt-1">Chưa có agent nào trong thư mục này.</p>
                 </CardContent>
               </Card>
             )}
             {!canCreateAgent && (
-               <div className="text-muted-foreground text-center w-full col-span-full">Không có agent nào trong thư mục này.</div>
+              <div className="text-muted-foreground text-center w-full col-span-full">Không có agent nào trong thư mục này.</div>
             )}
           </>
-        ) : (
+        ) :
           // Agent cards
           filteredAgents.map((agent) => (
-            <Card 
-              key={agent.id} 
-              className=" border-none rounded-xl shadow-sm hover:shadow-md hover:bg-gradient-to-r from-primary-from to-primary-to text-primary-text transition-shadow cursor-pointer"
-              onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
-            >
-              <CardHeader className="pb-2 md:pb-3 ">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <Avatar className="h-10 w-10 md:h-12 md:w-12 rounded-full overflow-hidden border bg-gradient-to-r from-primary-from to-primary-to text-primary-text flex items-center justify-center">
-                    {agent.avatar ? (
-                      <div dangerouslySetInnerHTML={{ __html: agent.avatar }} style={{ width: 40, height: 40 }} />
-                    ) : (
-                      <div dangerouslySetInnerHTML={{ __html: createAvatar(adventurer , { seed: agent.name || 'Agent' }).toString() }} style={{ width: 40, height: 40 }} />
-                    )}
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-base md:text-lg font-semibold">{agent.name}</CardTitle>
-                    {agent.role_description && (
-                      <CardDescription className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {agent.role_description}
-                      </CardDescription>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              {/* Có thể thêm CardContent cho agent details nếu cần */}
-            </Card>
+            <AgentCard key={agent.id} agent={agent} />
           ))
-        )}
+        }
         {/* Loader để IntersectionObserver quan sát */}
         <div ref={loaderRef} style={{ height: 40 }} />
         {loadingAgents && allAgents.length > 0 && <div className="col-span-full text-center py-2">Đang tải thêm...</div>}

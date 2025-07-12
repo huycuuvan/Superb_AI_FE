@@ -22,8 +22,8 @@ import { useFolders } from '@/contexts/FolderContext';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/hooks/useAuth';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
-import { useTheme } from '@/hooks/useTheme';
 import { Folder } from '@/types';
+import { useTheme } from '@/hooks/useTheme';
 
 // API Service Imports
 import { updateFolder, deleteFolder } from '@/services/api';
@@ -39,12 +39,12 @@ const DepartmentCard = ({ folder, onEdit, onDelete }: { folder: Folder, onEdit: 
   const navigate = useNavigate();
 
   return (
-    <Card className="relative p-4 flex flex-col gap-3 group transition-all hover:shadow-lg hover:-translate-y-1">
+    <Card className="bg-card border-border relative p-4 flex flex-col gap-3 group hover:-translate-y-1">
       {/* Menu Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MoreVertical className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
+            <MoreVertical className="h-4 w-4 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -62,11 +62,11 @@ const DepartmentCard = ({ folder, onEdit, onDelete }: { folder: Folder, onEdit: 
 
       {/* Card Content */}
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
           {getDepartmentIcon(folder.name)}
         </div>
         <div className="flex-1">
-          <div className="font-bold text-lg truncate" title={folder.name}>{folder.name}</div>
+          <div className="font-bold text-lg truncate text-foreground" title={folder.name}>{folder.name}</div>
         </div>
       </div>
       
@@ -81,7 +81,7 @@ const DepartmentCard = ({ folder, onEdit, onDelete }: { folder: Folder, onEdit: 
           variant="outline" 
           size="sm" 
           onClick={() => navigate(`/dashboard/folder/${folder.id}`)} 
-          className="dark:hover:bg-primary dark:hover:text-primary-foreground"
+          className="text-primary border-primary hover:bg-primary/10 dark:hover:bg-primary dark:hover:text-primary-foreground"
         >
           Xem chi tiết
         </Button>

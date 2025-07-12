@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Breadcrumb,
@@ -40,12 +41,14 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById, getFolderDetail } from "@/services/api";
+import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById } from "@/services/api";
+import { useAgentsByFolders } from "@/hooks/useAgentsByFolders";
 
 import React from "react";
 import { toast } from "sonner";
 import './Header.css'; // <<<< Import file CSS mới
 import { LanguageToggle } from "../LanguageToggle";
+import { ThemeToggle } from "../ThemeToggle";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 
 interface DetailedInvitation extends Invitation {
@@ -69,6 +72,11 @@ const Header = React.memo(() => {
     queryFn: () => getAgentById(agentId!),
     enabled: !!user && !!agentId,
   });
+
+  // Sử dụng useAgentsByFolders để lấy thông tin folder
+  const folderIds = folderId ? [folderId] : [];
+  const { data: agentsByFoldersData } = useAgentsByFolders(folderIds, 1, 1);
+  const folderInfo = agentsByFoldersData?.data?.[0];
 
   const currentAgent = agentData?.data || null;
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -100,104 +108,152 @@ const Header = React.memo(() => {
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
       await acceptInvitation(invitationId);
-      toast.success("Đã chấp nhận lời mời.");
       queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      toast.success('Đã chấp nhận lời mời');
     } catch (error) {
-      toast.error("Không thể chấp nhận lời mời.");
+      console.error('Error accepting invitation:', error);
+      toast.error('Không thể chấp nhận lời mời');
     }
   };
 
   const handleRejectInvitation = async (invitationId: string) => {
     try {
       await rejectInvitation(invitationId);
-      toast.success("Đã từ chối lời mời.");
       queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
+      toast.success('Đã từ chối lời mời');
     } catch (error) {
-      toast.error("Không thể từ chối lời mời.");
+      console.error('Error rejecting invitation:', error);
+      toast.error('Không thể từ chối lời mời');
     }
-  };
-
-  const confirmRemoveMember = (memberId: string) => {
-    setMemberToRemoveId(memberId);
-    setIsRemoveMemberModalOpen(true);
   };
 
   const handleRemoveMember = async () => {
-    if (!workspaceIdForMembers || !memberToRemoveId) return toast.error("Thông tin không hợp lệ.");
+    if (!memberToRemoveId || !workspace?.id) return;
+
     try {
-      await removeWorkspaceMember(workspaceIdForMembers, memberToRemoveId);
-      toast.success("Đã xóa thành viên.");
-      queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspaceIdForMembers] });
+      await removeWorkspaceMember(workspace.id, memberToRemoveId);
+      queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspace.id] });
       setIsRemoveMemberModalOpen(false);
+      toast.success('Đã xóa thành viên');
     } catch (error) {
-      toast.error("Không thể xóa thành viên.");
-      setIsRemoveMemberModalOpen(false);
+      console.error('Error removing member:', error);
+      toast.error('Không thể xóa thành viên');
     }
   };
 
-  const handleLogout = () => {
-    logout(navigate);
-  };
-
-  const pendingInvitations = invitationsData?.data?.filter(inv => inv.Status === 'pending') || [];
-  const memberToConfirmRemoval = membersData?.data.find(member => member.user_id === memberToRemoveId);
-  const isAgentChatPage = location.pathname.startsWith('/dashboard/agents/') && agentId;
-  const isAgentsListPage = location.pathname === '/dashboard/agents';
-  const isDepartmentsPage = location.pathname.startsWith('/dashboard/departments');
+  const isHomePage = location.pathname === '/dashboard';
+  const isAgentsPage = location.pathname.startsWith('/dashboard/agents');
+  const isTasksPage = location.pathname.startsWith('/dashboard/tasks');
+  const isScheduledTasksPage = location.pathname.startsWith('/dashboard/scheduled-tasks');
   const isKnowledgePage = location.pathname.startsWith('/dashboard/knowledge');
   const isSettingsPage = location.pathname.startsWith('/dashboard/settings');
   const isCredentialPage = location.pathname.startsWith('/dashboard/credential');
-  const isFolderDetailPage = location.pathname.startsWith('/dashboard/folder/');  
-  const { data: folderData } = useQuery({
-    queryKey: ['folder', folderId],
-    queryFn: () => getFolderDetail(folderId!, workspace?.id ?? ""),
-    enabled: !!user && !!folderId && !!workspace?.id,
-  });
-  const folder = folderData?.data || null;
+  const isFolderDetailPage = location.pathname.startsWith('/dashboard/folder/');
+
   return (
     // CLEANED: Using `bg-background` for the header to match the layout.
     <header className="bg-background border-b border-border relative z-10 background-gradient-white">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
         {/* --- LEFT SECTION --- */}
         <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              {/* Mobile Menu Content */}
+              <div className="flex flex-col p-4">
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/dashboard">
+                    <Clock className="mr-2 h-4 w-4" />
+                    {t('common.dashboard')}
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/dashboard/agents">
+                    <Users className="mr-2 h-4 w-4" />
+                    {t('common.agents')}
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/dashboard/tasks">
+                    <Puzzle className="mr-2 h-4 w-4" />
+                    {t('common.tasks')}
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/dashboard/settings">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    {t('common.settings')}
+                  </Link>
+                </Button>
+              </div>
+              <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 border-t">
+                <Button variant="ghost" className="w-full justify-start text-red-500" onClick={(e) => {
+                  e.preventDefault();
+                  logout();
+                }}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t('common.logout')}
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+
+          {/* Breadcrumb Navigation */}
           {(() => {
-            if (isAgentChatPage || isAgentsListPage) {
-              return (
-                <div className="hidden md:flex">
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
-                      {user?.role !== 'user' && (
-                        <>
-                          <BreadcrumbSeparator />
-                          <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard/agents">{t('common.agents')}</Link></BreadcrumbLink></BreadcrumbItem>
-                        </>
-                      )}
-                      {isAgentChatPage && (
-                        <>
-                          <BreadcrumbSeparator />
-                          <BreadcrumbItem><BreadcrumbPage>{currentAgent?.name || 'Agent'}</BreadcrumbPage></BreadcrumbItem>
-                        </>
-                      )}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </div>
-              );
+            if (isHomePage) {
+              return <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>;
             }
-            if (isDepartmentsPage) {
+
+            if (isAgentsPage) {
               return (
                 <div className="hidden md:flex">
                   <Breadcrumb>
                     <BreadcrumbList>
                       <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbPage>{t('folder.departments')}</BreadcrumbPage></BreadcrumbItem>
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.agents')}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>
               );
             }
+
+            if (isTasksPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.tasks')}</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+
+            if (isScheduledTasksPage) {
+              return (
+                <div className="hidden md:flex">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>Task theo lịch trình</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              );
+            }
+
             if (isKnowledgePage) {
               return (
                 <div className="hidden md:flex">
@@ -211,6 +267,7 @@ const Header = React.memo(() => {
                 </div>
               );
             }
+
             if (isSettingsPage) {
               return (
                 <div className="hidden md:flex">
@@ -224,6 +281,7 @@ const Header = React.memo(() => {
                 </div>
               );
             }
+
             if (isCredentialPage) {
               return (
                 <div className="hidden md:flex">
@@ -237,6 +295,7 @@ const Header = React.memo(() => {
                 </div>
               );
             }
+
             if (isFolderDetailPage) {
               return (
                 <div className="hidden md:flex">
@@ -244,184 +303,207 @@ const Header = React.memo(() => {
                     <BreadcrumbList>
                       <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbPage>{folder?.name}</BreadcrumbPage></BreadcrumbItem>
+                      <BreadcrumbItem><BreadcrumbPage>{folderInfo?.name}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>
               );
             }
+
             return <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>;
           })()}
-          
         </div>
         
         {/* --- RIGHT SECTION --- */}
         <div className="flex items-center gap-2 md:gap-4">
-          <Sheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+          {/* Notifications */}
+          <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                {pendingInvitations.length > 0 && (
-                  // CLEANED: Using semantic destructive color for notification badge
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold">
-                    {pendingInvitations.length}
-                  </span>
+                {invitationsData?.data && invitationsData.data.length > 0 && (
+                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
                 )}
               </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[380px] sm:w-[450px] p-0 flex flex-col">
-                <SheetHeader className="p-4 border-b"><SheetTitle>{t('common.notifications')}</SheetTitle></SheetHeader>
-                <div className="flex-grow overflow-y-auto p-4 space-y-4">
-                    <h3 className="text-md font-semibold text-foreground">{t('common.invitations')}</h3>
-                    {isLoadingInvitations && <div className="text-center py-6 text-muted-foreground">{t('common.loading')}</div>}
-                    {/* CLEANED: Using semantic destructive color for error message */}
-                    {errorInvitations && <div className="text-center py-6 text-destructive bg-destructive/10 p-3 rounded-md">{t('common.errorLoadingInvitations')}</div>}
-                    {!isLoadingInvitations && pendingInvitations.length === 0 && <div className="text-sm text-muted-foreground py-6 text-center">{t('common.noInvitations')}</div>}
-                    
-                    <div className="space-y-3">
-                        {pendingInvitations.map(invitation => (
-                            <div key={invitation.ID} className="bg-card p-3 rounded-lg border">
-                                <p className="text-sm font-medium text-foreground">
-                                    Mời tham gia <span className="font-semibold text-primary">{invitation.WorkspaceName}</span>
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">Từ: {invitation.InviterEmail} - {t('common.role')}: {invitation.Role}</p>
-                                <div className="flex gap-2 justify-end mt-3">
-                                    <Button variant="outline" size="sm" onClick={() => handleRejectInvitation(invitation.ID)}>{t('common.reject')}</Button>
-                                    <Button variant="default" size="sm" onClick={() => handleAcceptInvitation(invitation.ID)}>{t('common.accept')}</Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </SheetContent>
-          </Sheet>
-
-          <LanguageToggle />
-          
-          {/* Hiển thị nút nạp credit khi credit thấp */}
-          {user && (user.credit || 0) < 50 && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowCreditPurchase(true)}
-              className="hidden md:inline-flex text-orange-600 border-orange-600 hover:bg-orange-50"
-            >
-              <Coins className="h-4 w-4 mr-1" />
-              Nạp Credit
-            </Button>
-          )}
-          
-      
-
-          {workspace && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                {/* CLEANED: Simplified hover state */}
-                <div className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded ">
-                  {/* CLEANED: Using primary color for avatar */}
-                  <Avatar className="bg-primary text-primary-foreground w-8 h-8 flex items-center justify-center border">
-                    <span className="font-bold text-sm">{workspace.name?.charAt(0).toUpperCase() || 'W'}</span>
-                  </Avatar>
-                  <span className="font-semibold hidden md:inline-flex md:text-sm text-foreground">
-                    {workspace.name}
-                  </span>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {user?.email && (
-                  <>
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-medium text-foreground leading-none">{user.name || "User"}</p>
-                      <p className="text-xs text-muted-foreground leading-none mt-1">{user.email}</p>
-                      <p className="text-xs text-muted-foreground leading-none mt-1">Credit: {user?.credit ?? 0}</p>
-                    </div>
-                    <DropdownMenuSeparator />
-                  </>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Thông báo</DialogTitle>
+                <DialogDescription>
+                  Các thông báo và lời mời của bạn
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {isLoadingInvitations ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : errorInvitations ? (
+                  <div className="text-center text-red-500 py-4">
+                    Lỗi khi tải thông báo
+                  </div>
+                ) : invitationsData?.data && invitationsData.data.length > 0 ? (
+                  <div className="space-y-4">
+                    {invitationsData.data.map((invitation) => (
+                      <div key={invitation.ID} className="flex items-center justify-between gap-4 p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">Lời mời tham gia workspace</p>
+                          <p className="text-sm text-muted-foreground">
+                            Workspace: {invitation.WorkspaceName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Từ: {invitation.InviterEmail}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptInvitation(invitation.ID)}
+                          >
+                            Chấp nhận
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectInvitation(invitation.ID)}
+                          >
+                            Từ chối
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    Không có thông báo mới
+                  </div>
                 )}
-                <DropdownMenuItem onClick={() => setIsMembersModalOpen(true)} className="cursor-pointer   hover:button-gradient-light p-2 dark:hover:button-gradient-dark ">
-                  <Users className="mr-2 h-4 w-4" /> {t('common.viewMembers')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/workspace')} className="cursor-pointer  hover:button-gradient-light dark:hover:button-gradient-dark p-2">
-                  {t('common.selectWorkspace')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-           <Button variant="secondary" size="icon" className="hidden md:inline-flex" onClick={handleLogout} aria-label="Logout">
-            <LogOut className="h-5 w-5" />
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Members Management */}
+          <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Users className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Quản lý thành viên</DialogTitle>
+                <DialogDescription>
+                  Danh sách thành viên trong workspace
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {isLoadingMembers ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : membersError ? (
+                  <div className="text-center text-red-500 py-4">
+                    Lỗi khi tải danh sách thành viên
+                  </div>
+                ) : membersData?.data && membersData.data.length > 0 ? (
+                  <div className="space-y-4">
+                    {membersData.data.map((member) => (
+                      <div key={member.user_id} className="flex items-center justify-between gap-4 p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{member.name || member.user_name}</p>
+                          <p className="text-sm text-muted-foreground">{member.email || member.user_email}</p>
+                          <p className="text-sm text-muted-foreground">Role: {member.role}</p>
+                        </div>
+                        {/* Ẩn nút xóa nếu là chính mình */}
+                        {user?.id !== member.user_id && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => {
+                              setMemberToRemoveId(member.user_id);
+                              setIsRemoveMemberModalOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    Không có thành viên nào
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Confirm Remove Member Dialog */}
+          <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Xác nhận xóa thành viên</DialogTitle>
+                <DialogDescription>
+                  Bạn có chắc chắn muốn xóa thành viên này khỏi workspace?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>
+                  Hủy
+                </Button>
+                <Button variant="destructive" onClick={handleRemoveMember}>
+                  Xóa
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Credits */}
+          <Button variant="ghost" size="icon" onClick={() => setShowCreditPurchase(true)}>
+            <Coins className="h-5 w-5" />
           </Button>
+
+          {/* Language Toggle */}
+          <LanguageToggle />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <img
+                    src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${user?.email}`}
+                    alt="avatar"
+                    className="rounded-full"
+                  />
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuItem className="flex flex-col items-start">
+                <div className="text-sm font-medium">{user?.name}</div>
+                <div className="text-xs text-muted-foreground">{user?.email}</div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={(e) => {
+                e.preventDefault();
+                logout();
+              }} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Đăng xuất</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-   
-      <div className={cn("md:hidden border-t border-border bg-background", mobileMenuOpen ? "block" : "hidden")}>
-        <nav className="px-2 py-2 space-y-1">
-          {['home', 'agents', 'tasks', 'settings'].map((item) => {
-            const path = `/dashboard${item === 'home' ? '' : '/' + item}`;
-            const isActive = location.pathname === path;
-            return (
-              <Link
-                key={item}
-                to={path}
-                className={cn("mobile-nav-link", isActive ? "mobile-nav-link-active" : "mobile-nav-link-default")}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t(item)}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-       {/* --- DIALOGS --- (No theme changes needed, they adapt automatically) */}
-       <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Thành viên Workspace</DialogTitle></DialogHeader>
-            <div className="py-4 max-h-[400px] overflow-y-auto">
-              {isLoadingMembers && <div className="text-center"><Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" /></div>}
-              {membersError && <div className="text-center text-destructive">{t('common.errorLoadingMembers')}</div>}
-              {membersData?.data && (
-                <div className="space-y-3">
-                  {membersData.data.map(member => (
-                    <div key={member.user_id} className="flex items-center gap-3 p-2 border rounded-md">
-                      <Avatar className="w-8 h-8 flex items-center justify-center bg-muted text-muted-foreground font-semibold">{member.user_name.charAt(0).toUpperCase()}</Avatar>
-                      <div className="flex-grow">
-                        <p className="font-medium text-foreground">{member.user_name}</p>
-                        <p className="text-xs text-muted-foreground">{member.user_email} - {member.role}</p>
-                      </div>
-                      {user?.id !== member.user_id && (
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => confirmRemoveMember(member.user_id)} aria-label="Xóa thành viên">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-       </Dialog>
-
-       <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('common.confirmRemoveMember')}</DialogTitle>
-            <DialogDescription>{t('common.confirmRemoveMemberDescription')}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button variant="destructive" onClick={handleRemoveMember}>{t('common.remove')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <CreditPurchaseDialog
-        isOpen={showCreditPurchase}
-        onClose={() => setShowCreditPurchase(false)}
-        onSuccess={(newCreditBalance) => {
-          toast.success(`Đã nạp thành công! Credit mới: ${newCreditBalance}`);
-        }}
-      />
+      {/* Credit Purchase Dialog */}
+      <CreditPurchaseDialog isOpen={showCreditPurchase} onClose={() => setShowCreditPurchase(false)} />
     </header>
   );
 });

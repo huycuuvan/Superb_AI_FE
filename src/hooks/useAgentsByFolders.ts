@@ -18,18 +18,16 @@ export function useAgentsByFolders(
   filters?: AgentsByFoldersFilters
 ) {
   return useQuery({
-    queryKey: [
-      "agents-by-folders",
-      folderIds,
-      page,
-      pageSize,
-      filters, // Đảm bảo object filter đưa vào key để cache/phân biệt truy vấn
-    ],
+    queryKey: ["agents-by-folders", folderIds, page, pageSize, filters],
     queryFn: () =>
       folderIds.length > 0
         ? getAgentsByFolders(folderIds, page, pageSize, filters)
         : Promise.resolve({ data: [] }),
     enabled: folderIds.length > 0,
+    staleTime: 30000, // Cache data trong 30 giây
+    gcTime: 1000 * 60 * 5, // Giữ cache trong 5 phút
+    refetchOnMount: "always", // Luôn refetch khi mount để đảm bảo data mới nhất
+    refetchOnWindowFocus: false, // Không refetch khi focus window để tránh flickering
   });
 }
 

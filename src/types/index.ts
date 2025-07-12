@@ -51,6 +51,8 @@ export interface Agent {
   failed_runs?: number;
   is_running?: boolean;
   is_scheduled?: boolean;
+  last_message_time?: string;
+  last_message_content?: string;
 }
 
 export interface ApiTaskType {
@@ -286,4 +288,26 @@ export interface CaptureOrderResponse {
   transaction_id?: string;
   message?: string;
   credit_added?: number;
+}
+
+export interface Invitation {
+  ID: string;
+  WorkspaceID: string;
+  InviterID: string;
+  InviteeEmail: string;
+  Status: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  WorkspaceName?: string;
+  InviterEmail?: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  name: string;
+  email: string;
 }

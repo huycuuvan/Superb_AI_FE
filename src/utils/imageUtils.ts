@@ -4,10 +4,14 @@
 export const isBase64Image = (url: string) =>
   /^data:image\/[a-z]+;base64,/.test(url.trim());
 
+// Nhận diện link storage của aiemployee.site
+export const isStorageUrl = (url: string) =>
+  url.includes("aiemployee.site/storage/v1/object/public/uploads");
+
 // Nhận diện link ảnh phổ biến
 export const isImageUrl = (url: string) => {
   const ext = /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(\?.*)?$/i;
-  return ext.test(url.trim()) || isBase64Image(url);
+  return ext.test(url.trim()) || isBase64Image(url) || isStorageUrl(url);
 };
 
 // Chuyển Dropbox share sang direct link
@@ -38,7 +42,11 @@ export const getDirectImageUrl = (url: string) => {
   if (direct.includes("dropbox.com")) direct = toDirectDropboxLink(direct);
   else if (direct.includes("drive.google.com"))
     direct = toDirectGoogleDriveLink(direct);
-  // ...mở rộng imgur, onedrive nếu muốn
+  // Xử lý link storage của aiemployee.site
+  else if (isStorageUrl(direct)) {
+    // Link storage đã là direct link nên không cần xử lý thêm
+    return direct;
+  }
   return direct;
 };
 

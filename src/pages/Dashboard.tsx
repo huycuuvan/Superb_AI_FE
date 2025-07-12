@@ -4,9 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { Agent, Folder } from "@/types";
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from '@/hooks/useTheme';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   Pagination,
   PaginationContent,
@@ -32,8 +30,9 @@ import { useTranslation } from "react-i18next";
 import { usePublicAgents, useAgentsByFolders } from '@/hooks/useAgentsByFolders';
 import { AgentCard } from "@/components/Agents/AgentCard";
 import AgentCardSkeleton from "@/components/skeletons/AgentCardSkeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDebounce } from 'use-debounce';
+import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/useTheme';
 
 
 const Dashboard = () => {
@@ -54,7 +53,7 @@ const Dashboard = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 400);
-  const [filterPosition, setFilterPosition] = useState('all');
+
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12); // 4 cột x 3 hàng, có thể chỉnh nếu muốn
 
@@ -143,28 +142,31 @@ const Dashboard = () => {
     <div className="space-y-6 text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm md:text-base text-muted-foreground">
             {t('common.dashboardDescription')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
           {user?.role !== 'user' && (
-            <Button className={`flex ${theme === 'dark' ? 'button-gradient-dark' : 'button-gradient-light'} text-white items-center justify-center gap-2 w-full sm:w-auto`} onClick={() => setShowAddAgentDialog(true)}>
+            <Button 
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 w-full sm:w-auto" 
+              onClick={() => setShowAddAgentDialog(true)}
+            >
               <span className="text-lg">+</span> {t('agent.createAgent')}
             </Button>
           )}
         </div>
       </div>
+
       {/* Search & Filter UI */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <Input
           placeholder="Tìm kiếm agent..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="sm:w-64"
+          className="sm:w-64 bg-background border-border"
         />
-  
       </div>
 
       {/* Folder Chips */}
@@ -172,7 +174,12 @@ const Dashboard = () => {
         <Badge
           key="all"
           variant={isAllAgents ? 'default' : 'outline'}
-          className="cursor-pointer hover:bg-primary/80"
+          className={cn(
+            "cursor-pointer transition-all ease-in-out transform hover:scale-105",
+            isAllAgents
+              ? "bg-indigo-600 text-white hover:bg-indigo-700"
+              : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
           onClick={() => { setSelectedFolderId('all'); setPage(1); }}
         >
           {t('common.all')}
@@ -181,7 +188,12 @@ const Dashboard = () => {
           <Badge
             key={folder.id}
             variant={selectedFolderId === folder.id ? 'default' : 'outline'}
-            className="cursor-pointer hover:bg-primary/80"
+            className={cn(
+              "cursor-pointer transition-all ease-in-out transform hover:scale-105",
+              selectedFolderId === folder.id
+                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
             onClick={() => { setSelectedFolderId(folder.id); setPage(1); }}
           >
             {folder.name}
@@ -190,68 +202,70 @@ const Dashboard = () => {
       </div>
 
       <div>
-  {/* Skeleton khi loading */}
-  {isLoadingAgents ? (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {Array.from({ length: pageSize }).map((_, idx) => (
-        <AgentCardSkeleton key={idx} />
-      ))}
-    </div>
-  ) : (
-    agents.length === 0 ? (
-      <div className="text-muted-foreground text-center w-full">{t('agent.noAgents')}</div>
-    ) : (
-      <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {(selectedFolderId == null
-            ? agents
-            : agents // agent public không có folder_id, luôn trả về toàn bộ
-          ).map(agent => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination className="mt-6">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={e => { e.preventDefault(); if (currentPage > 1) setPage(currentPage - 1); }}
-                  aria-disabled={currentPage === 1}
-                  className={currentPage === 1 ? 'opacity-50 pointer-events-none' : ''}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }).map((_, idx) => (
-                <PaginationItem key={idx}>
-                  <PaginationLink
-                    href="#"
-                    isActive={currentPage === idx + 1}
-                    className={currentPage === idx + 1 ? 'bg-indigo-600 text-white border-indigo-600' : ''}
-                    onClick={e => { e.preventDefault(); setPage(idx + 1); }}
-                  >
-                    {idx + 1}
-                  </PaginationLink>
-                </PaginationItem>
+        {/* Skeleton khi loading */}
+        {isLoadingAgents ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: pageSize }).map((_, idx) => (
+              <AgentCardSkeleton key={idx} />
+            ))}
+          </div>
+        ) : agents.length === 0 ? (
+          <div className="text-muted-foreground text-center w-full py-8">
+            {t('agent.noAgents')}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {(selectedFolderId == null ? agents : agents).map(agent => (
+                <AgentCard key={agent.id} agent={agent} />
               ))}
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={e => { e.preventDefault(); if (currentPage < totalPages) setPage(currentPage + 1); }}
-                  aria-disabled={currentPage === totalPages}
-                  className={currentPage === totalPages ? 'opacity-50 pointer-events-none' : ''}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-6">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={e => { e.preventDefault(); if (currentPage > 1) setPage(currentPage - 1); }}
+                      className={`${currentPage === 1 ? 'opacity-50 pointer-events-none' : ''} 
+                                 text-foreground hover:bg-muted/50`}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }).map((_, idx) => (
+                    <PaginationItem key={idx}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === idx + 1}
+                        className={cn(
+                          "min-w-[40px] h-[40px] flex items-center justify-center rounded-md transition-colors",
+                          currentPage === idx + 1 
+                            ? "bg-blue-500 dark:bg-blue-600 text-white font-semibold hover:bg-blue-600 dark:hover:bg-blue-700" 
+                            : "text-foreground hover:bg-accent hover:text-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700"
+                        )}
+                        onClick={e => { e.preventDefault(); setPage(idx + 1); }}
+                      >
+                        {idx + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={e => { e.preventDefault(); if (currentPage < totalPages) setPage(currentPage + 1); }}
+                      className={`${currentPage === totalPages ? 'opacity-50 pointer-events-none' : ''} 
+                                 text-foreground hover:bg-muted/50`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
-      </>
-    )
-  )}
-</div>
+      </div>
 
-
-      {/* Dialogs giữ nguyên */}
+      {/* Dialogs */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -303,7 +317,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-
 
 export default Dashboard;

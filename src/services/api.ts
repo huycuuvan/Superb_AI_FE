@@ -932,6 +932,9 @@ export interface WorkspaceMember {
   joined_at: string;
   user_name: string;
   user_email: string;
+  id: string;
+  name: string;
+  email: string;
 }
 
 export const getWorkspaceMembers = async (
@@ -1383,14 +1386,34 @@ export const deleteCredential = async (id: string) => {
 };
 
 // Lấy agents theo nhiều folder
+export interface AgentsByFoldersResponse {
+  data: {
+    id: string;
+    name: string;
+    workspace_id: string;
+    agents: Agent[];
+    pagination: {
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+      has_next: boolean;
+      has_prev: boolean;
+    };
+  }[];
+}
+
 export const getAgentsByFolders = async (
   folderIds: string[],
   page: number = 1,
   pageSize: number = 10,
   filters?: AgentsByFoldersFilters
-): Promise<{ data: Agent[] }> => {
+): Promise<AgentsByFoldersResponse> => {
   const token = localStorage.getItem("token");
+  const workspaceId = localStorage.getItem("selectedWorkspace");
   if (!token) throw new Error("Không tìm thấy token");
+  if (!workspaceId) throw new Error("Không tìm thấy workspace");
+
   const res = await fetch(`${API_BASE_URL}/agents/by-folders`, {
     method: "POST",
     headers: {
@@ -1399,6 +1422,7 @@ export const getAgentsByFolders = async (
     },
     body: JSON.stringify({
       folder_ids: folderIds,
+      workspace_id: workspaceId,
       page,
       page_size: pageSize,
       filters,

@@ -27,7 +27,6 @@ import { Card, CardContent, CardTitle, CardHeader, CardDescription, CardFooter }
 import { TaskSelectionModal } from '@/components/chat/TaskSelectionModal';
 import { PromptTemplatesModal } from '@/components/chat/PromptTemplatesModal';
 import { Label } from '@/components/ui/label';
-import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
@@ -47,6 +46,7 @@ import {
   SelectItem
 } from "@/components/ui/select";
 import { isAgentResImageObject, getAgentResImageUrl } from '@/utils/imageUtils';
+import { useTheme } from '@/hooks/useTheme';
 
 
 // Define a more specific type for execution_config
@@ -2033,7 +2033,7 @@ const handleSubmitTaskInputs = async () => {
     </Button>
   </div>
   {/* Cảnh báo phải */}
-  <p className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+  <p className="text-xs text-muted-foreground whitespace-nowrap ml-4 md:text-wrap md:text-center md:line-clamp-3">
     Superb AI có thể mắc lỗi. Hãy kiểm tra các thông tin quan trọng.
   </p>
 </div>
