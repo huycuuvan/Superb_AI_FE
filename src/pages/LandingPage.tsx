@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiSearch, FiArrowRight, FiCode, FiUsers, FiLock, FiGithub, FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi';
 import Lottie from 'lottie-react';
 
@@ -180,6 +180,14 @@ const AnimatedSection = ({ children, className = '' }: { children: React.ReactNo
     );
 };
 
+// Thêm hàm scroll mượt
+const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
 // 3D Cards Carousel Component with enhanced effects
 const SwiperCoverflow = ({ agents, isDark, isLoaded }: { 
     agents: Array<{
@@ -192,39 +200,20 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
     isLoaded: boolean;
 }) => {
     const [currentIndex, setCurrentIndex] = useState(2); // Start with middle card active
-    const [isAutoplay, setIsAutoplay] = useState(true);
-
-    useEffect(() => {
-        if (!isAutoplay) return;
-        
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % agents.length);
-        }, 3000);
-        
-        return () => clearInterval(interval);
-    }, [agents.length, isAutoplay]);
+    const [isAutoplay, setIsAutoplay] = useState(false); // Tắt autoplay mặc định
 
     const nextSlide = () => {
-        setIsAutoplay(false);
         setCurrentIndex((prev) => (prev + 1) % agents.length);
-        setTimeout(() => setIsAutoplay(true), 5000);
     };
-
     const prevSlide = () => {
-        setIsAutoplay(false);
         setCurrentIndex((prev) => (prev - 1 + agents.length) % agents.length);
-        setTimeout(() => setIsAutoplay(true), 5000);
     };
-
     const goToSlide = (index: number) => {
-        setIsAutoplay(false);
         setCurrentIndex(index);
-        setTimeout(() => setIsAutoplay(true), 5000);
     };
 
     return (
         <div className="w-full h-[500px] relative overflow-hidden">
-            {/* 3D Carousel Container */}
             <div 
                 className="relative w-full h-full flex items-center justify-center"
                 style={{
@@ -236,14 +225,11 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                     const offset = index - currentIndex;
                     const absOffset = Math.abs(offset);
                     const isActive = index === currentIndex;
-                    
-                    // Calculate position and transformations
-                    const translateX = offset * 200; // Spacing between cards
-                    const translateZ = isActive ? 0 : -100 - (absOffset * 50); // Depth
-                    const rotateY = offset * 25; // Rotation angle
-                    const scale = isActive ? 1.1 : Math.max(0.7, 1 - absOffset * 0.2); // Scale
-                    const opacity = absOffset > 2 ? 0 : Math.max(0.3, 1 - absOffset * 0.3); // Opacity
-                    
+                    const translateX = offset * 200;
+                    const translateZ = isActive ? 0 : -100 - (absOffset * 50);
+                    const rotateY = offset * 25;
+                    const scale = isActive ? 1.1 : Math.max(0.7, 1 - absOffset * 0.2);
+                    const opacity = absOffset > 2 ? 0 : Math.max(0.3, 1 - absOffset * 0.3);
                     return (
                         <div
                             key={index}
@@ -255,54 +241,19 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                             }}
                             onClick={() => goToSlide(index)}
                         >
-                            <div className={`agent-card w-full h-full ${isDark ? 'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/40' : 'bg-gradient-to-br from-blue-50/95 to-cyan-50/95 border-blue-200/60'} backdrop-blur-xl backdrop-saturate-150 rounded-2xl border p-6 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isActive ? (isDark ? 'shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'shadow-[0_0_25px_rgba(59,130,246,0.4)]') : (isDark ? 'hover:shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]') + ' hover:-translate-y-2 hover:scale-105'}`}>
-                                {/* Base animated background gradient */}
+                            <div className={`agent-card w-full h-full flex flex-col justify-between ${isDark ? 'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/40' : 'bg-gradient-to-br from-blue-50/95 to-cyan-50/95 border-blue-200/60'} backdrop-blur-xl backdrop-saturate-150 rounded-2xl border p-6 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isActive ? (isDark ? 'shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'shadow-[0_0_25px_rgba(59,130,246,0.4)]') : (isDark ? 'hover:shadow-[0_0_25px_rgba(147,51,234,0.6)]' : 'hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]') + ' hover:-translate-y-2 hover:scale-105'}`}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-400/20 to-cyan-400/20'} ${isActive ? 'opacity-40' : 'opacity-10 group-hover:opacity-30'} transition-opacity duration-500 rounded-2xl`}></div>
-                                
-                                {/* Bright glow overlay */}
                                 <div className={`absolute -inset-1 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-400/30 to-cyan-400/30'} ${isActive ? 'opacity-50' : 'opacity-0 group-hover:opacity-50'} transition-all duration-500 rounded-xl blur-md`}></div>
                                 <div className={`absolute -inset-0.5 bg-gradient-to-br ${isDark ? agent.bgColor : 'from-blue-500/40 to-cyan-500/40'} ${isActive ? 'opacity-70' : 'opacity-0 group-hover:opacity-70'} transition-all duration-500 rounded-lg blur-sm`}></div>
-                                
-                                {/* Content */}
-                                <div className="h-full flex flex-col text-center relative z-20">
-                                    {/* Large Animation Icon */}
-                                    <div className="flex-1 flex items-center justify-center">
-                                        <div className={`transform transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                                            {agent.icon}
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Text Content at Bottom */}
-                                    <div className="mt-auto">
-                                        <h3 className={`text-lg font-bold mb-2 transition-all duration-500 ${
-                                            isDark 
-                                                ? (isActive ? 'text-purple-200 drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]' : 'text-white group-hover:text-purple-200 group-hover:drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]')
-                                                : (isActive ? 'text-blue-800 drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]' : 'text-slate-800 group-hover:text-blue-800 group-hover:drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]')
-                                        }`}>
-                                            {agent.title}
-                                        </h3>
-                                        
-                                        <p className={`text-xs leading-relaxed mb-3 transition-all duration-500 ${
-                                            isDark 
-                                                ? (isActive ? 'text-slate-100' : 'text-slate-300 group-hover:text-slate-100')
-                                                : (isActive ? 'text-slate-700' : 'text-slate-600 group-hover:text-slate-700')
-                                        }`}>
-                                            {agent.description}
-                                        </p>
-                                        
-                                        {/* Enhanced status indicator */}
-                                        <div className="flex items-center justify-center">
-                                            <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-green-400' : 'bg-blue-500'} animate-pulse mr-2 ${isActive ? (isDark ? 'shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'shadow-[0_0_5px_rgba(59,130,246,0.8)]') : (isDark ? 'group-hover:shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'group-hover:shadow-[0_0_5px_rgba(59,130,246,0.8)]')} transition-all duration-500`}></div>
-                                            <span className={`text-xs ${
-                                                isDark 
-                                                    ? (isActive ? 'text-green-300' : 'text-green-400 group-hover:text-green-300')
-                                                    : (isActive ? 'text-blue-700' : 'text-blue-600 group-hover:text-blue-700')
-                                            } font-semibold transition-all duration-500`}>Try Now</span>
-                                        </div>
-                                    </div>
+                                <div className="flex-1 flex flex-col items-center justify-center text-center relative z-20">
+                                    <div className={`mb-2 transform transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{agent.icon}</div>
+                                    <h3 className={`text-lg font-bold mb-2 transition-all duration-500 ${isDark ? (isActive ? 'text-purple-200 drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]' : 'text-white group-hover:text-purple-200 group-hover:drop-shadow-[0_0_3px_rgba(147,51,234,0.8)]') : (isActive ? 'text-blue-800 drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]' : 'text-slate-800 group-hover:text-blue-800 group-hover:drop-shadow-[0_0_3px_rgba(59,130,246,0.6)]')}`}>{agent.title}</h3>
+                                    <p className={`text-xs leading-relaxed mb-3 transition-all duration-500 ${isDark ? (isActive ? 'text-slate-100' : 'text-slate-300 group-hover:text-slate-100') : (isActive ? 'text-slate-700' : 'text-slate-600 group-hover:text-slate-700')}`}>{agent.description}</p>
                                 </div>
-                                
-                                {/* Shimmer effect */}
+                                <div className="flex items-center justify-center mb-2">
+                                    <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-green-400' : 'bg-blue-500'} animate-pulse mr-2 ${isActive ? (isDark ? 'shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'shadow-[0_0_5px_rgba(59,130,246,0.8)]') : (isDark ? 'group-hover:shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'group-hover:shadow-[0_0_5px_rgba(59,130,246,0.8)]')} transition-all duration-500`}></div>
+                                    <span className={`text-xs ${isDark ? (isActive ? 'text-green-300' : 'text-green-400 group-hover:text-green-300') : (isActive ? 'text-blue-700' : 'text-blue-600 group-hover:text-blue-700')} font-semibold transition-all duration-500`}>Try Now</span>
+                                </div>
                                 <div className={`absolute inset-0 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-1000`}>
                                     <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 ${isActive ? '-translate-x-full' : 'translate-x-full group-hover:-translate-x-full'} transition-transform duration-1000 ease-in-out`}></div>
                                 </div>
@@ -311,8 +262,6 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                     );
                 })}
             </div>
-
-            {/* Navigation Buttons */}
             <button
                 onClick={prevSlide}
                 className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/90 hover:bg-slate-700/90 text-purple-400 border-slate-600/50' : 'bg-blue-50/90 hover:bg-blue-100/90 text-blue-600 border-blue-200/60'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
@@ -321,7 +270,6 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-
             <button
                 onClick={nextSlide}
                 className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full ${isDark ? 'bg-slate-800/90 hover:bg-slate-700/90 text-purple-400 border-slate-600/50' : 'bg-blue-50/90 hover:bg-blue-100/90 text-blue-600 border-blue-200/60'} border backdrop-blur-lg flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg`}
@@ -330,8 +278,6 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
             </button>
-
-            {/* Pagination Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex space-x-2">
                 {agents.map((_, index) => (
                     <button
@@ -344,11 +290,6 @@ const SwiperCoverflow = ({ agents, isDark, isLoaded }: {
                         }`}
                     />
                 ))}
-            </div>
-
-            {/* Autoplay indicator */}
-            <div className={`absolute top-4 right-4 z-30 ${isAutoplay ? 'opacity-100' : 'opacity-50'} transition-opacity duration-300`}>
-                <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-purple-400' : 'bg-blue-500'} animate-pulse`}></div>
             </div>
         </div>
     );
@@ -633,6 +574,61 @@ const LandingPage: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
+  // State cho subscribe
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeStatus, setSubscribeStatus] = useState<null | "success" | "error">(null);
+  const [subscribeMsg, setSubscribeMsg] = useState("");
+
+  // State cho pricing card active
+  const [activePricing, setActivePricing] = useState<number>(1); // 0: Startup, 1: Pro, 2: Enterprise
+
+  // Hàm xử lý subscribe
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Validate email đơn giản
+    if (!subscribeEmail || !/^\S+@\S+\.\S+$/.test(subscribeEmail)) {
+      setSubscribeStatus("error");
+      setSubscribeMsg("Vui lòng nhập email hợp lệ!");
+      return;
+    }
+    // Giả lập gửi API
+    setTimeout(() => {
+      setSubscribeStatus("success");
+      setSubscribeMsg("Đăng ký nhận tin thành công! Cảm ơn bạn.");
+      setSubscribeEmail("");
+    }, 1000);
+  };
+
+  // State cho modal trial
+  const [showTrialModal, setShowTrialModal] = useState(false);
+
+  const navigate = useNavigate();
+  // State cho modal Contact Sales
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [contactStatus, setContactStatus] = useState<null | 'success' | 'error'>(null);
+  const [contactMsg, setContactMsg] = useState('');
+
+  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setContactForm({ ...contactForm, [e.target.name]: e.target.value });
+    setContactStatus(null);
+    setContactMsg('');
+  };
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Validate đơn giản
+    if (!contactForm.name || !/^\S+@\S+\.\S+$/.test(contactForm.email) || !contactForm.phone || !contactForm.message) {
+      setContactStatus('error');
+      setContactMsg('Vui lòng điền đầy đủ và đúng thông tin!');
+      return;
+    }
+    setTimeout(() => {
+      setContactStatus('success');
+      setContactMsg('Gửi liên hệ thành công! Chúng tôi sẽ phản hồi sớm nhất.');
+      setContactForm({ name: '', email: '', phone: '', message: '' });
+    }, 1000);
+  };
+
                 return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${
       isDarkMode 
@@ -738,26 +734,27 @@ const LandingPage: React.FC = () => {
             isSticky ? 'px-6 md:px-8 mx-auto' : 'container mx-auto px-6'
           } flex justify-between items-center`}>
             {/* Logo */}
-            <Link to="/" className="font-bold flex items-center space-x-2">
-            <div className={`p-2 ${isDarkMode ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
-                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
+            <button type="button" onClick={() => scrollToSection('top')} className="font-bold flex items-center space-x-2 bg-transparent border-0 outline-none focus:outline-none">
+              <div className={`p-2 ${isDarkMode ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} rounded-lg shadow-lg`}>
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
               <span className={`${isDarkMode ? 'text-white' : 'text-slate-800'} transition-all duration-300 ${
                 isSticky ? 'text-sm sm:text-base font-semibold' : 'text-lg sm:text-2xl font-bold'
               }`}>SuperbAI</span>
-            </Link>
+            </button>
             
             {/* Navigation Links - Desktop */}
             <nav className={`hidden md:flex items-center transition-all duration-300 ${
               isSticky ? 'space-x-4' : 'space-x-8'
             }`}>
               {['features', 'pricing', 'testimonials'].map((section) => (
-                <a 
+                <button
                   key={section}
-                  href={`#${section}`} 
-                  className={`transition-all duration-300 font-medium capitalize relative ${
+                  type="button"
+                  onClick={() => scrollToSection(section)}
+                  className={`transition-all duration-300 font-medium capitalize relative bg-transparent border-0 outline-none focus:outline-none ${
                     isSticky ? 'text-sm px-3 py-1.5' : 'text-sm px-0 py-0'
                   } ${
                     activeSection === section 
@@ -770,7 +767,7 @@ const LandingPage: React.FC = () => {
                   }`}
                 >
                   {section.replace('-', ' ')}
-                </a>
+                </button>
               ))}
             </nav>
             
@@ -856,18 +853,18 @@ const LandingPage: React.FC = () => {
               }`}>
                 <nav className="px-4 py-4 space-y-2">
                   {['features', 'pricing', 'testimonials'].map((section) => (
-                    <a 
+                    <button
                       key={section}
-                      href={`#${section}`} 
-                      className={`block px-3 py-2.5 rounded-lg transition-all duration-300 font-medium capitalize text-sm ${
+                      type="button"
+                      onClick={() => { scrollToSection(section); setIsMobileMenuOpen(false); }}
+                      className={`block px-3 py-2.5 rounded-lg transition-all duration-300 font-medium capitalize text-sm bg-transparent border-0 outline-none focus:outline-none ${
                         activeSection === section 
                           ? (isDarkMode ? 'text-purple-400 bg-purple-400/10' : 'text-purple-600 bg-purple-600/10')
                           : (isDarkMode ? 'text-gray-300 hover:text-purple-400 hover:bg-purple-400/5' : 'text-slate-600 hover:text-purple-600 hover:bg-purple-600/5')
                       }`}
-                      onClick={() => setIsMobileMenuOpen(false)}
                     >
                       {section.replace('-', ' ')}
-                    </a>
+                    </button>
                   ))}
                   
                   {/* Mobile Menu Actions */}
@@ -895,11 +892,11 @@ const LandingPage: React.FC = () => {
           )}
         </header>
 
-        <main>
+        <main id="top">
           <Hero isDark={isDarkMode} />
           
                     {/* Real Process Showcase Section */}
-          <section id="process" className={`${isDarkMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
+          <section id="features" className={`${isDarkMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-800 border-gray-200'} py-24 overflow-hidden border-t`}>
             <div className="container mx-auto px-6">
               <AnimatedSection className="text-center max-w-4xl mx-auto mb-20">
                 <h2 className="text-4xl md:text-5xl font-bold mb-6">See How AI Agents Work</h2>
@@ -1072,74 +1069,138 @@ const LandingPage: React.FC = () => {
                   Start for free and scale as you grow. No hidden fees, no surprises.
                 </p>
               </AnimatedSection>
-              
               <AnimatedSection>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
                   {/* Startup Plan */}
-                  <div className={`p-8 rounded-xl backdrop-blur-sm border transition-all duration-300 ${
-                    isDarkMode 
-                      ? 'bg-slate-800/50 border-slate-700/50' 
-                      : 'bg-white/60 border-white/40'
-                  } hover:shadow-lg`}>
-                    <h3 className="text-2xl font-bold mb-2">Startup</h3>
-                    <div className="text-4xl font-bold mb-4">$9<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
-                    <ul className="space-y-3 mb-6 text-left">
+                  <div
+                    className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
+                      activePricing === 0
+                        ? isDarkMode
+                          ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
+                          : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
+                        : isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white' 
+                          : 'bg-white/60 border-white/40 hover:border-purple-400/60'
+                    } hover:shadow-lg min-h-[400px]`}
+                    onClick={() => setActivePricing(0)}
+                  >
+                    <h3 className="text-2xl font-bold mb-2 text-center">Startup</h3>
+                    <div className="text-4xl font-bold mb-2 text-center">$9<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
                       <li className="flex items-center gap-2">✅ 9 active agents simultaneously</li>
                       <li className="flex items-center gap-2">✅ 99 jobs run/month</li>
                       <li className="flex items-center gap-2">✅ 999 tokens</li>
                       <li className="flex items-center gap-2">✅ Community support</li>
                     </ul>
-                    <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
-                      Get Started
-                    </button>
+                    <div className="flex-1" />
+                    <button className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 0 ? '' : 'opacity-80'}`}
+                      onClick={() => navigate('/register')}
+                    >Get Started</button>
                   </div>
-
                   {/* Pro Plan */}
-                  <div className={`p-8 rounded-xl border-2 border-purple-500 relative backdrop-blur-sm transition-all duration-300 ${
-                    isDarkMode ? 'bg-purple-900/20' : 'bg-purple-50/60'
-                  } hover:shadow-2xl`}>
+                  <div
+                    className={`flex flex-col items-center justify-between p-5 rounded-xl border-2 relative backdrop-blur-sm transition-all duration-300 cursor-pointer ${
+                      activePricing === 1
+                        ? isDarkMode
+                          ? 'border-purple-500 bg-slate-800/80 shadow-2xl text-white'
+                          : 'border-purple-500 bg-purple-50/60 shadow-2xl'
+                        : isDarkMode ? 'border-slate-700/50 bg-purple-900/20 hover:border-purple-400/60 text-white' : 'border-purple-200/60 bg-purple-50/60 hover:border-purple-400/60'
+                    } min-h-[400px]`}
+                    onClick={() => setActivePricing(1)}
+                  >
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
                       Most Popular
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Pro</h3>
-                    <div className="text-4xl font-bold mb-4">$39<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
-                    <ul className="space-y-3 mb-6 text-left">
+                    <h3 className="text-2xl font-bold mb-2 text-center">Pro</h3>
+                    <div className="text-4xl font-bold mb-2 text-center">$39<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
+                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
                       <li className="flex items-center gap-2">✅ 39 active agents</li>
                       <li className="flex items-center gap-2">✅ 399 jobs run/month</li>
                       <li className="flex items-center gap-2">✅ 3999 + 999 (bonus) tokens</li>
                       <li className="flex items-center gap-2">✅ Priority support</li>
                     </ul>
-                    <button className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105">
-                      Start Free Trial
-                    </button>
+                    <div className="flex-1" />
+                    <button
+                      className={`w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 1 ? '' : 'opacity-80'}`}
+                      onClick={e => { e.stopPropagation(); navigate('/register'); }}
+                    >Start Free Trial</button>
                   </div>
-
                   {/* Enterprise Plan */}
-                  <div className={`p-8 rounded-xl backdrop-blur-sm border transition-all duration-300 ${
-                    isDarkMode 
-                      ? 'bg-slate-800/50 border-slate-700/50' 
-                      : 'bg-white/60 border-white/40'
-                  } hover:shadow-lg`}>
-                    <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-                    <div className="text-4xl font-bold mb-4">Custom</div>
-                    <ul className="space-y-3 mb-6 text-left">
+                  <div
+                    className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
+                      activePricing === 2
+                        ? isDarkMode
+                          ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
+                          : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
+                        : isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white' 
+                          : 'bg-white/60 border-white/40 hover:border-purple-400/60'
+                    } hover:shadow-lg min-h-[400px]`}
+                    onClick={() => setActivePricing(2)}
+                  >
+                    <h3 className="text-2xl font-bold mb-2 text-center">Enterprise</h3>
+                    <div className="text-4xl font-bold mb-2 text-center">Custom</div>
+                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
                       <li className="flex items-center gap-2">✅ Unlimited agents</li>
                       <li className="flex items-center gap-2">✅ Unlimited jobs run</li>
                       <li className="flex items-center gap-2">✅ Custom deployment</li>
                       <li className="flex items-center gap-2">✅ Dedicated support</li>
                       <li className="flex items-center gap-2">✅ SLA guarantees</li>
                     </ul>
-                    <button className="w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105">
-                      Contact Sales
-                    </button>
+                    <div className="flex-1" />
+                    <button className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 2 ? '' : 'opacity-80'}`}
+                      onClick={e => { e.stopPropagation(); setShowContactModal(true); }}
+                    >Contact Sales</button>
                   </div>
                 </div>
               </AnimatedSection>
             </div>
+            {/* Modal trial */}
+            {showTrialModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center">
+                  <h3 className="text-2xl font-bold mb-4 text-purple-700">🎉 Đăng ký dùng thử Pro</h3>
+                  <p className="mb-6 text-slate-700">Bạn đã chọn dùng thử gói <b>Pro</b>!<br/>Vui lòng đăng nhập hoặc đăng ký để trải nghiệm đầy đủ tính năng.</p>
+                  <button onClick={() => setShowTrialModal(false)} className="mt-2 px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold shadow hover:from-purple-700 hover:to-violet-700 transition-all">Đóng</button>
+                </div>
+              </div>
+            )}
+            {/* Modal Contact Sales */}
+            {showContactModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                <div className={`rounded-xl shadow-2xl p-8 max-w-md w-full text-center ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'}` }>
+                  <h3 className="text-2xl font-bold mb-4 text-purple-400">Liên hệ với Sales</h3>
+                  <form onSubmit={handleContactSubmit} className="space-y-4 text-left">
+                    <div>
+                      <label className="block mb-1 font-medium">Họ tên</label>
+                      <input name="name" value={contactForm.name} onChange={handleContactChange} className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-slate-800 border-purple-500 text-white placeholder-slate-400 focus:ring-purple-500' : 'border-gray-300 focus:ring-purple-400'}`} placeholder="Nhập họ tên" />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Email</label>
+                      <input name="email" type="email" value={contactForm.email} onChange={handleContactChange} className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-slate-800 border-purple-500 text-white placeholder-slate-400 focus:ring-purple-500' : 'border-gray-300 focus:ring-purple-400'}`} placeholder="Nhập email" />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Số điện thoại</label>
+                      <input name="phone" value={contactForm.phone} onChange={handleContactChange} className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-slate-800 border-purple-500 text-white placeholder-slate-400 focus:ring-purple-500' : 'border-gray-300 focus:ring-purple-400'}`} placeholder="Nhập số điện thoại" />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-medium">Nội dung</label>
+                      <textarea name="message" value={contactForm.message} onChange={handleContactChange} className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-slate-800 border-purple-500 text-white placeholder-slate-400 focus:ring-purple-500' : 'border-gray-300 focus:ring-purple-400'}`} rows={3} placeholder="Nhập nội dung" />
+                    </div>
+                    {contactStatus === 'success' && <div className="text-green-400 text-sm font-medium">{contactMsg}</div>}
+                    {contactStatus === 'error' && <div className="text-red-400 text-sm font-medium">{contactMsg}</div>}
+                    <div className="flex gap-3 justify-end mt-2">
+                      <button type="button" onClick={() => setShowContactModal(false)} className={`px-5 py-2 rounded-lg ${isDarkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} font-semibold transition-all`}>Đóng</button>
+                      <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold shadow hover:from-purple-700 hover:to-violet-700 transition-all">Gửi</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* CTA Section */}
-          <section className="py-20">
+          <section id="testimonials" className="py-20">
             <div className="container mx-auto px-6">
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-12 text-white backdrop-blur-lg shadow-2xl border border-purple-500/30 text-center">
                 <h2 className="text-4xl md:text-5xl font-bold mb-4">Ready to Transform Your Business?</h2>
@@ -1309,16 +1370,24 @@ const LandingPage: React.FC = () => {
                 <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} mb-6 text-sm md:text-base`}>
                   Get the latest news about new features, AI trends and tips to optimize your business
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={handleSubscribe}>
                   <input
                     type="email"
+                    value={subscribeEmail}
+                    onChange={e => { setSubscribeEmail(e.target.value); setSubscribeStatus(null); setSubscribeMsg(""); }}
                     placeholder="Enter your email"
                     className={`flex-1 px-4 py-2.5 rounded-lg border text-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-slate-900 placeholder-slate-500'} focus:outline-none focus:ring-2 ${isDarkMode ? 'focus:ring-purple-400' : 'focus:ring-purple-500'}`}
                   />
-                                      <button className="bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-all transform hover:scale-105 text-sm hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25">
-                      Subscribe
-                    </button>
-                </div>
+                  <button type="submit" className="bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-all transform hover:scale-105 text-sm hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25">
+                    Subscribe
+                  </button>
+                </form>
+                {subscribeStatus === "success" && (
+                  <div className="mt-3 text-green-500 text-sm font-medium">{subscribeMsg}</div>
+                )}
+                {subscribeStatus === "error" && (
+                  <div className="mt-3 text-red-500 text-sm font-medium">{subscribeMsg}</div>
+                )}
               </div>
             </div>
 
