@@ -461,9 +461,14 @@ const Header = React.memo(() => {
           </Dialog>
 
           {/* Credits */}
-          <Button variant="ghost" size="icon" onClick={() => setShowCreditPurchase(true)}>
-            <Coins className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setShowCreditPurchase(true)}>
+              <Coins className="h-5 w-5 text-yellow-400" />
+            </Button>
+            <span className="font-semibold text-yellow-400 text-sm min-w-[48px] text-center select-none">
+              {user?.credit ?? 0}
+            </span>
+          </div>
 
           {/* Language Toggle */}
           <LanguageToggle />

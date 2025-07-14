@@ -192,8 +192,8 @@ const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => {
    }
 
   return (
-    <div className="space-y-6 p-6 background-gradient-white ">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4  ">
         <div>
           <h1 className="text-3xl font-bold">Agents</h1>
           <p className="text-muted-foreground">Manage and interact with your AI agents</p>
@@ -245,7 +245,7 @@ const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => {
           </TabsList>
           
           {categories.map(category => (
-            <TabsContent key={category} value={category} className="mt-0">
+            <TabsContent key={category} value={category} className="mt-0 ">
               <AgentGrid agents={getAgentsByCategory(category)} onEdit={handleEditClick} onDelete={handleDeleteClick} />
             </TabsContent>
           ))}
@@ -325,7 +325,7 @@ const handleSaveAgentEdit = async (dataFromDialog: Partial<Agent>) => {
 const AgentGrid = ({ agents, onEdit, onDelete }: { agents: Agent[], onEdit: (agent: Agent) => void, onDelete: (agent: Agent) => void }) => {
   const navigate = useNavigate();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 bg-transparent">
       {agents.map((agent) => (
         <AgentCard
           key={agent.id}

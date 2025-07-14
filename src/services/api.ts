@@ -1964,3 +1964,87 @@ export const getPublicAgents = async (page = 1, pageSize = 10, search = "") => {
   if (!res.ok) throw new Error("Failed to fetch public agents");
   return res.json();
 };
+
+// ========== KNOWLEDGE API ==========
+
+// 1. Upload knowledge file
+export const uploadKnowledge = async (
+  file: File,
+  agent_id: string,
+  workspace_id: string,
+  status: string
+): Promise<any> => {
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("agent_id", agent_id);
+  formData.append("workspace_id", workspace_id);
+  formData.append("status", status);
+  const res = await fetch("http://localhost:3000/knowledge/upload", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Lỗi upload file tri thức");
+  return res.json();
+};
+
+// 2. List knowledge
+export const listKnowledge = async (params: {
+  agent_id?: string;
+  workspace_id?: string;
+  status?: string;
+}): Promise<any> => {
+  const token = localStorage.getItem("token");
+  const query = new URLSearchParams();
+  if (params.agent_id) query.append("agent_id", params.agent_id);
+  if (params.workspace_id) query.append("workspace_id", params.workspace_id);
+  if (params.status) query.append("status", params.status);
+  const url = `http://localhost:3000/knowledge/list?${query.toString()}`;
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error("Lỗi lấy danh sách tri thức");
+  return res.json();
+};
+
+// 3. Update knowledge
+export const updateKnowledge = async (data: {
+  id: string;
+  title?: string;
+  content?: string;
+  status?: string;
+}): Promise<any> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch("http://localhost:3000/knowledge/update", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Lỗi cập nhật tri thức");
+  return res.json();
+};
+
+// 4. Delete knowledge
+export const deleteKnowledge = async (id: string): Promise<any> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`http://localhost:3000/knowledge/${id}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error("Lỗi xóa tri thức");
+  return res.json();
+};
+
+// Lấy chi tiết knowledge
+export const getKnowledgeDetail = async (id: string): Promise<any> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`http://localhost:3000/knowledge/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error("Lỗi lấy chi tiết tri thức");
+  return res.json();
+};

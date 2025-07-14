@@ -27,7 +27,7 @@ export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
   const navigate = useNavigate();
   return (
     <div
-      className="bg-card rounded-2xl shadow-md border border-border flex flex-col
+      className="glossy-black-card rounded-2xl shadow-md flex flex-col
                  p-4 min-h-[250px] max-h-[250px] max-w-[320px] w-full mx-auto
                  hover:shadow-lg hover:-translate-y-1 group relative"
     >
@@ -104,17 +104,15 @@ export const AgentCard = ({ agent, onEdit, onDelete }: AgentCardProps) => {
       {/* Actions */}
       <div className="flex gap-2 mt-auto">
         <Button
-          className="flex-1 bg-indigo-600 text-white rounded-xl py-1.5 text-xs font-bold 
-                     hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+        variant="outline"
+          className="flex-1 border border-border text-foreground rounded-xl py-1.5 text-xs font-bold hover:bg-primary/10 transition-colors"
           onClick={() => navigate(`/dashboard/agents/${agent.id}?fromProfile=true&newChat=1`)}
         >
           Chat
         </Button>
         <Button
           variant="outline"
-          className="flex-1 border border-indigo-600 text-indigo-600 rounded-xl py-1.5 text-xs font-bold 
-                     hover:bg-indigo-50 dark:border-indigo-400 dark:text-indigo-400 
-                     dark:hover:bg-indigo-950"
+          className="flex-1 border border-border text-foreground rounded-xl py-1.5 text-xs font-bold hover:bg-primary/10 transition-colors"
           onClick={() => navigate(`/dashboard/agents/${agent.id}/profile`)}
         >
           View Profile

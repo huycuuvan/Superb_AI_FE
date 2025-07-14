@@ -31,7 +31,7 @@ const LogMessage = ({ log, isCollapsed }: { log: SubflowLog, isCollapsed?: boole
         `max-w-[85%] ml-auto rounded-lg relative border shadow-md mt-2 ` +
         (isCollapsed ? 'p-2 text-xs max-h-[60px] overflow-hidden leading-tight bg-green-50 dark:bg-green-900/40 border-green-300 dark:border-green-700' : 'p-3 text-sm bg-green-50 dark:bg-green-900/40 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100')
       } style={isCollapsed ? {minHeight: 'unset'} : {}}>
-        <div className="whitespace-pre-line" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
+        <div className="whitespace-pre-line break-words" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
         </div>
         {isLongContent && !isCollapsed && (
@@ -54,7 +54,7 @@ const LogMessage = ({ log, isCollapsed }: { log: SubflowLog, isCollapsed?: boole
         `max-w-[85%] rounded-lg relative border shadow-sm mr-0 ml-0 ` +
         (isCollapsed ? 'p-2 text-xs max-h-[60px] overflow-hidden leading-tight bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600' : 'p-4 text-sm bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100')
       } style={isCollapsed ? {minHeight: 'unset'} : {}}>
-        <div className="whitespace-pre-line" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
+        <div className="whitespace-pre-line break-words" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
           {content}
         </div>
       </div>
@@ -66,7 +66,7 @@ const LogMessage = ({ log, isCollapsed }: { log: SubflowLog, isCollapsed?: boole
       `max-w-[85%] rounded-lg relative border shadow-sm mr-0 ml-0 ` +
       (isCollapsed ? 'p-2 text-xs max-h-[60px] overflow-hidden leading-tight bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600' : 'p-4 text-sm bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100')
     } style={isCollapsed ? {minHeight: 'unset'} : {}}>
-      <div className="whitespace-pre-line" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
+      <div className="whitespace-pre-line break-words" style={isCollapsed ? {WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden'} : {}}>
         {displayContent}
       </div>
       {!isCollapsed && (

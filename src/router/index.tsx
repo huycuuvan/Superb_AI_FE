@@ -43,6 +43,7 @@ import CredentialsPage from '@/pages/Credentials';
 import DepartmentsPage from '@/pages/Departments';
 import ScheduledTasksPage from '@/pages/ScheduledTasks';
 import { PayPalCallback } from '@/components/PayPalCallback';
+import KnowledgeDetailPage from '@/pages/KnowledgeDetail';
 
 const routes: RouteObject[] = [
   {
@@ -113,6 +114,10 @@ const routes: RouteObject[] = [
       {
         path: 'knowledge',
         element: <Knowledge />,
+      },
+      {
+        path: 'knowledge/:id',
+        element: <KnowledgeDetailPage />,
       },
       {
         path: 'settings',

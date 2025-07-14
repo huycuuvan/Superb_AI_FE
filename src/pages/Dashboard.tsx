@@ -172,13 +172,10 @@ const Dashboard = () => {
       {/* Folder Chips */}
       <div className="flex flex-wrap gap-2 mb-4">
         <Badge
-          key="all"
-          variant={isAllAgents ? 'default' : 'outline'}
+          variant={isAllAgents ? 'filteractive' : 'outline'}
           className={cn(
             "cursor-pointer transition-all ease-in-out transform hover:scale-105",
-            isAllAgents
-              ? "bg-indigo-600 text-white hover:bg-indigo-700"
-              : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+            isAllAgents ? "" : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
           )}
           onClick={() => { setSelectedFolderId('all'); setPage(1); }}
         >
@@ -186,13 +183,10 @@ const Dashboard = () => {
         </Badge>
         {folders?.map(folder => (
           <Badge
-            key={folder.id}
-            variant={selectedFolderId === folder.id ? 'default' : 'outline'}
+            variant={selectedFolderId === folder.id ? 'filteractive' : 'outline'}
             className={cn(
               "cursor-pointer transition-all ease-in-out transform hover:scale-105",
-              selectedFolderId === folder.id
-                ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+              selectedFolderId === folder.id ? "" : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
             )}
             onClick={() => { setSelectedFolderId(folder.id); setPage(1); }}
           >
@@ -239,10 +233,10 @@ const Dashboard = () => {
                         href="#"
                         isActive={currentPage === idx + 1}
                         className={cn(
-                          "min-w-[40px] h-[40px] flex items-center justify-center rounded-md transition-colors",
+                          "pagination-link min-w-[40px] h-[40px] flex items-center justify-center rounded-md transition-colors",
                           currentPage === idx + 1 
-                            ? "bg-blue-500 dark:bg-blue-600 text-white font-semibold hover:bg-blue-600 dark:hover:bg-blue-700" 
-                            : "text-foreground hover:bg-accent hover:text-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700"
+                            ? "bg-primary text-white font-semibold hover:bg-primary"
+                            : "text-foreground hover:bg-primary hover:text-white"
                         )}
                         onClick={e => { e.preventDefault(); setPage(idx + 1); }}
                       >

@@ -129,9 +129,9 @@ const CodeBlockRenderer = ({ node, children, ...props }: any) => {
 const TableRenderer = ({ node, ...props }: any) => {
   const tableRef = useRef<HTMLTableElement>(null);
   return (
-    <div className="relative pt-2 pr-10">
+    <div className="relative pt-2 pr-10 overflow-x-auto">
       <CopyButton elementRef={tableRef} />
-      <table ref={tableRef} className="w-full my-2 border-collapse border border-slate-400" {...props} />
+      <table ref={tableRef} className="w-full my-2 border-collapse border border-slate-400 min-w-max" {...props} />
     </div>
   );
 };
@@ -246,8 +246,8 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
       li: ({ node, ...props }: any) => <li className="pl-1 [&>p:first-of-type]:inline" {...props} />,
       table: TableRenderer,
       thead: ({ node, ...props }: any) => <thead className="bg-slate-100 dark:bg-slate-800" {...props} />,
-      th: ({ node, ...props }: any) => <th className="border border-slate-300 dark:border-slate-600 font-semibold p-2 text-left" {...props} />,
-      td: ({ node, ...props }: any) => <td className="border border-slate-300 dark:border-slate-700 p-2" {...props} />,
+      th: ({ node, ...props }: any) => <th className="border border-slate-300 dark:border-slate-600 font-semibold p-2 text-left whitespace-nowrap" {...props} />,
+      td: ({ node, ...props }: any) => <td className="border border-slate-300 dark:border-slate-700 p-2 whitespace-nowrap" {...props} />,
     }
   };
 

@@ -77,7 +77,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
       
       <Header />
       
-      <main className="flex-grow pt-[76px] md:pt-[88px]">
+      <main className="flex-grow pt-[76px] md:pt-[88px] ">
         {(pageTitle || pageSubtitle) && (
           <section ref={headerRef} className={`py-10 md:py-16 bg-transparent ${titleCentered ? 'text-center' : ''}`}>
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">

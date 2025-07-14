@@ -6,7 +6,7 @@ import {
   ListPlus, Book, Clock,
   Rocket, Lightbulb,
       ChevronsDown, BrainCircuit,
-  ChevronUp, ChevronDown, Coins, Key
+  ChevronUp, ChevronDown, Coins, Key, FileText, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, deleteThread, getSubflowLogPairs } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, deleteThread, getSubflowLogPairs, listKnowledge } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { isAgentResImageObject, getAgentResImageUrl } from '@/utils/imageUtils';
 import { useTheme } from '@/hooks/useTheme';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 
 // Define a more specific type for execution_config
@@ -110,13 +111,6 @@ interface Credential {
 const AgentMessageWithLog = ({ msg, userMsgId, messageLogs, loadingLog, handleShowLog, children }) => {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   React.useEffect(() => {
-    console.log('AgentMessageWithLog', {
-      inView,
-      userMsgId,
-      msgId: msg.id,
-      hasLog: !!messageLogs[msg.id],
-      loading: !!loadingLog[msg.id]
-    });
     if (inView && userMsgId && !messageLogs[msg.id] && !loadingLog[msg.id]) {
       handleShowLog(msg.id, userMsgId);
     }
@@ -1279,6 +1273,33 @@ const handleSubmitTaskInputs = async () => {
     });
   }, []);
 
+  // State knowledge
+  const [knowledgeList, setKnowledgeList] = useState<any[]>([]);
+  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(null);
+  const [viewKnowledge, setViewKnowledge] = useState<any | null>(null);
+
+  // Fetch knowledge theo agent và workspace
+  useEffect(() => {
+    const fetchKnowledge = async () => {
+      if (!currentAgent?.id || !workspace?.id) return;
+      setIsLoadingKnowledge(true);
+      try {
+        const res = await listKnowledge({ agent_id: currentAgent.id, workspace_id: workspace.id, status: 'main' });
+        if (res.success) {
+          setKnowledgeList(res.data || []);
+        } else {
+          setKnowledgeList([]);
+        }
+      } catch (err) {
+        setKnowledgeList([]);
+      } finally {
+        setIsLoadingKnowledge(false);
+      }
+    };
+    fetchKnowledge();
+    setSelectedKnowledgeId(null); // Reset khi đổi agent
+  }, [currentAgent?.id, workspace?.id]);
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1512,7 +1533,82 @@ const handleSubmitTaskInputs = async () => {
               aboveInputContent !== 'none' ? 'pb-[200px]' : 'pb-[120px]'
             )}
           >
-            {/* 1. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
+            {/* 1. Card tri thức dưới câu chào agent */}
+            {messages.length > 0 && messages[0].sender === 'agent' && (
+              <div className="mb-2">
+                <div className="font-semibold text-base mb-2 text-foreground">Tri thức liên quan</div>
+                {isLoadingKnowledge ? (
+                  <div className="text-muted-foreground text-sm">Đang tải tri thức...</div>
+                ) : knowledgeList.length === 0 ? (
+                  <div className="text-muted-foreground text-sm">Không có tri thức nào</div>
+                ) : (
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {knowledgeList.slice(0, 5).map(item => {
+                      const isSelected = selectedKnowledgeId === item.id;
+                      return (
+                        <div key={item.id} className={cn(
+                          "relative min-w-[220px] max-w-xs flex-shrink-0 cursor-pointer group",
+                          isSelected ? 'ring-2 ring-primary border-primary bg-primary/10' : 'border border-primary/30 bg-card text-card-foreground',
+                          'rounded-xl transition-all duration-150 shadow-md'
+                        )} onClick={() => setSelectedKnowledgeId(item.id)}>
+                          {/* Radio chọn */}
+                          <div className="absolute top-2 left-2 z-10">
+                            <span className={cn(
+                              "inline-block w-4 h-4 rounded-full border-2",
+                              isSelected ? 'border-primary bg-primary' : 'border-muted-foreground bg-background'
+                            )} />
+                          </div>
+                          {/* Nút xem */}
+                          <button
+                            className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-accent/30"
+                            onClick={e => { e.stopPropagation(); setViewKnowledge(item); }}
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                          <Card className="border-0 shadow-none bg-transparent">
+                            <CardHeader className="pb-2 flex flex-row items-center gap-2">
+                              <FileText className="h-5 w-5 text-primary" />
+                              <CardTitle className="text-base font-semibold truncate" title={item.title}>{item.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-2">
+                              <div className="text-xs text-muted-foreground line-clamp-3 mb-1">
+                                {item.preview ? item.preview : <span className="italic">Không có preview</span>}
+                              </div>
+                              <div className="text-xs text-foreground font-medium">Trạng thái: <span className="capitalize">{item.status}</span></div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Modal xem chi tiết knowledge */}
+                <Dialog open={!!viewKnowledge} onOpenChange={open => !open && setViewKnowledge(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Chi tiết tri thức</DialogTitle>
+                    </DialogHeader>
+                    {viewKnowledge && (
+                      <div className="space-y-2">
+                        <div className="font-semibold text-lg">{viewKnowledge.title}</div>
+                        <div className="text-sm text-muted-foreground whitespace-pre-line">
+                          {viewKnowledge.preview ? viewKnowledge.preview : <span className="italic">Không có preview</span>}
+                        </div>
+                        <div className="text-sm">Trạng thái: <span className="capitalize font-medium">{viewKnowledge.status}</span></div>
+                        {viewKnowledge.file_url && (
+                          <a href={viewKnowledge.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">Tải file</a>
+                        )}
+                      </div>
+                    )}
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setViewKnowledge(null)}>Đóng</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+            {/* 2. Vòng lặp hiển thị tin nhắn (giữ nguyên) */}
             {messages.slice(-50).map((msg, idx) => {
               if (msg.sender === 'agent') {
                 // Chỉ fetch log nếu có parent_message_id, nhưng luôn render message agent

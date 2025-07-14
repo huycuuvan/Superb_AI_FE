@@ -73,7 +73,7 @@ const DashboardLayout = () => {
               </button>
             )}
             {/* 3. Đảm bảo main content cũng dùng màu nền động */}
-            <main className={`flex-1 overflow-y-auto bg-background no-scrollbar ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
+            <main className={`flex-1 overflow-y-auto bg-transparent no-scrollbar ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
               <Outlet />
             </main>
           </div>
