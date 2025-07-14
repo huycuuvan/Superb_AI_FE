@@ -214,7 +214,7 @@ const WorkspacePage = () => {
         Logout
       </Button>
       <div ref={cardRef} className="w-full max-w-md sm:max-w-lg mx-auto relative z-10">
-        <Card className="shadow-2xl rounded-3xl bg-white/30 dark:bg-zinc-900/70 border border-purple-200 dark:border-purple-800 backdrop-blur-lg">
+        <Card className="shadow-2xl rounded-3xl bg-white border border-zinc-200 text-slate-900 dark:bg-zinc-900 dark:border-zinc-700 dark:text-white backdrop-blur-lg">
           <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-purple-100 dark:border-purple-900">
             <CardTitle className="text-3xl font-bold text-center text-zinc-900 dark:text-white">Your Workspace</CardTitle>
             <CardDescription className="text-center text-purple-700 dark:text-purple-300 text-base sm:text-lg">
@@ -224,36 +224,36 @@ const WorkspacePage = () => {
           <CardContent className="space-y-8 p-6 sm:p-8 bg-transparent">
             {showCreate ? (
               <form onSubmit={handleCreateWorkspace} className="w-full space-y-6">
-                <h2 className="text-xl font-semibold text-center text-slate-800">Create a new workspace</h2>
+                <h2 className="text-xl font-semibold text-center text-white drop-shadow-sm">Create a new workspace</h2>
                 {error && (
                   <Alert variant="destructive" className="w-full">
                     {error}
                   </Alert>
                 )}
                 <div className="w-full space-y-1.5">
-                  <Label htmlFor="name" className="font-medium text-sm text-slate-700">Workspace name</Label>
+                  <Label htmlFor="name" className="font-medium text-sm text-zinc-200 dark:text-zinc-200">Workspace name</Label>
                   <Input 
                     id="name" 
                     value={name} 
                     onChange={e => setName(e.target.value)} 
                     required 
                     disabled={loading}
-                    className="border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white dark:bg-[#23232a] placeholder:text-slate-400 text-slate-800 dark:text-white rounded-md"
+                    className="border-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-zinc-800/80 text-white placeholder:text-zinc-400 rounded-md"
                   />
                 </div>
                 <div className="w-full space-y-1.5">
-                  <Label htmlFor="description" className="font-medium text-sm text-slate-700">Description</Label>
+                  <Label htmlFor="description" className="font-medium text-sm text-zinc-200 dark:text-zinc-200">Description</Label>
                   <Textarea 
                     id="description" 
                     value={description} 
                     onChange={e => setDescription(e.target.value)}
                     disabled={loading}
-                    className="border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 text-base py-2.5 px-3.5 bg-white dark:bg-[#23232a] placeholder:text-slate-400 text-slate-800 dark:text-white rounded-md"
+                    className="border-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-zinc-800/80 text-white placeholder:text-zinc-400 rounded-md"
                   />
                 </div>
                 <Button 
                   type="submit" 
-                  className={`w-full ${isDark ? 'button-gradient-dark' : 'button-gradient-light'} text-white shadow-lg hover:shadow-gray-500/40`}
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg hover:from-purple-600 hover:to-indigo-600 hover:shadow-xl transition-all font-bold py-2.5 rounded-md text-base"
                   disabled={loading}
                   size="lg"
                 >
@@ -296,7 +296,7 @@ const WorkspacePage = () => {
                               <span className="truncate group-hover:text-white">{workspace.name}</span>
                               {user && (
                                 <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 group-hover:bg-white/20 group-hover:text-white min-w-[80px] px-4 py-1 text-center">
-                                  {workspace.owner_id === user.id ? 'Sở hữu' : 'Thành viên'}
+                                  {workspace.owner && workspace.owner.id === user.id ? 'Sở hữu' : 'Thành viên'}
                                 </span>
                               )}
                             </div>
