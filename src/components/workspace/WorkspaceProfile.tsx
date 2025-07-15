@@ -186,7 +186,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
           </CardHeader>
           <CardContent>
             <form onSubmit={handleScrapUrl} className="space-y-2">
-              <Label htmlFor="websiteInput" className="font-medium text-sm">Website công ty</Label>
+              <Label htmlFor="websiteInput" className="font-medium text-sm text-slate-800 dark:text-zinc-200">Website công ty</Label>
               <div className="flex gap-2">
                 <Input
                   id="websiteInput"
@@ -194,7 +194,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
                   value={websiteInput}
                   onChange={e => setWebsiteInput(e.target.value)}
                   placeholder="https://tencongty.com"
-                  className=""
+                  className="border-zinc-400 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-slate-900 placeholder:text-zinc-500 rounded-md dark:bg-zinc-800/80 dark:text-white dark:placeholder:text-zinc-400"
                   disabled={scrapLoading}
                 />
                 <Button type="submit" className="" disabled={scrapLoading}>
@@ -297,6 +297,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
                     required
                     placeholder="Enter brand description"
                     rows={3}
+                    className="border-zinc-400 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-slate-900 placeholder:text-zinc-500 rounded-md dark:bg-zinc-800/80 dark:text-white dark:placeholder:text-zinc-400"
                   />
                 </div>
                 <div className="space-y-2">
@@ -309,6 +310,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
                     required
                     placeholder="Enter products and services"
                     rows={3}
+                    className="border-zinc-400 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-slate-900 placeholder:text-zinc-500 rounded-md dark:bg-zinc-800/80 dark:text-white dark:placeholder:text-zinc-400"
                   />
                 </div>
                 <div className="space-y-2">

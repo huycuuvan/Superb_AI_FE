@@ -9,6 +9,10 @@ export const API_ENDPOINTS = {
     logout: `${API_BASE_URL}/auth/logout`,
     refresh: `${API_BASE_URL}/auth/refresh`,
     google: `${API_BASE_URL}/auth/google/token`,
+    forgotPassword: `${API_BASE_URL}/auth/forgot-password`,
+    verifyEmail: `${API_BASE_URL}/auth/verify-email`,
+    verifyForgotPassword: `${API_BASE_URL}/auth/verify-forgot-password`,
+    resetPassword: `${API_BASE_URL}/auth/reset-password`,
   },
   workspace: {
     create: `${API_BASE_URL}/workspaces`,

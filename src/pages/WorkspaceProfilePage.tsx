@@ -56,8 +56,9 @@ export default function WorkspaceProfilePage() {
       </div>
       <div ref={profileCardRef} className="w-full max-w-sm sm:max-w-md relative z-10">
         <Card className={cn(
-          "glossy-black-card rounded-2xl shadow-md p-4",
-          "border border-border text-foreground bg-card/80 dark:bg-card/80 backdrop-blur-md"
+          "rounded-2xl shadow-md p-4 border border-border backdrop-blur-md",
+          "bg-white text-slate-900",
+          "dark:bg-zinc-900/80 dark:text-white"
         )}>
       
           <CardContent className="p-4 sm:p-6">

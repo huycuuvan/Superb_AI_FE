@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/useTheme';
 import { useGoogleLogin } from '@/hooks/useGoogleLogin';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/hooks/useLanguage';
 
 // Simple Superb AI Logo Component (Không thay đổi)
 const SuperbAiLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
@@ -59,6 +60,7 @@ const Login = () => {
   const queryClient = useQueryClient();
   const from = location.state?.from?.pathname || "/dashboard";
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (user && hasWorkspace) {
@@ -147,7 +149,7 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6 p-6 sm:p-8">
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="font-medium text-sm text-slate-700 dark:text-zinc-300">Email Address</Label>
+                <Label htmlFor="email" className="font-medium text-sm text-slate-700 dark:text-zinc-300">{t('auth.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -160,9 +162,9 @@ const Login = () => {
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="font-medium text-sm text-slate-700 dark:text-zinc-300">Password</Label>
+                  <Label htmlFor="password" className="font-medium text-sm text-slate-700 dark:text-zinc-300">{t('auth.password')}</Label>
                   <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 hover:underline dark:text-purple-400 dark:hover:text-purple-300">
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
                 <Input

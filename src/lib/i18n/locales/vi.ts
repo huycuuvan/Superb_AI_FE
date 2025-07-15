@@ -47,6 +47,18 @@ export default {
     all: "Tất cả",
     public: "Công khai",
     private: "Riêng tư",
+    scheduled_tasks: "Nhiệm vụ theo lịch trình",
+    notificationsDescription: "Các thông báo và lời mời của bạn",
+    members: "Thành viên",
+    membersDescription: "Thành viên trong workspace",
+    removeMember: "Xóa thành viên",
+    removeMemberDescription:
+      "Bạn có chắc chắn muốn xóa {memberName} khỏi workspace?",
+    errorLoadingMembers: "Lỗi khi tải danh sách thành viên",
+    noMembers: "Không có thành viên nào",
+    errorLoadingNotifications: "Lỗi khi tải thông báo",
+    noNotifications: "Không có thông báo",
+    logout: "Đăng xuất",
   },
   auth: {
     login: "Đăng nhập",

@@ -1276,7 +1276,7 @@ const handleSubmitTaskInputs = async () => {
   // State knowledge
   const [knowledgeList, setKnowledgeList] = useState<any[]>([]);
   const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
-  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(null);
+  const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string[]>([]);
   const [viewKnowledge, setViewKnowledge] = useState<any | null>(null);
 
   // Fetch knowledge theo agent và workspace
@@ -1943,21 +1943,43 @@ const handleSubmitTaskInputs = async () => {
                {/* Knowledge File Selection (Placeholder) */}
                 {aboveInputContent === 'knowledge' && (
                   <div className="mb-3 p-4 border border-border rounded-lg bg-card text-card-foreground max-h-60 overflow-y-auto">
-                    <h3 className="text-lg font-semibold mb-2 text-foreground">Knowledge Files</h3>
-                    <p className="text-sm text-muted-foreground">Select knowledge files to provide context to the agent.</p>
-                    {/* Add file selection UI here */}
-                     <div className="mt-4 space-y-2">
-                       <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="file1" />
-                          <label htmlFor="file1" className="text-sm text-foreground">Document_A.pdf</label>
-                       </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="file2" />
-                          <label htmlFor="file2" className="text-sm text-foreground">KnowledgeBase.txt</label>
-                        </div>
-                        {/* Add more files as needed */}
-                     </div>
-                    <Button variant="outline" className="w-full border-border mt-4" onClick={() => setAboveInputContent('none')}>Close Knowledge</Button>
+                    <h3 className="text-lg font-semibold mb-2 text-foreground">Danh sách tri thức</h3>
+                    {isLoadingKnowledge ? (
+                      <div className="text-muted-foreground text-sm">Đang tải tri thức...</div>
+                    ) : knowledgeList.length === 0 ? (
+                      <div className="text-muted-foreground text-sm">Không có tri thức nào</div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {knowledgeList.map(item => (
+                          <div key={item.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`knowledge_${item.id}`}
+                              checked={Array.isArray(selectedKnowledgeId) ? selectedKnowledgeId.includes(item.id) : selectedKnowledgeId === item.id}
+                              onChange={e => {
+                                if (Array.isArray(selectedKnowledgeId)) {
+                                  if (e.target.checked) {
+                                    setSelectedKnowledgeId([...selectedKnowledgeId, item.id]);
+                                  } else {
+                                    setSelectedKnowledgeId(selectedKnowledgeId.filter(id => id !== item.id));
+                                  }
+                                } else {
+                                  setSelectedKnowledgeId(e.target.checked ? [item.id] : []);
+                                }
+                              }}
+                            />
+                            <label htmlFor={`knowledge_${item.id}`} className="text-sm text-foreground cursor-pointer flex-1">
+                              <span className="font-medium">{item.title}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">[{item.status}]</span>
+                              {item.file_url && (
+                                <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-primary underline text-xs">Tải file</a>
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button variant="outline" className="w-full border-border mt-4" onClick={() => setAboveInputContent('none')}>Đóng</Button>
                   </div>
                 )}
 
@@ -2059,7 +2081,7 @@ const handleSubmitTaskInputs = async () => {
                               <div className="flex justify-center items-center gap-2">
                                 <Button variant="ghost" size="icon" title="Đính kèm tệp" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Chọn Task" onClick={() => setIsTaskModalOpen(true)}><ListPlus className="h-5 w-5 text-muted-foreground"/></Button>
-                                <Button variant="ghost" size="icon" title="Sử dụng Knowledge"><Book className="h-5 w-5 text-muted-foreground"/></Button>
+                                <Button variant="ghost" size="icon" title="Sử dụng Knowledge" onClick={() => setAboveInputContent('knowledge')}><Book className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button variant="ghost" size="icon" title="Lịch sử thực thi" onClick={() => setShowTaskHistory(true)}><History className="h-5 w-5 text-muted-foreground"/></Button>
                                 <Button 
                                   variant="ghost" 
@@ -2103,6 +2125,7 @@ const handleSubmitTaskInputs = async () => {
       size="sm"
       className="flex items-center gap-1 px-3 py-1 rounded-lg font-medium"
       title="Knowledge"
+      onClick={() => setAboveInputContent('knowledge')}
     >
       <Book className="h-5 w-5 text-muted-foreground" />
       <span className="hidden lg:inline text-sm text-muted-foreground">Knowledge</span>

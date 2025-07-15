@@ -1470,18 +1470,6 @@ export const getSubflowLogPairs = async (thread_id: string) => {
   return res.json();
 };
 
-export const verifyEmail = async (email: string, code: string) => {
-  const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, code }),
-  });
-  if (!res.ok) {
-    await handleApiError(res);
-  }
-  return res.json();
-};
-
 export const deleteThread = async (
   threadId: string
 ): Promise<{ success: boolean }> => {
@@ -2046,5 +2034,44 @@ export const getKnowledgeDetail = async (id: string): Promise<any> => {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   if (!res.ok) throw new Error("Lỗi lấy chi tiết tri thức");
+  return res.json();
+};
+
+// ========== FORGOT PASSWORD API ==========
+export const forgotPassword = async (email: string) => {
+  const res = await fetch(API_ENDPOINTS.auth.forgotPassword, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+  return res.json();
+};
+
+export const verifyEmail = async (email: string, code: string) => {
+  const res = await fetch(API_ENDPOINTS.auth.verifyEmail, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
+};
+
+export const verifyForgotPassword = async (email: string, code: string) => {
+  const res = await fetch(API_ENDPOINTS.auth.verifyForgotPassword, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+  return res.json();
+};
+
+export const resetPassword = async (email: string, new_password: string) => {
+  const res = await fetch(API_ENDPOINTS.auth.resetPassword, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, new_password }),
+  });
   return res.json();
 };

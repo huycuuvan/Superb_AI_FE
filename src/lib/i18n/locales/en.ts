@@ -49,6 +49,18 @@ export default {
     all: "All",
     public: "Public",
     private: "Private",
+    scheduled_tasks: "Scheduled Tasks",
+    notificationsDescription: "Your notifications and invitations",
+    members: "Members",
+    membersDescription: "Members in the workspace",
+    removeMember: "Remove Member",
+    removeMemberDescription:
+      "Are you sure you want to remove {memberName} from the workspace?",
+    errorLoadingMembers: "Error loading members",
+    noMembers: "No members found",
+    errorLoadingNotifications: "Error loading notifications",
+    noNotifications: "No notifications found",
+    logout: "Logout",
   },
   auth: {
     login: "Login",

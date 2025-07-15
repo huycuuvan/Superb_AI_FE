@@ -328,9 +328,9 @@ const Header = React.memo(() => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Thông báo</DialogTitle>
+                <DialogTitle>{t('common.notifications')}</DialogTitle>
                 <DialogDescription>
-                  Các thông báo và lời mời của bạn
+                  {t('common.notificationsDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -340,14 +340,14 @@ const Header = React.memo(() => {
                   </div>
                 ) : errorInvitations ? (
                   <div className="text-center text-red-500 py-4">
-                    Lỗi khi tải thông báo
+                    {t('common.errorLoadingNotifications')}
                   </div>
                 ) : invitationsData?.data && invitationsData.data.length > 0 ? (
                   <div className="space-y-4">
                     {invitationsData.data.map((invitation) => (
                       <div key={invitation.ID} className="flex items-center justify-between gap-4 p-4 border rounded-lg">
                         <div>
-                          <p className="font-medium">Lời mời tham gia workspace</p>
+                          <p className="font-medium">{t('common.invitations')}</p>
                           <p className="text-sm text-muted-foreground">
                             Workspace: {invitation.WorkspaceName}
                           </p>
@@ -360,14 +360,14 @@ const Header = React.memo(() => {
                             size="sm"
                             onClick={() => handleAcceptInvitation(invitation.ID)}
                           >
-                            Chấp nhận
+                            {t('common.accept')}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleRejectInvitation(invitation.ID)}
                           >
-                            Từ chối
+                            {t('common.reject')}
                           </Button>
                         </div>
                       </div>
@@ -375,7 +375,7 @@ const Header = React.memo(() => {
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-4">
-                    Không có thông báo mới
+                    {t('common.noNotifications')}
                   </div>
                 )}
               </div>
@@ -391,9 +391,9 @@ const Header = React.memo(() => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Quản lý thành viên</DialogTitle>
+                <DialogTitle>{t('common.members')}</DialogTitle>
                 <DialogDescription>
-                  Danh sách thành viên trong workspace
+                  {t('common.membersDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -403,7 +403,7 @@ const Header = React.memo(() => {
                   </div>
                 ) : membersError ? (
                   <div className="text-center text-red-500 py-4">
-                    Lỗi khi tải danh sách thành viên
+                    {t('common.errorLoadingMembers')}
                   </div>
                 ) : membersData?.data && membersData.data.length > 0 ? (
                   <div className="space-y-4">
@@ -433,7 +433,7 @@ const Header = React.memo(() => {
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-4">
-                    Không có thành viên nào
+                    {t('common.noMembers')}
                   </div>
                 )}
               </div>
@@ -444,17 +444,17 @@ const Header = React.memo(() => {
           <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Xác nhận xóa thành viên</DialogTitle>
+                <DialogTitle>{t('common.removeMember')}</DialogTitle>
                 <DialogDescription>
-                  Bạn có chắc chắn muốn xóa thành viên này khỏi workspace?
+                  {t('common.removeMemberDescription')}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsRemoveMemberModalOpen(false)}>
-                  Hủy
+                  {t('common.cancel')}
                 </Button>
                 <Button variant="destructive" onClick={handleRemoveMember}>
-                  Xóa
+                  {t('common.remove')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -500,7 +500,7 @@ const Header = React.memo(() => {
                 logout();
               }} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Đăng xuất</span>
+                <span>{t('common.logout')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

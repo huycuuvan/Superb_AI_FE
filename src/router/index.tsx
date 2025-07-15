@@ -44,6 +44,7 @@ import DepartmentsPage from '@/pages/Departments';
 import ScheduledTasksPage from '@/pages/ScheduledTasks';
 import { PayPalCallback } from '@/components/PayPalCallback';
 import KnowledgeDetailPage from '@/pages/KnowledgeDetail';
+import ForgotPassword from '@/pages/ForgotPassword';
 
 const routes: RouteObject[] = [
   {
@@ -73,6 +74,10 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
   },
   {
     path: '/payment/callback',

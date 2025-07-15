@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useTheme } from '@/hooks/useTheme';
+import { cn } from "@/lib/utils";
 
 interface Workspace {
   id: string;
@@ -43,7 +44,6 @@ const WorkspacePage = () => {
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
   const { theme } = useTheme();
-  const isDark = theme === 'dark';
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [workspaceIdForMembers, setWorkspaceIdForMembers] = useState<string | null>(null);
@@ -199,7 +199,13 @@ const WorkspacePage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative text-slate-900 dark:text-white">
+    <div className={cn(
+      'min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 antialiased selection:bg-pink-300 selection:text-pink-900 overflow-hidden relative',
+      // Thay đổi nền light theme để dịu mắt hơn
+      'bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50',
+      // Giữ nguyên dark theme
+      theme === 'dark' && 'dark bg-gradient-to-br from-zinc-900 via-zinc-950 to-black'
+    )}>
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-purple-400/20 dark:bg-purple-500/20 rounded-full filter blur-3xl opacity-50 animate-pulse-slow"></div>
         <div className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 bg-pink-400/20 dark:bg-pink-500/10 rounded-full filter blur-3xl opacity-50 animate-pulse-slower animation-delay-1000"></div>
@@ -213,8 +219,8 @@ const WorkspacePage = () => {
         <LogOut className="w-4 h-4" />
         Logout
       </Button>
-      <div ref={cardRef} className="w-full max-w-md sm:max-w-lg mx-auto relative z-10">
-        <Card className="shadow-2xl rounded-3xl bg-white border border-zinc-200 text-slate-900 dark:bg-zinc-900 dark:border-zinc-700 dark:text-white backdrop-blur-lg">
+      <div ref={cardRef} className="w-full max-w-md sm:max-w-lg mx-auto relative z-10 ">
+        <Card className="shadow-2xl rounded-3xl border border-zinc-200 backdrop-blur-lg dark:bg-purple-500/20 bg-white text-slate-900 dark:bg-zinc-900/80 dark:text-white dark:border-zinc-700">
           <CardHeader className="space-y-1.5 p-6 sm:p-8 border-b border-purple-100 dark:border-purple-900">
             <CardTitle className="text-3xl font-bold text-center text-zinc-900 dark:text-white">Your Workspace</CardTitle>
             <CardDescription className="text-center text-purple-700 dark:text-purple-300 text-base sm:text-lg">
@@ -224,31 +230,31 @@ const WorkspacePage = () => {
           <CardContent className="space-y-8 p-6 sm:p-8 bg-transparent">
             {showCreate ? (
               <form onSubmit={handleCreateWorkspace} className="w-full space-y-6">
-                <h2 className="text-xl font-semibold text-center text-white drop-shadow-sm">Create a new workspace</h2>
+                <h2 className="text-xl font-semibold text-center text-purple-700 drop-shadow-sm">Create a new workspace</h2>
                 {error && (
                   <Alert variant="destructive" className="w-full">
                     {error}
                   </Alert>
                 )}
                 <div className="w-full space-y-1.5">
-                  <Label htmlFor="name" className="font-medium text-sm text-zinc-200 dark:text-zinc-200">Workspace name</Label>
+                  <Label htmlFor="name" className="font-medium text-sm  dark:text-zinc-200 text-primary">Workspace name</Label>
                   <Input 
                     id="name" 
                     value={name} 
                     onChange={e => setName(e.target.value)} 
                     required 
                     disabled={loading}
-                    className="border-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-zinc-800/80 text-white placeholder:text-zinc-400 rounded-md"
+                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-white placeholder:text-zinc-400 rounded-md"
                   />
                 </div>
                 <div className="w-full space-y-1.5">
-                  <Label htmlFor="description" className="font-medium text-sm text-zinc-200 dark:text-zinc-200">Description</Label>
+                  <Label htmlFor="description" className="font-medium text-sm text-primary  dark:text-zinc-200">Description</Label>
                   <Textarea 
                     id="description" 
                     value={description} 
                     onChange={e => setDescription(e.target.value)}
                     disabled={loading}
-                    className="border-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-zinc-800/80 text-white placeholder:text-zinc-400 rounded-md"
+                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-zinc-400 placeholder:text-zinc-400 rounded-md"
                   />
                 </div>
                 <Button 

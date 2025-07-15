@@ -12,6 +12,7 @@ import gsap from 'gsap';
 import { useTheme } from '@/hooks/useTheme';
 import { useGoogleLogin } from '@/hooks/useGoogleLogin';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/hooks/useLanguage';
 
 // Simple Superb AI Logo Component
 const SuperbAiLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
@@ -50,6 +51,7 @@ const Register = () => {
   const navigate = useNavigate();
   const registerCardRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if(registerCardRef.current){
@@ -63,20 +65,21 @@ const Register = () => {
     setLoading(true);
     setError("");
     setSuccess("");
-    setShowVerify(true); // chuyển luôn sang màn nhập mã
     try {
       const res = await registerWithEmail({ email, password, name });
       if (res && res.tag === "REGISTER_VERIFICATION_SENT") {
         setSuccess("Đã gửi mã xác thực về email. Vui lòng kiểm tra email và nhập mã xác thực để hoàn tất đăng ký.");
+        setShowVerify(true);
       } else {
         setSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.");
+        setShowVerify(true);
       }
     } catch (err) {
       setShowVerify(false); // lỗi thì quay lại màn đăng ký
       if (isApiError(err)) {
         if (err.tag === "REGISTER_PASSWORD_TOO_SHORT") {
           setError("Mật khẩu phải có ít nhất 8 ký tự");
-        } else if (err.tag === "REGISTER_EMAIL_ALREADY_EXISTS") {
+        } else if (err.tag === "REGISTER_EMAIL_ALREADY_EXISTS" || err.tag === "REGISTER_EMAIL_EXISTS") {
           setError("Email đã được sử dụng");
         } else {
           setError(err.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
@@ -218,7 +221,7 @@ const Register = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="font-medium text-sm text-slate-700">Email Address</Label>
+                <Label htmlFor="email" className="font-medium text-sm text-slate-700">{t('auth.email')}</Label>
                 <Input 
                   id="email" 
                   type="email" 
@@ -234,6 +237,11 @@ const Register = () => {
                     theme === 'dark' && 'dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-50 dark:placeholder:text-zinc-500'
                   )}
                 />
+                <div className="flex justify-end mt-1">
+                  <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 hover:underline dark:text-purple-400 dark:hover:text-purple-300">
+                    {t('auth.forgotPassword')}
+                  </Link>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="font-medium text-sm text-slate-700">Password</Label>
