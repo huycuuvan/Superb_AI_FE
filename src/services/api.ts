@@ -1980,7 +1980,7 @@ export const uploadKnowledge = async (
   formData.append("agent_id", agent_id);
   formData.append("workspace_id", workspace_id);
   formData.append("status", status);
-  const res = await fetch("http://localhost:3000/knowledge/upload", {
+  const res = await fetch(API_ENDPOINTS.knowledge.create, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: formData,
@@ -2000,7 +2000,7 @@ export const listKnowledge = async (params: {
   if (params.agent_id) query.append("agent_id", params.agent_id);
   if (params.workspace_id) query.append("workspace_id", params.workspace_id);
   if (params.status) query.append("status", params.status);
-  const url = `http://localhost:3000/knowledge/list?${query.toString()}`;
+  const url = `${API_ENDPOINTS.knowledge.list}?${query.toString()}`;
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
@@ -2016,7 +2016,7 @@ export const updateKnowledge = async (data: {
   status?: string;
 }): Promise<any> => {
   const token = localStorage.getItem("token");
-  const res = await fetch("http://localhost:3000/knowledge/update", {
+  const res = await fetch(API_ENDPOINTS.knowledge.update, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -2031,7 +2031,7 @@ export const updateKnowledge = async (data: {
 // 4. Delete knowledge
 export const deleteKnowledge = async (id: string): Promise<any> => {
   const token = localStorage.getItem("token");
-  const res = await fetch(`http://localhost:3000/knowledge/${id}`, {
+  const res = await fetch(API_ENDPOINTS.knowledge.delete(id), {
     method: "DELETE",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
@@ -2042,7 +2042,7 @@ export const deleteKnowledge = async (id: string): Promise<any> => {
 // Lấy chi tiết knowledge
 export const getKnowledgeDetail = async (id: string): Promise<any> => {
   const token = localStorage.getItem("token");
-  const res = await fetch(`http://localhost:3000/knowledge/${id}`, {
+  const res = await fetch(API_ENDPOINTS.knowledge.getById(id), {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   if (!res.ok) throw new Error("Lỗi lấy chi tiết tri thức");

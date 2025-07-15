@@ -90,4 +90,12 @@ export const API_ENDPOINTS = {
     captureOrder: `${API_BASE_URL}/payment/capture-order`,
     getTransactionHistory: `${API_BASE_URL}/payment/transactions`,
   },
+
+  knowledge: {
+    create: `${API_BASE_URL}/knowledge/upload`,
+    list: `${API_BASE_URL}/knowledge/list`,
+    getById: (id: string) => `${API_BASE_URL}/knowledge/${id}`,
+    update: `${API_BASE_URL}/knowledge/update`,
+    delete: (id: string) => `${API_BASE_URL}/knowledge/${id}`,
+  },
 };
