@@ -2075,3 +2075,138 @@ export const resetPassword = async (email: string, new_password: string) => {
   });
   return res.json();
 };
+
+// ========== GIFTCODE API ==========
+
+export interface Giftcode {
+  code: string;
+  credit: number;
+  quantity?: number;
+  expired_at: string;
+  created_at?: string;
+  updated_at?: string;
+  used_by?: string[];
+}
+
+export interface GiftcodeResponse {
+  data: Giftcode | null;
+  status: number;
+}
+
+// 1. Tạo giftcode mới (admin)
+export const createGiftcode = async (giftcodeData: {
+  code: string;
+  credit: number;
+  quantity?: number;
+  expired_at: string;
+}): Promise<{ data: Giftcode }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(`${API_BASE_URL}/admin/giftcode`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(giftcodeData),
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+// 2. Lấy danh sách tất cả giftcode (admin)
+export const getAllGiftcodes = async (): Promise<{ data: Giftcode[] }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(`${API_BASE_URL}/admin/giftcode`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+// 3. Xem chi tiết 1 giftcode (admin)
+export const getGiftcodeDetail = async (
+  code: string
+): Promise<{ data: Giftcode }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(
+    `${API_BASE_URL}/admin/giftcode/${encodeURIComponent(code)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+// 4. Cập nhật giftcode (admin)
+export const updateGiftcode = async (
+  code: string,
+  data: { credit?: number; quantity?: number; expired_at?: string }
+): Promise<{ data: Giftcode }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(
+    `${API_BASE_URL}/admin/giftcode/${encodeURIComponent(code)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    }
+  );
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+// 5. Xoá giftcode (admin)
+export const deleteGiftcode = async (
+  code: string
+): Promise<{ success: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(
+    `${API_BASE_URL}/admin/giftcode/${encodeURIComponent(code)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) await handleApiError(res);
+  return { success: res.ok };
+};
+
+// 6. User nhập giftcode để nhận credit
+export const redeemGiftcode = async (
+  code: string
+): Promise<{ message: string; credit?: number; success?: boolean }> => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+  const res = await fetch(`${API_BASE_URL}/giftcode/redeem`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) await handleApiError(res);
+  const data = await res.json();
+  return {
+    message: data.message,
+    credit: data.credit,
+    success: typeof data.success === "boolean" ? data.success : undefined,
+  };
+};

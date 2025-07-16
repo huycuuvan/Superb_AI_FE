@@ -15,7 +15,8 @@ import {
   Calendar,
   MessageSquare,
   Clock,
-  Trash
+  Trash,
+  Gift
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import './Sidebar.css';
@@ -109,7 +110,8 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
     { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
-      { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' }
+      { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' },
+      { icon: Gift, label: 'Giftcode', path: '/dashboard/giftcodes' },
     ] : []),
     {
       label: 'Credential',

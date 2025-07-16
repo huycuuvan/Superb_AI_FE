@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, Share2, Loader2, Coins } from "lucide-react";
+import { Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, Share2, Loader2, Coins, Gift } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -50,6 +50,7 @@ import './Header.css'; // <<<< Import file CSS mới
 import { LanguageToggle } from "../LanguageToggle";
 import { ThemeToggle } from "../ThemeToggle";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
+import RedeemGiftcodeDialog from "@/components/RedeemGiftcodeDialog";
 
 interface DetailedInvitation extends Invitation {
   WorkspaceName?: string;
@@ -61,7 +62,7 @@ const Header = React.memo(() => {
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { workspace } = useSelectedWorkspace();
@@ -84,6 +85,7 @@ const Header = React.memo(() => {
   const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
   const [memberToRemoveId, setMemberToRemoveId] = useState<string | null>(null);
   const [showCreditPurchase, setShowCreditPurchase] = useState(false);
+  const [showGiftcodeModal, setShowGiftcodeModal] = useState(false);
   const workspaceIdForMembers = workspace?.id || null;
 
   const {
@@ -469,6 +471,21 @@ const Header = React.memo(() => {
               {user?.credit ?? 0}
             </span>
           </div>
+
+          {/* Giftcode Button */}
+          <Button variant="outline" size="icon" onClick={() => setShowGiftcodeModal(true)}>
+            <Gift className="h-5 w-5" /> 
+          </Button>
+          <RedeemGiftcodeDialog
+            open={showGiftcodeModal}
+            onClose={() => setShowGiftcodeModal(false)}
+            onSuccess={(credit) => {
+              if (user && typeof credit === 'number') {
+                updateUser({ ...user, credit: (user.credit ?? 0) + credit });
+              }
+              setShowGiftcodeModal(false);
+            }}
+          />
 
           {/* Language Toggle */}
           <LanguageToggle />

@@ -45,6 +45,7 @@ import ScheduledTasksPage from '@/pages/ScheduledTasks';
 import { PayPalCallback } from '@/components/PayPalCallback';
 import KnowledgeDetailPage from '@/pages/KnowledgeDetail';
 import ForgotPassword from '@/pages/ForgotPassword';
+import GiftcodesPage from '@/pages/admin/Giftcodes';
 
 const routes: RouteObject[] = [
   {
@@ -148,6 +149,10 @@ const routes: RouteObject[] = [
         path: 'scheduled-tasks',
         element: <ScheduledTasksPage />,
       },
+      {
+        path: 'giftcodes',
+        element: <GiftcodesPage />,
+      },
     ],
   },
   {
@@ -218,6 +223,7 @@ const routes: RouteObject[] = [
         path: 'agent-configs',
         element: <AdminAgentConfigs />,
       },
+      
     ],
   },
   {

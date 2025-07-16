@@ -59,7 +59,7 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
           <div
             className={
               "rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3 space-y-2 " +
-              (isExpanded ? "max-h-96" : "max-h-48") +
+              (isExpanded ? "max-h-96" : "max-h-[30rem]") +
               " overflow-y-auto no-scrollbar"
             }
           >
@@ -68,6 +68,7 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
                 <BrainCircuit className="w-4 h-4 mr-1" style={{ marginTop: 2 }} />
                 {t('agent_chat.log_agent_thinking')}
               </span>
+             
               <button
                 type="button"
                 onClick={handleToggleExpand}
@@ -87,6 +88,23 @@ export const AgentTypingIndicator = memo(({ agentName, agentAvatar, subflowLogs 
                 {t('agent_chat.show_all_steps', { count: subflowLogs.length })}
               </div>
             )}
+            {/* Hiệu ứng ba chấm nhảy nếu log cuối chưa phải kết quả */}
+            {(() => {
+              const latestLog = subflowLogs[subflowLogs.length - 1];
+              const content = latestLog?.content?.toLowerCase() || '';
+              // Có thể tùy chỉnh thêm các từ khóa kết thúc
+              const isDone = ['done', 'success', 'hoàn thành', 'kết thúc', 'thành công', 'completed', 'finish'].some(k => content.includes(k));
+              if (!isDone) {
+                return (
+                  <div className="flex items-center space-x-1 mt-1 ml-6" aria-label="Agent is typing">
+                    <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"></span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       );

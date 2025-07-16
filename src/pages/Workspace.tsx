@@ -244,7 +244,7 @@ const WorkspacePage = () => {
                     onChange={e => setName(e.target.value)} 
                     required 
                     disabled={loading}
-                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-white placeholder:text-zinc-400 rounded-md"
+                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-background text-foreground placeholder:text-muted-foreground rounded-md"
                   />
                 </div>
                 <div className="w-full space-y-1.5">
@@ -254,7 +254,7 @@ const WorkspacePage = () => {
                     value={description} 
                     onChange={e => setDescription(e.target.value)}
                     disabled={loading}
-                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-white text-zinc-400 placeholder:text-zinc-400 rounded-md"
+                    className="border-zinc-200 focus:border-primary focus:ring-1 focus:ring-primary/60 text-base py-2.5 px-3.5 bg-background text-foreground placeholder:text-muted-foreground rounded-md"
                   />
                 </div>
                 <Button 

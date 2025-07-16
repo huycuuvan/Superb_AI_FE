@@ -1645,7 +1645,7 @@ const handleSubmitTaskInputs = async () => {
                       >
                         {/* Log subflow nếu có */}
                         {msg.sender === 'agent' && !msg.isStreaming && Array.isArray(logArrs) && logArrs.length > 0 ? (
-                          <div className="border border-blue-400 dark:border-blue-700 rounded-2xl shadow-md p-2 mb-2 bg-blue-50 dark:bg-blue-900/20 max-h-48 overflow-y-auto no-scrollbar">
+                          <div className="border border-blue-400 dark:border-blue-700 rounded-2xl shadow-md p-2 mb-2 bg-blue-50 dark:bg-blue-900/20 max-h-[30rem] overflow-y-auto no-scrollbar">
                             <LogAgentThinking logs={logArrs} />
                           </div>
                         ) : (

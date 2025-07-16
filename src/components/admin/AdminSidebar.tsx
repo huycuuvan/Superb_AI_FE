@@ -93,6 +93,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
       icon: Settings2
     },
     {
+      title: "Giftcode",
+      description: "Quản lý giftcode",
+      href: "/admin/giftcodes",
+      icon: Settings2 // TODO: Đổi thành icon Gift nếu có
+    },
+    {
       title: "Analytics",
       description: "Phân tích",
       href: "/admin/analytics",
