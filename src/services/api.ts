@@ -1302,7 +1302,11 @@ export const uploadMessageWithFiles = async (
   const formData = new FormData();
   formData.append("message_content", messageContent);
   files.forEach((file) => {
-    formData.append("images", file);
+    if (file.type.startsWith("image/")) {
+      formData.append("images", file);
+    } else {
+      formData.append("files", file);
+    }
   });
   formData.append("optimistic_id", optimisticId);
   const response = await fetch(
@@ -2211,4 +2215,35 @@ export const redeemGiftcode = async (
     credit: data.credit,
     success: typeof data.success === "boolean" ? data.success : undefined,
   };
+};
+
+export const saveAgentPlan = async (payload: {
+  agent_role: string;
+  sessionId: string;
+  user_id: string;
+  parent_message_id: string;
+  thread_id: string;
+  agent_tool_calling?: string;
+  agent_tool_executing?: string;
+  subflow_id?: string;
+  sender_id: string;
+  receiver_id: string;
+  workspace_id: string;
+  agent_id: string;
+  is_save_plan: string;
+  content: string;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/agents/save-plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    await handleApiError(res);
+  }
+  return res.json();
 };

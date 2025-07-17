@@ -23,6 +23,7 @@ interface ChatMessageContentProps {
   stream: boolean;
   timestamp?: string;
   images?: string[];
+  onSavePlan?: () => void; // Thêm prop callback
 }
 
 const STREAMING_SPEED = 15;
@@ -181,7 +182,7 @@ function renderJsonAsTable(data: any): JSX.Element {
 }
 
 // --- COMPONENT CHÍNH ĐÃ ĐƯỢC SỬA LỖI ---
-export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp, images }: ChatMessageContentProps) => {
+export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp, images, onSavePlan }: ChatMessageContentProps) => {
 
   // FIX: State `animatedContent` chỉ dùng cho hiệu ứng animation.
   // Nếu không stream, nó sẽ bằng `content` ngay lập tức.
@@ -404,10 +405,30 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp, i
     </div>
   );
 
+  const [saved, setSaved] = useState(false);
+  const handleSave = async () => {
+    if (onSavePlan) {
+      await onSavePlan();
+      setSaved(true);
+    }
+  };
+
   return (
     <div className="relative pt-2">
       <div className={containerClassName}>
         {renderContent()}
+        {/* Nút lưu kế hoạch/câu trả lời cho agent */}
+        {isAgent && onSavePlan && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-2"
+            onClick={handleSave}
+            disabled={saved}
+          >
+            {saved ? 'Đã lưu câu trả lời' : 'Lưu kế hoạch/câu trả lời'}
+          </Button>
+        )}
       </div>
       {/* Timestamp và Toggle Button không thay đổi */}
       {isLongMessage && ( <ToggleButton isExpanded={isExpanded} /> )}

@@ -130,7 +130,7 @@ export interface ApiMessage {
   updated_at: string;
   parent_message_id?: string; // For replies
   image_urls?: string[];
-  file_url?: string;
+  file_urls?: string[];
 }
 
 export interface ChatTask {
@@ -148,6 +148,7 @@ export interface ChatMessage {
   agentId?: string;
   image_urls?: string[];
   file_url?: string;
+  file_urls?: string[];
   isStreaming?: boolean;
   parent_message_id?: string;
 }

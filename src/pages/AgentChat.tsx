@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFiles, getCredentials, deleteThread, getSubflowLogPairs, listKnowledge } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFiles, getCredentials, deleteThread, getSubflowLogPairs, listKnowledge, saveAgentPlan } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -260,8 +260,8 @@ const AgentChat = () => {
                 sender: msgData.sender_type,
                 timestamp: msgData.created_at,
                 agentId: msgData.sender_agent_id,
-                image_urls: msgData.image_urls, // giữ lại trường này
-                file_url: msgData.file_url,
+                image_urls: msgData.image_urls,
+                ...(msgData.file_urls ? { file_urls: msgData.file_urls } : {}), // chỉ gán nếu có
                 isStreaming: false
               };
       
@@ -317,8 +317,8 @@ const AgentChat = () => {
                   sender: msgData.sender_type,
                   timestamp: msgData.created_at || receivedData.timestamp,
                   agentId: msgData.sender_user_id,
-                  image_urls: msgData.image_urls, // giữ lại trường này
-                  file_url: msgData.file_url,
+                  image_urls: msgData.image_urls,
+                  ...(msgData.file_urls ? { file_urls: msgData.file_urls } : {}), // <--- thêm dòng này
                   isStreaming: msgData.sender_type === 'agent',
                   parent_message_id: msgData.parent_message_id,
                 };
@@ -554,8 +554,8 @@ const AgentChat = () => {
                   sender: msg.sender_type,
                   timestamp: msg.created_at,
                   agentId: msg.sender_agent_id,
-                  image_urls: (msg as any).image_urls, // ép kiểu để tránh lỗi type
-                  file_url: msg.file_url,
+                  image_urls: msg.image_urls,
+                  ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
                   parent_message_id: msg.parent_message_id,
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
@@ -567,8 +567,7 @@ const AgentChat = () => {
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
                   agentId: agentData.data.id,
-                  // Không truyền image_urls ở đây
-                  file_url: agentData.data.file_url,
+                  image_urls: agentData.data.image_urls,
                 };
                 initialMessages.push(welcomeMessage);
               }
@@ -582,8 +581,7 @@ const AgentChat = () => {
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
                   agentId: agentData.data.id,
-                  // Không truyền image_urls ở đây
-                  file_url: agentData.data.file_url,
+                  image_urls: agentData.data.image_urls,
                 };
                 initialMessages = [welcomeMessage];
               }
@@ -673,7 +671,9 @@ const AgentChat = () => {
         setIsAgentThinking(true);
         uploadMessageWithFiles(threadIdToSend, messageToSend, filesToSend, optimisticId)
           .catch(error => {
-            console.error('Error sending message with files:', error);
+            setUploadedFiles([]);
+            setFilePreviews([]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             toast({ variant: "destructive", title: "Lỗi", description: "Gửi file thất bại." });
             setMessages(prev => prev.filter(m => m.id !== optimisticId));
           })
@@ -765,8 +765,8 @@ const AgentChat = () => {
           sender: msg.sender_type,
           timestamp: msg.created_at,
           agentId: msg.sender_agent_id,
-          image_urls: (msg as any).image_urls, // ép kiểu để tránh lỗi type
-          file_url: msg.file_url,
+          image_urls: msg.image_urls,
+          ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
           parent_message_id: msg.parent_message_id,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
@@ -780,7 +780,7 @@ const AgentChat = () => {
           sender: 'agent',
           timestamp: new Date().toISOString(),
           agentId: currentAgent.id,
-          // Không truyền image_urls ở đây
+          image_urls: currentAgent.image_urls,
           file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
@@ -929,9 +929,9 @@ const handleSubmitTaskInputs = async () => {
           sender: msg.sender_type,
           timestamp: msg.created_at,
           agentId: msg.sender_agent_id,
-          image_urls: msg.image_urls, // giữ lại trường này
-          file_url: msg.file_url,
-          parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
+          image_urls: msg.image_urls,
+          ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
+          parent_message_id: msg.parent_message_id,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Update the state with messages from the clicked thread
@@ -942,8 +942,7 @@ const handleSubmitTaskInputs = async () => {
           sender: 'agent',
           timestamp: new Date().toISOString(),
           agentId: currentAgent.id,
-          image_urls: currentAgent.image_urls, // giữ lại trường này
-          file_url: currentAgent.file_url,
+          image_urls: currentAgent.image_urls,
         };
         setMessages([welcomeMessage]);
       } else {
@@ -1291,6 +1290,30 @@ const handleSubmitTaskInputs = async () => {
     fetchKnowledge();
     setSelectedKnowledgeId(null); // Reset khi đổi agent
   }, [currentAgent?.id, workspace?.id]);
+
+  const handleSavePlan = async (msg: ChatMessage) => {
+    try {
+      await saveAgentPlan({
+        agent_role: currentAgent?.role_description || '',
+        sessionId: currentThread || '',
+        user_id: user?.id || '',
+        parent_message_id: msg.parent_message_id || '',
+        thread_id: currentThread || '',
+        agent_tool_calling: '',
+        agent_tool_executing: '',
+        subflow_id: '',
+        sender_id: 'exa',
+        receiver_id: 'danma',
+        workspace_id: workspace?.id || '',
+        agent_id: currentAgent?.id || '',
+        is_save_plan: 'true',
+        content: msg.content || '',
+      });
+      toast({ title: 'Đã lưu kế hoạch/câu trả lời thành công', variant: 'default' });
+    } catch (err: any) {
+      toast({ title: 'Lưu kế hoạch/câu trả lời thất bại', description: err?.message || String(err), variant: 'destructive' });
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
@@ -1687,11 +1710,12 @@ const handleSubmitTaskInputs = async () => {
       isAgent={true}
       stream={msg.isStreaming ?? false}
       images={msg.image_urls}
+      onSavePlan={() => handleSavePlan(msg)}
     />
   );
 })()}
                         
-                        {(msg.image_urls || msg.file_url) && (
+                        {(msg.image_urls || msg.file_urls || msg.file_url) && (
                           <div className="mt-2">
                             {msg.image_urls ? (
                               // Hiển thị ảnh
@@ -1704,6 +1728,34 @@ const handleSubmitTaskInputs = async () => {
                                     className="max-w-xs rounded-lg"
                                   />
                                 ))}
+                              </div>
+                            ) : msg.file_urls && Array.isArray(msg.file_urls) ? (
+                              // Hiển thị nhiều file
+                              <div className="flex flex-row gap-2 mt-2 overflow-x-auto max-w-full">
+                                {msg.file_urls.map((url, index) => {
+                                  const fileName = getFileName(url);
+                                  const fileType = getFileTypeLabel(fileName);
+                                  return (
+                                    <a
+                                      key={index}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block w-32 min-w-0"
+                                      style={{ textDecoration: 'none' }}
+                                    >
+                                      <div className="flex flex-col items-center p-2 bg-background/80 rounded-lg border border-border shadow-sm hover:border-primary transition">
+                                        <div className="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center mb-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </div>
+                                        <div className="text-xs font-semibold truncate w-full text-center">{fileName}</div>
+                                        <div className="text-[10px] text-muted-foreground text-center">{fileType}</div>
+                                      </div>
+                                    </a>
+                                  );
+                                })}
                               </div>
                             ) : msg.file_url ? (
                               (() => {
@@ -1767,7 +1819,39 @@ const handleSubmitTaskInputs = async () => {
                         stream={msg.isStreaming ?? false}
                         images={Array.isArray(msg.image_urls) ? msg.image_urls : undefined}
                       />
-                   
+                      {/* Hiển thị file đã upload nếu có */}
+                      {(msg.file_urls && Array.isArray(msg.file_urls)) && (
+                        <div className="mt-2 flex flex-col gap-2">
+                          {msg.file_urls.map((url, index) => {
+                            const fileName = getFileName(url);
+                            const fileType = getFileTypeLabel(fileName);
+                            return (
+                              <a
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block max-w-xs"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm hover:border-primary transition">
+                                  <div className="flex-shrink-0">
+                                    <div className="w-8 h-8 bg-pink-500 rounded-lg flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold truncate">{fileName}</div>
+                                    <div className="text-xs text-muted-foreground">{fileType}</div>
+                                  </div>
+                                </div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     {/* Avatar user bên phải */}
                     <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1">
@@ -1982,7 +2066,18 @@ const handleSubmitTaskInputs = async () => {
                               <div className="mb-2 relative flex gap-2 overflow-x-auto max-w-full">
                                 {filePreviews.map((preview, idx) => (
                                   <div key={idx} className="relative group flex-shrink-0">
-                                    <img src={preview.url} alt={preview.name} className="w-20 h-20 object-cover rounded-lg border" />
+                                    {preview.type.startsWith('image/') ? (
+                                      <img src={preview.url} alt={preview.name} className="w-20 h-20 object-cover rounded-lg border" />
+                                    ) : (
+                                      <div className="w-20 h-20 flex flex-col items-center justify-center bg-muted rounded-lg border p-2">
+                                        <div className="w-8 h-8 bg-pink-500 rounded-lg flex items-center justify-center mb-1">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </div>
+                                        <div className="text-xs text-center truncate max-w-[64px]">{preview.name}</div>
+                                      </div>
+                                    )}
                                     <Button size="icon" variant="destructive" className="h-6 w-6 p-0 rounded-full absolute top-1 right-1 opacity-80 group-hover:opacity-100" onClick={() => handleRemoveFile(idx)}>
                                       <X className="h-4 w-4" />
                                     </Button>
@@ -2120,7 +2215,7 @@ const handleSubmitTaskInputs = async () => {
       />
       <input
         type="file"
-        accept="image/*"
+        accept="*/*"
         multiple
         ref={fileInputRef}
         style={{ display: 'none' }}
