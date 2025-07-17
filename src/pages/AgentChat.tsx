@@ -17,7 +17,7 @@ import { History } from 'lucide-react'
 import { TaskHistory } from '@/components/chat/TaskHistory'; // Đảm bảo đường dẫn này đúng
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFile, getCredentials, deleteThread, getSubflowLogPairs, listKnowledge } from '@/services/api';
+import { getAgentById, createThread, getWorkspace, checkThreadExists, sendMessageToThread, getThreadMessages, getAgentTasks, executeTask, getThreads, getThreadById, getThreadByAgentId, getTaskRunsByThreadId, uploadMessageWithFiles, getCredentials, deleteThread, getSubflowLogPairs, listKnowledge } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
@@ -260,7 +260,7 @@ const AgentChat = () => {
                 sender: msgData.sender_type,
                 timestamp: msgData.created_at,
                 agentId: msgData.sender_agent_id,
-                image_url: msgData.image_url,
+                image_urls: msgData.image_urls, // giữ lại trường này
                 file_url: msgData.file_url,
                 isStreaming: false
               };
@@ -317,10 +317,10 @@ const AgentChat = () => {
                   sender: msgData.sender_type,
                   timestamp: msgData.created_at || receivedData.timestamp,
                   agentId: msgData.sender_user_id,
-                  image_url: msgData.image_url,
+                  image_urls: msgData.image_urls, // giữ lại trường này
                   file_url: msgData.file_url,
                   isStreaming: msgData.sender_type === 'agent',
-                  parent_message_id: msgData.parent_message_id, // Đảm bảo có parent_message_id
+                  parent_message_id: msgData.parent_message_id,
                 };
                 if (prevMessages.some(m => m.id === newChatMessage.id)) return prevMessages;
                 // GỌI LUÔN handleShowLog nếu có parent_message_id
@@ -476,8 +476,8 @@ const AgentChat = () => {
     setCredentials([]);
     setSelectedCredentialId('');
     setLoadingCredentials(false);
-    setUploadedFile(null);
-    setFilePreview(null);
+    setUploadedFiles([]);
+    setFilePreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (textareaRef.current) textareaRef.current.style.height = '40px';
     hasInitializedRef.current = false;
@@ -554,7 +554,7 @@ const AgentChat = () => {
                   sender: msg.sender_type,
                   timestamp: msg.created_at,
                   agentId: msg.sender_agent_id,
-                  image_url: msg.image_url,
+                  image_urls: (msg as any).image_urls, // ép kiểu để tránh lỗi type
                   file_url: msg.file_url,
                   parent_message_id: msg.parent_message_id,
               })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -567,7 +567,7 @@ const AgentChat = () => {
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
                   agentId: agentData.data.id,
-                  image_url: agentData.data.image_url,
+                  // Không truyền image_urls ở đây
                   file_url: agentData.data.file_url,
                 };
                 initialMessages.push(welcomeMessage);
@@ -582,7 +582,7 @@ const AgentChat = () => {
                   sender: 'agent',
                   timestamp: new Date().toISOString(),
                   agentId: agentData.data.id,
-                  image_url: agentData.data.image_url,
+                  // Không truyền image_urls ở đây
                   file_url: agentData.data.file_url,
                 };
                 initialMessages = [welcomeMessage];
@@ -643,73 +643,57 @@ const AgentChat = () => {
   }, [isLoading]); // Chạy lại khi trạng thái loading thay đổi
   const handleSendMessage = () => {
     if (isCreditError) return;
-    // Cho phép gửi nếu có text hoặc có file
-    if ((message.trim() || uploadedFile) && currentThread) {
+    if ((message.trim() || uploadedFiles.length > 0) && currentThread) {
       setIsSending(true);
-  
-      // Tạo ID tạm thời duy nhất
       const optimisticId = `optimistic-${Date.now()}`;
-      
       // Tạo tin nhắn tạm thời để hiển thị ngay
       const optimisticMessage: ChatMessage = {
         id: optimisticId,
         content: message,
         sender: 'user',
         timestamp: new Date().toISOString(),
-        file_url: filePreview?.url || undefined,
-        image_url: filePreview?.url || undefined,
-      };
-  
-      // Cập nhật UI ngay lập tức
+        // Sửa lại: chỉ preview nhiều ảnh nếu ChatMessage cho phép, nếu không thì bỏ qua
+        // images: filePreviews.map(f => f.url),
+      } as any;
+      // Nếu muốn preview nhiều ảnh, có thể thêm thuộc tính images (hoặc sửa lại UI hiển thị)
+      (optimisticMessage as any).images = filePreviews.map(f => f.url);
       setMessages(prevMessages => [...prevMessages, optimisticMessage]);
-  
-      // Lưu lại dữ liệu để gửi đi
       const messageToSend = message;
-      const fileToSend = uploadedFile;
+      const filesToSend = uploadedFiles;
       const threadIdToSend = currentThread;
-  
-      // Xóa input
       setMessage('');
-      setUploadedFile(null);
-      setFilePreview(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      // Reset chiều cao textarea về mặc định (ví dụ 40px)
+      setUploadedFiles([]);
+      setFilePreviews([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       if (textareaRef.current) {
         textareaRef.current.style.height = '40px';
         textareaRef.current.focus();
       }
-      
-      // Gửi dữ liệu trong nền
-      if (fileToSend) { // Trường hợp có file
+      if (filesToSend.length > 0) {
         setIsAgentThinking(true);
-        uploadMessageWithFile(threadIdToSend, messageToSend, fileToSend, optimisticId)
+        uploadMessageWithFiles(threadIdToSend, messageToSend, filesToSend, optimisticId)
           .catch(error => {
-            console.error('Error sending message with file:', error);
+            console.error('Error sending message with files:', error);
             toast({ variant: "destructive", title: "Lỗi", description: "Gửi file thất bại." });
             setMessages(prev => prev.filter(m => m.id !== optimisticId));
           })
           .finally(() => {
             setIsSending(false);
           });
-      } else { // Trường hợp chỉ có text
-        
-        // ===== ĐIỂM SỬA QUAN TRỌNG CHO CLIENT =====
+      } else {
+        // Gửi text như cũ
         const messageToSendObj = {
           type: "chat",
           thread_id: threadIdToSend,
           content: messageToSend,
           sender_type: "user",
           sender_user_id: user?.id,
-          message_id: optimisticId, // <-- THÊM DÒNG NÀY ĐỂ GỬI ID TẠM THỜI
+          message_id: optimisticId,
         };
-        // ===========================================
-  
         ws.current?.send(JSON.stringify(messageToSendObj));
         setIsSending(false); 
         setIsAgentThinking(true);
-        setSubflowLogs([]); // Reset subflow logs khi bắt đầu chat mới
+        setSubflowLogs([]);
       }
     }
   };
@@ -781,9 +765,9 @@ const AgentChat = () => {
           sender: msg.sender_type,
           timestamp: msg.created_at,
           agentId: msg.sender_agent_id,
-          image_url: msg.image_url,
+          image_urls: (msg as any).image_urls, // ép kiểu để tránh lỗi type
           file_url: msg.file_url,
-          parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
+          parent_message_id: msg.parent_message_id,
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setMessages(initialMessages); // Sử dụng messages từ backend
@@ -796,7 +780,7 @@ const AgentChat = () => {
           sender: 'agent',
           timestamp: new Date().toISOString(),
           agentId: currentAgent.id,
-          image_url: currentAgent.image_url,
+          // Không truyền image_urls ở đây
           file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
@@ -945,7 +929,7 @@ const handleSubmitTaskInputs = async () => {
           sender: msg.sender_type,
           timestamp: msg.created_at,
           agentId: msg.sender_agent_id,
-          image_url: msg.image_url,
+          image_urls: msg.image_urls, // giữ lại trường này
           file_url: msg.file_url,
           parent_message_id: msg.parent_message_id, // BỔ SUNG DÒNG NÀY
       })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -958,7 +942,7 @@ const handleSubmitTaskInputs = async () => {
           sender: 'agent',
           timestamp: new Date().toISOString(),
           agentId: currentAgent.id,
-          image_url: currentAgent.image_url,
+          image_urls: currentAgent.image_urls, // giữ lại trường này
           file_url: currentAgent.file_url,
         };
         setMessages([welcomeMessage]);
@@ -1076,65 +1060,72 @@ const handleSubmitTaskInputs = async () => {
     }
   };
 
-  const [filePreview, setFilePreview] = useState<{url: string; type: string; name: string; size: string} | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<{ url: string; type: string; name: string; size: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    const validFiles: File[] = [];
+    const previews: { url: string; type: string; name: string; size: string }[] = [];
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           variant: "destructive",
           title: "File quá lớn",
-          description: "Vui lòng chọn file có dung lượng nhỏ hơn 10MB.",
+          description: `File ${file.name} vượt quá 10MB, vui lòng chọn file nhỏ hơn.`,
         });
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        return;
+        continue;
       }
-      setUploadedFile(file);
+      validFiles.push(file);
       const fileSize = file.size < 1024 * 1024 
         ? `${(file.size / 1024).toFixed(1)} KB` 
         : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-      
-      setFilePreview({
+      previews.push({
         url: URL.createObjectURL(file),
         type: file.type,
         name: file.name,
         size: fileSize
       });
     }
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+    setFilePreviews(prev => [...prev, ...previews]);
+  };
+
+  const handleRemoveFile = (idx: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
+    setFilePreviews(prev => prev.filter((_, i) => i !== idx));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData.items;
+    const newFiles: File[] = [];
+    const newPreviews: { url: string; type: string; name: string; size: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file') {
         const file = item.getAsFile();
         if (file) {
-          setUploadedFile(file);
+          if (file.size > 10 * 1024 * 1024) continue;
+          newFiles.push(file);
           const fileSize = file.size < 1024 * 1024 
             ? `${(file.size / 1024).toFixed(1)} KB` 
             : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-          
-          setFilePreview({
+          newPreviews.push({
             url: URL.createObjectURL(file),
             type: file.type,
             name: file.name,
             size: fileSize
           });
-          e.preventDefault();
-          break;
         }
       }
     }
-  };
-
-  const handleRemoveFile = () => {
-    setUploadedFile(null);
-    setFilePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (newFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      setFilePreviews(prev => [...prev, ...newPreviews]);
+      e.preventDefault();
+    }
   };
 
   useEffect(() => {
@@ -1695,19 +1686,25 @@ const handleSubmitTaskInputs = async () => {
       content={msg.content}
       isAgent={true}
       stream={msg.isStreaming ?? false}
+      images={msg.image_urls}
     />
   );
 })()}
                         
-                        {(msg.image_url || msg.file_url) && (
+                        {(msg.image_urls || msg.file_url) && (
                           <div className="mt-2">
-                            {msg.image_url ? (
+                            {msg.image_urls ? (
                               // Hiển thị ảnh
-                              <img
-                                src={msg.image_url}
-                                alt="uploaded image"
-                                className="max-w-xs rounded-lg"
-                              />
+                              <div className="flex flex-wrap gap-2">
+                                {msg.image_urls.map((url, index) => (
+                                  <img
+                                    key={index}
+                                    src={url}
+                                    alt="uploaded image"
+                                    className="max-w-xs rounded-lg"
+                                  />
+                                ))}
+                              </div>
                             ) : msg.file_url ? (
                               (() => {
                                 const fileName = getFileName(msg.file_url);
@@ -1768,48 +1765,9 @@ const handleSubmitTaskInputs = async () => {
                         content={msg.content}
                         isAgent={false}
                         stream={msg.isStreaming ?? false}
+                        images={Array.isArray(msg.image_urls) ? msg.image_urls : undefined}
                       />
-                      {(msg.image_url || msg.file_url) && (
-                        <div className="mt-2">
-                          {msg.image_url ? (
-                            // Hiển thị ảnh
-                            <img
-                              src={msg.image_url}
-                              alt="uploaded image"
-                              className="max-w-xs rounded-lg"
-                            />
-                          ) : msg.file_url ? (
-                            (() => {
-                              const fileName = getFileName(msg.file_url);
-                              const fileType = getFileTypeLabel(fileName);
-                              return (
-                                <a
-                                  href={msg.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block max-w-xs"
-                                  style={{ textDecoration: 'none' }}
-                                >
-                                  <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm hover:border-primary transition">
-                                    <div className="flex-shrink-0">
-                                      {/* Icon document màu hồng */}
-                                      <div className="w-8 h-8 bg-pink-500 rounded-lg flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
-                                        </svg>
-                                      </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold truncate">{fileName}</div>
-                                      <div className="text-xs text-muted-foreground">{fileType}</div>
-                                    </div>
-                                  </div>
-                                </a>
-                              );
-                            })()
-                          ) : null}
-                        </div>
-                      )}
+                   
                     </div>
                     {/* Avatar user bên phải */}
                     <Avatar className="h-9 w-9 flex-shrink-0 self-start mt-1">
@@ -2020,34 +1978,16 @@ const handleSubmitTaskInputs = async () => {
                     <div className="w-full max-w-4xl mx-auto">
                         <div className="relative">
                             {/* Preview file phía trên input chat */}
-                            {filePreview && (
-                              <div className="mb-2 relative max-w-xs">
-                                {filePreview.type.startsWith('image/') ? (
-                                  <div className="relative w-24 h-24">
-                                    <img src={filePreview.url} alt="preview" className="rounded-lg object-cover w-full h-full" />
-                                    <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full" onClick={handleRemoveFile}>
+                            {filePreviews.length > 0 && (
+                              <div className="mb-2 relative flex gap-2 overflow-x-auto max-w-full">
+                                {filePreviews.map((preview, idx) => (
+                                  <div key={idx} className="relative group flex-shrink-0">
+                                    <img src={preview.url} alt={preview.name} className="w-20 h-20 object-cover rounded-lg border" />
+                                    <Button size="icon" variant="destructive" className="h-6 w-6 p-0 rounded-full absolute top-1 right-1 opacity-80 group-hover:opacity-100" onClick={() => handleRemoveFile(idx)}>
                                       <X className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                ) : (
-                                  (() => {
-                                    const { color, label } = getFileIconProps(filePreview.name);
-                                    return (
-                                      <div className="flex items-center gap-2 p-2 bg-background/80 rounded-lg border border-border shadow-sm">
-                                        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center`}>
-                                          <span className="text-white text-xs font-bold">{label}</span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-sm font-semibold truncate">{filePreview.name}</div>
-                                          <div className="text-xs text-muted-foreground">{filePreview.size}</div>
-                                        </div>
-                                        <Button size="icon" variant="destructive" className="h-6 w-6 p-0 rounded-full flex-shrink-0" onClick={handleRemoveFile}>
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    );
-                                  })()
-                                )}
+                                ))}
                               </div>
                             )}
                             <div className="flex items-end relative">
@@ -2180,7 +2120,8 @@ const handleSubmitTaskInputs = async () => {
       />
       <input
         type="file"
-        accept="*/*"
+        accept="image/*"
+        multiple
         ref={fileInputRef}
         style={{ display: 'none' }}
         onChange={handleFileChange}

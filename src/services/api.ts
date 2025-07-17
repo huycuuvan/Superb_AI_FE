@@ -1289,11 +1289,11 @@ export const clearAgentThreadHistory = async (
   return res.json();
 };
 
-// Gửi message kèm file lên thread
-export const uploadMessageWithFile = async (
+// Gửi message kèm nhiều file lên thread
+export const uploadMessageWithFiles = async (
   threadId: string,
   messageContent: string,
-  file: File,
+  files: File[],
   optimisticId: string
 ): Promise<{ data: any }> => {
   const token = localStorage.getItem("token");
@@ -1301,7 +1301,9 @@ export const uploadMessageWithFile = async (
 
   const formData = new FormData();
   formData.append("message_content", messageContent);
-  formData.append("image", file);
+  files.forEach((file) => {
+    formData.append("images", file);
+  });
   formData.append("optimistic_id", optimisticId);
   const response = await fetch(
     `${API_BASE_URL}/threads/${threadId}/messages/upload`,

@@ -22,6 +22,7 @@ interface ChatMessageContentProps {
   isAgent: boolean;
   stream: boolean;
   timestamp?: string;
+  images?: string[];
 }
 
 const STREAMING_SPEED = 15;
@@ -180,7 +181,7 @@ function renderJsonAsTable(data: any): JSX.Element {
 }
 
 // --- COMPONENT CHÍNH ĐÃ ĐƯỢC SỬA LỖI ---
-export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }: ChatMessageContentProps) => {
+export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp, images }: ChatMessageContentProps) => {
 
   // FIX: State `animatedContent` chỉ dùng cho hiệu ứng animation.
   // Nếu không stream, nó sẽ bằng `content` ngay lập tức.
@@ -253,6 +254,33 @@ export const ChatMessageContent = memo(({ content, isAgent, stream, timestamp }:
 
   // --- FIX: Logic render nội dung được tối ưu ---
   const renderContent = () => {
+    // Nếu có images là mảng, render tất cả ảnh phía trên nội dung
+    if (images && Array.isArray(images) && images.length > 0) {
+      if (images.length === 1) {
+        // 1 ảnh: giữ layout cũ
+        return (
+          <div className="space-y-2 mb-2">
+            <img src={images[0]} alt="img-0" className="max-w-xs rounded shadow mx-auto my-2" style={{ maxHeight: 180 }} />
+            {renderContentOrigin()}
+          </div>
+        );
+      }
+      // Nhiều ảnh: xếp hàng ngang, ảnh nhỏ lại
+      return (
+        <div className="space-y-2 mb-2">
+          <div className="flex flex-row gap-2 overflow-x-auto pb-2">
+            {images.map((img, idx) => (
+              <img key={idx} src={img} alt={`img-${idx}`} className="w-24 h-24 object-cover rounded shadow flex-shrink-0" />
+            ))}
+          </div>
+          {renderContentOrigin()}
+        </div>
+      );
+    }
+    return renderContentOrigin();
+  };
+  // Hàm gốc để render nội dung chat như cũ
+  const renderContentOrigin = () => {
     // 1. Kiểm tra Video và Ảnh
     const contentLines = content.trim().split('\n');
     const isPotentiallyVideo = contentLines.some(line => isVideoUrl(line));

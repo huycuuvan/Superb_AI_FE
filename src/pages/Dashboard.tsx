@@ -174,8 +174,8 @@ const Dashboard = () => {
         <Badge
           variant={isAllAgents ? 'filteractive' : 'outline'}
           className={cn(
-            "cursor-pointer transition-all ease-in-out transform hover:scale-105",
-            isAllAgents ? "" : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+            "cursor-pointer transition-all ease-in-out transform hover:scale-105 glossy-black-card rounded-2xl shadow-md",
+            isAllAgents ? "bg-primary text-foreground scale-110" : "bg-background text-foreground hover:bg-primary hover:text-foreground"
           )}
           onClick={() => { setSelectedFolderId('all'); setPage(1); }}
         >
@@ -185,8 +185,8 @@ const Dashboard = () => {
           <Badge
             variant={selectedFolderId === folder.id ? 'filteractive' : 'outline'}
             className={cn(
-              "cursor-pointer transition-all ease-in-out transform hover:scale-105",
-              selectedFolderId === folder.id ? "" : "bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+              "cursor-pointer transition-all ease-in-out transform hover:scale-105 glossy-black-card rounded-2xl shadow-md",
+              selectedFolderId === folder.id ? "bg-primary text-foreground scale-110" : "bg-background text-foreground hover:bg-primary hover:text-foreground"
             )}
             onClick={() => { setSelectedFolderId(folder.id); setPage(1); }}
           >

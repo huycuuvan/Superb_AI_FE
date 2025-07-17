@@ -42,7 +42,7 @@ export interface Agent {
   created_at: string;
   updated_at: string;
   folders: Folder[];
-  image_url?: string;
+  image_urls?: string[];
   file_url?: string;
   // Add new fields from BE
   running_count?: number;
@@ -129,7 +129,7 @@ export interface ApiMessage {
   created_at: string;
   updated_at: string;
   parent_message_id?: string; // For replies
-  image_url?: string;
+  image_urls?: string[];
   file_url?: string;
 }
 
@@ -146,7 +146,7 @@ export interface ChatMessage {
   sender: "user" | "agent";
   timestamp: string;
   agentId?: string;
-  image_url?: string;
+  image_urls?: string[];
   file_url?: string;
   isStreaming?: boolean;
   parent_message_id?: string;
