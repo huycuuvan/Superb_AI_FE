@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/hooks/useLanguage';
+import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const LanguageToggle = ({ className }: { className?: string }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
@@ -13,16 +13,29 @@ export const LanguageToggle = ({ className }: { className?: string }) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={className}>
-          {currentLanguage === 'en' ? 'EN' : 'VN'}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 px-0 hover:bg-accent hover:text-accent-foreground ${className}`}
+        >
+          {currentLanguage === "en" ? "EN" : "VN"}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => changeLanguage('en')}>
-          {t('english')}
+      <DropdownMenuContent
+        align="end"
+        className="bg-popover text-popover-foreground border border-border"
+      >
+        <DropdownMenuItem
+          onClick={() => changeLanguage("en")}
+          className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+        >
+          {t("english")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => changeLanguage('vi')}>
-          {t('vietnamese')}
+        <DropdownMenuItem
+          onClick={() => changeLanguage("vi")}
+          className="hover:bg-accent hover:text-accent-foreground cursor-pointer"
+        >
+          {t("vietnamese")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

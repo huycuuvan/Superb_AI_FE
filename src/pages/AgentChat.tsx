@@ -832,15 +832,36 @@ const AgentChat = () => {
           chatContainer.scrollTop -
           chatContainer.clientHeight <
         150;
-
-      if (isAtBottom || !isAgentThinking) {
-        // Sử dụng requestAnimationFrame để đợi DOM update xong rồi mới cuộn
+      if (isAtBottom) {
         requestAnimationFrame(() => {
-          scrollToBottom("auto"); // Cuộn ngay lập tức khi có tin nhắn mới
+          scrollToBottom("auto");
+        });
+      }
+      // Nếu không ở cuối, không cuộn
+    }
+  }, [messages, isAgentThinking]);
+
+  // --- Improved scroll behavior: allow user to scroll up during agent streaming ---
+  // Only auto-scroll if user is at bottom when a new message is added (not during streaming updates)
+  const prevMessagesLengthRef = useRef<number>(messages.length);
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    if (!chatContainer) return;
+    // Only auto-scroll if a new message is added (not just streaming update)
+    if (messages.length > prevMessagesLengthRef.current) {
+      const isAtBottom =
+        chatContainer.scrollHeight -
+          chatContainer.scrollTop -
+          chatContainer.clientHeight <
+        150;
+      if (isAtBottom) {
+        requestAnimationFrame(() => {
+          scrollToBottom("auto");
         });
       }
     }
-  }, [messages, isAgentThinking]);
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages]);
 
   useEffect(() => {
     if (!isLoading) {
