@@ -449,30 +449,41 @@ const AgentChat = () => {
                   setTimeout(() => {
                     import("@/utils/fakeStreaming").then(
                       ({ fakeStreamMessage }) => {
-                        fakeStreamMessage(
-                          msgData.message_content || msgData.content,
-                          (partial) => {
-                            setMessages((msgs) =>
-                              msgs.map((m) =>
-                                m.id === newChatMessage.id
-                                  ? { ...m, content: partial }
-                                  : m
-                              )
-                            );
-                          },
-                          () => {
-                            setMessages((msgs) =>
-                              msgs.map((m) =>
-                                m.id === newChatMessage.id
-                                  ? { ...m, isStreaming: false }
-                                  : m
-                              )
-                            );
-                          }
-                        );
+                                fakeStreamMessage(
+          msgData.message_content || msgData.content,
+          (partial) => {
+            // Sử dụng callback để tránh re-render không cần thiết
+            setMessages((msgs) => {
+              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
+              if (messageIndex === -1) return msgs;
+              
+              const updatedMessages = [...msgs];
+              updatedMessages[messageIndex] = {
+                ...updatedMessages[messageIndex],
+                content: partial
+              };
+              return updatedMessages;
+            });
+          },
+          () => {
+            setMessages((msgs) => {
+              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
+              if (messageIndex === -1) return msgs;
+              
+              const updatedMessages = [...msgs];
+              updatedMessages[messageIndex] = {
+                ...updatedMessages[messageIndex],
+                isStreaming: false
+              };
+              return updatedMessages;
+            });
+          },
+          5, // speed
+          'chunk' // mode: hiển thị theo từng đoạn để mượt hơn
+        );
                       }
                     );
-                  }, 100); // delay nhỏ để đảm bảo message đã được thêm vào state
+                  }, 10); // delay nhỏ để đảm bảo message đã được thêm vào state (giảm xuống 10ms)
                   return [...prevMessages, newChatMessage];
                 }
                 const newChatMessage: ChatMessage = {

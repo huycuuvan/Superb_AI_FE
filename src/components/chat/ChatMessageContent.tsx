@@ -30,7 +30,7 @@ interface ChatMessageContentProps {
   onSavePlan?: () => void; // Thêm prop callback
 }
 
-const STREAMING_SPEED = 15;
+const STREAMING_SPEED = 3; // Giảm xuống 3ms để mượt hơn
 
 // --- CÁC COMPONENT PHỤ (KHÔNG THAY ĐỔI) ---
 const CopyButton = ({
@@ -359,9 +359,7 @@ export const ChatMessageContent = memo(
       stream && isAgent ? "" : content
     );
 
-    // FIX: `useEffect` được viết lại hoàn toàn để ổn định hơn.
-    // Nó chỉ chạy lại khi `content`, `stream`, hoặc `isAgent` thay đổi.
-    // Nó không còn phụ thuộc vào state `animatedContent` của chính nó.
+    // Tối ưu hóa useEffect để tránh lag
     useEffect(() => {
       // Nếu không phải tin nhắn agent cần stream, hiển thị toàn bộ nội dung và dừng.
       if (!isAgent || !stream) {
@@ -376,19 +374,28 @@ export const ChatMessageContent = memo(
 
       setAnimatedContent(""); // Reset khi có content mới đến
       let currentLength = 0;
-      const timer = setInterval(() => {
-        currentLength++;
-        setAnimatedContent(content.substring(0, currentLength));
+      
+      // Sử dụng requestAnimationFrame để mượt hơn
+      const animate = () => {
+        currentLength += 2; // Tăng 2 ký tự mỗi frame để nhanh hơn
+        const newContent = content.substring(0, currentLength);
+        setAnimatedContent(newContent);
 
-        if (currentLength >= content.length) {
-          clearInterval(timer); // Dừng animation khi đã hiển thị hết
+        if (currentLength < content.length) {
+          requestAnimationFrame(animate);
         }
-      }, STREAMING_SPEED);
+      };
 
-      // Hàm dọn dẹp: Rất quan trọng để tránh memory leak.
-      // Sẽ được gọi khi component unmount hoặc khi effect chạy lại.
-      return () => clearInterval(timer);
-    }, [content, isAgent, stream, animatedContent]); // Add animatedContent dependency
+      // Bắt đầu animation với delay nhỏ
+      const timeoutId = setTimeout(() => {
+        requestAnimationFrame(animate);
+      }, 10);
+
+      // Hàm dọn dẹp
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }, [content, isAgent, stream]); // Bỏ animatedContent dependency để tránh re-render
 
     // --- Logic thu gọn/mở rộng cho tin nhắn user (không đổi) ---
     const [isExpanded, setIsExpanded] = useState(false);
