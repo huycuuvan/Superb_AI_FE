@@ -110,11 +110,11 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
     { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
     { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
-      { icon: Cpu, label: 'Prompt Templates', path: '/dashboard/prompts' },
-      { icon: Gift, label: 'Giftcode', path: '/dashboard/giftcodes' },
+      { icon: Cpu, label: t('common.promptTemplates'), path: '/dashboard/prompts' },
+      { icon: Gift, label: t('common.giftcode'), path: '/dashboard/giftcodes' },
     ] : []),
     {
-      label: 'Credential',
+      label: t('common.credential'),
       icon: Key,
       path: '/dashboard/credentials',
     },

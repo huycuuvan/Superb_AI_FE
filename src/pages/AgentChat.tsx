@@ -117,6 +117,7 @@ import {
 } from "@/components/ui/dialog";
 import TradingViewWidget from "@/components/TradingViewWidget";
 import symbols from "@/data/symbols.json";
+import { fakeStreamMessage } from "@/utils/fakeStreaming";
 
 // Define a more specific type for execution_config
 interface ExecutionConfig {
@@ -1707,6 +1708,44 @@ const AgentChat = () => {
     }
   };
 
+  // Thêm ref để lưu trạng thái streaming hiện tại
+  const isStreamingRef = useRef(false);
+
+  // Theo dõi message cuối cùng của agent đang stream
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.sender === "agent" && lastMessage.isStreaming) {
+      isStreamingRef.current = true;
+    } else {
+      isStreamingRef.current = false;
+    }
+  }, [messages]);
+
+  // Lắng nghe sự kiện visibilitychange để hiển thị toàn bộ câu trả lời còn lại nếu đang stream
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        // Nếu agent đang stream thì hiển thị luôn toàn bộ nội dung
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.sender === "agent" && lastMessage.isStreaming && lastMessage.content) {
+          // Tìm nội dung đầy đủ của agent từ message cuối cùng (nếu có trường content gốc)
+          // Nếu không có, chỉ hiển thị lại nội dung hiện tại
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              content: lastMessage.content, // Giả sử content đã là đầy đủ, nếu có trường content gốc thì thay vào đây
+              isStreaming: false,
+            };
+            return updated;
+          });
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [messages]);
+
   return (
     <div className="flex h-[calc(100vh-65px)] overflow-hidden">
       {/* Sidebar overlay cho mobile */}
@@ -2394,21 +2433,24 @@ const AgentChat = () => {
                           )}
                           {/* Hiển thị biểu đồ TradingView nếu phát hiện nhiều mã chứng khoán hợp lệ */}
                           {(() => {
-                            const stockRegex = /\b([A-Z]{3,10})\b/g;
-                            const matches = msg.content?.match(stockRegex);
-                            const validSymbols = matches?.filter(code => SYMBOL_SET.has(code)) || [];
-                            console.log("validSymbols", validSymbols);
-                            if (validSymbols.length > 0) {
-                              return (
-                                <div style={{ marginTop: 16 }}>
-                                  {validSymbols.map(symbol => (
-                                    <TradingViewWidget key={symbol} symbol={symbol} theme={isDark ? "dark" : "light"} locale="vi" />
-                                  ))}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
+  // Ưu tiên lấy từ msg.symbols nếu có
+  const validSymbols = Array.isArray(msg.symbols) ? msg.symbols : [];
+  if (validSymbols.length > 0) {
+    return (
+      <div style={{ marginTop: 16 }}>
+        {validSymbols.map(symbol => (
+          <TradingViewWidget
+            key={symbol}
+            symbol={symbol}
+            theme={isDark ? "dark" : "light"}
+            locale="vi"
+          />
+        ))}
+      </div>
+    );
+  }
+  return null;
+})()}
                         </div>
                       </div>
                       {/* Timestamp agent */}

@@ -14,9 +14,9 @@ export const LanguageToggle = ({ className }: { className?: string }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className={`h-8 w-8 px-0 hover:bg-accent hover:text-accent-foreground ${className}`}
+         
         >
           {currentLanguage === "en" ? "EN" : "VN"}
         </Button>

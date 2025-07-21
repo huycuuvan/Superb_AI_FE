@@ -151,6 +151,7 @@ export interface ChatMessage {
   file_urls?: string[];
   isStreaming?: boolean;
   parent_message_id?: string;
+  symbols?: string[];
 }
 
 export interface SidebarItem {

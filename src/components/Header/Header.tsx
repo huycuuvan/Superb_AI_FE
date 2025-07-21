@@ -111,10 +111,10 @@ const Header = React.memo(() => {
     try {
       await acceptInvitation(invitationId);
       queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
-      toast.success('Đã chấp nhận lời mời');
+      toast.success(t('common.invitationAccepted'));
     } catch (error) {
       console.error('Error accepting invitation:', error);
-      toast.error('Không thể chấp nhận lời mời');
+      toast.error(t('common.errorAcceptingInvitation'));
     }
   };
 
@@ -122,10 +122,10 @@ const Header = React.memo(() => {
     try {
       await rejectInvitation(invitationId);
       queryClient.invalidateQueries({ queryKey: ['userInvitations'] });
-      toast.success('Đã từ chối lời mời');
+      toast.success(t('common.invitationRejected'));
     } catch (error) {
       console.error('Error rejecting invitation:', error);
-      toast.error('Không thể từ chối lời mời');
+      toast.error(t('common.errorRejectingInvitation'));
     }
   };
 
@@ -136,10 +136,10 @@ const Header = React.memo(() => {
       await removeWorkspaceMember(workspace.id, memberToRemoveId);
       queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspace.id] });
       setIsRemoveMemberModalOpen(false);
-      toast.success('Đã xóa thành viên');
+      toast.success(t('common.memberRemoved'));
     } catch (error) {
       console.error('Error removing member:', error);
-      toast.error('Không thể xóa thành viên');
+      toast.error(t('common.errorRemovingMember'));
     }
   };
 
@@ -249,7 +249,7 @@ const Header = React.memo(() => {
                     <BreadcrumbList>
                       <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbPage>Task theo lịch trình</BreadcrumbPage></BreadcrumbItem>
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.scheduledTasks')}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>
@@ -291,7 +291,7 @@ const Header = React.memo(() => {
                     <BreadcrumbList>
                       <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">{t('common.dashboard')}</Link></BreadcrumbLink></BreadcrumbItem>
                       <BreadcrumbSeparator />
-                      <BreadcrumbItem><BreadcrumbPage>Credential</BreadcrumbPage></BreadcrumbItem>
+                      <BreadcrumbItem><BreadcrumbPage>{t('common.credential')}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>

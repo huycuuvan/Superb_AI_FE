@@ -142,7 +142,7 @@ const Dashboard = () => {
     <div className="space-y-6 text-foreground">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('common.dashboard')}</h1>
           <p className="text-sm md:text-base text-muted-foreground">
             {t('common.dashboardDescription')}
           </p>
@@ -162,7 +162,7 @@ const Dashboard = () => {
       {/* Search & Filter UI */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <Input
-          placeholder="Tìm kiếm agent..."
+          placeholder={t('common.searchAgent')}
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="sm:w-64 bg-background border-border"
