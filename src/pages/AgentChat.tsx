@@ -115,6 +115,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import TradingViewWidget from "@/components/TradingViewWidget";
+import symbols from "@/data/symbols.json";
 
 // Define a more specific type for execution_config
 interface ExecutionConfig {
@@ -132,6 +134,7 @@ interface Message {
   sender_user_id: string;
   chat_message?: ApiMessage;
   parent_message_id?: string;
+  symbol?: string;
 }
 
 // Định nghĩa một kiểu dữ liệu cho output video
@@ -182,6 +185,9 @@ interface Credential {
   credential: object;
   created_at?: string;
 }
+
+// Tạo Set chỉ chứa các mã symbol (string)
+const SYMBOL_SET = new Set(symbols.map(item => item.symbol));
 
 // Thêm component con cho message agent:
 const AgentMessageWithLog = ({
@@ -2386,6 +2392,23 @@ const AgentChat = () => {
                               ) : null}
                             </div>
                           )}
+                          {/* Hiển thị biểu đồ TradingView nếu phát hiện nhiều mã chứng khoán hợp lệ */}
+                          {(() => {
+                            const stockRegex = /\b([A-Z]{3,10})\b/g;
+                            const matches = msg.content?.match(stockRegex);
+                            const validSymbols = matches?.filter(code => SYMBOL_SET.has(code)) || [];
+                            console.log("validSymbols", validSymbols);
+                            if (validSymbols.length > 0) {
+                              return (
+                                <div style={{ marginTop: 16 }}>
+                                  {validSymbols.map(symbol => (
+                                    <TradingViewWidget key={symbol} symbol={symbol} theme={isDark ? "dark" : "light"} locale="vi" />
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                       {/* Timestamp agent */}
