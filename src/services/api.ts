@@ -722,8 +722,7 @@ export const updateTask = async (
 export const executeTask = async (
   taskId: string,
   inputData: { [key: string]: string },
-  threadId: string,
-  extra?: { provider?: string; credential?: object }
+  threadId: string
 ): Promise<{
   message: string;
   status: number;
@@ -743,8 +742,6 @@ export const executeTask = async (
     thread_id: threadId,
     user_id: user.id,
   };
-  if (extra?.provider) body.provider = extra.provider;
-  if (extra?.credential) body.credential = extra.credential;
 
   const response = await fetch(API_ENDPOINTS.tasks.execute, {
     method: "POST",
@@ -1329,10 +1326,13 @@ export const uploadMessageWithFiles = async (
 };
 
 // ========== CREDENTIALS API ==========
-export const createCredential = async (data: {
+export interface CreateCredentialRequest {
   provider: string;
+  name: string;
   credential: object;
-}) => {
+}
+
+export const createCredential = async (data: CreateCredentialRequest) => {
   const token = localStorage.getItem("token");
   const res = await fetch(API_ENDPOINTS.credentials.create, {
     method: "POST",

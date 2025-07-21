@@ -116,7 +116,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import TradingViewWidget from "@/components/TradingViewWidget";
-import symbols from "@/data/symbols.json";
 import { fakeStreamMessage } from "@/utils/fakeStreaming";
 
 // Define a more specific type for execution_config
@@ -185,10 +184,9 @@ interface Credential {
   provider: string;
   credential: object;
   created_at?: string;
+  name?: string;
 }
 
-// Tạo Set chỉ chứa các mã symbol (string)
-const SYMBOL_SET = new Set(symbols.map(item => item.symbol));
 
 // Thêm component con cho message agent:
 const AgentMessageWithLog = ({
@@ -1173,21 +1171,20 @@ const AgentChat = () => {
     const selectedTask = tasks.find((t) => t.id === selectedTaskId);
     if (selectedTask && currentThread) {
       try {
-        const extra: any = {};
+        // Chuẩn bị input_data
+        const inputData = { ...selectedTaskInputs };
         if (selectedCredentialId) {
-          const cred = credentials.find(
-            (c) => String(c.id) === selectedCredentialId
-          );
+          const cred = credentials.find((c) => String(c.id) === selectedCredentialId);
+          console.log("Credential được gửi:", cred);
           if (cred) {
-            extra.provider = cred.provider;
-            extra.credential = cred.credential;
+            inputData.provider = cred.provider;
+            inputData.credential_name = cred.name;
           }
         }
         const response = await executeTask(
           selectedTask.id,
-          selectedTaskInputs,
-          currentThread,
-          extra
+          inputData, // <-- truyền input_data đã merge
+          currentThread
         );
         const runId = response.task_run_id;
 
@@ -1197,7 +1194,7 @@ const AgentChat = () => {
             task_id: selectedTask.id,
             status: "initiated",
             start_time: new Date().toISOString(),
-            input_data: selectedTaskInputs,
+            input_data: inputData,
             output_data: {},
             started_at: new Date().toISOString(),
             thread_id: currentThread,
@@ -1205,8 +1202,6 @@ const AgentChat = () => {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
-
-          // Thêm task mới vào ĐẦU danh sách và tự động mở bảng lịch sử
           setTaskRunItems((prevRuns) => [newTaskRun, ...prevRuns]);
           setShowTaskHistory(true);
         } else {
@@ -2433,12 +2428,12 @@ const AgentChat = () => {
                           )}
                           {/* Hiển thị biểu đồ TradingView nếu phát hiện nhiều mã chứng khoán hợp lệ */}
                           {(() => {
-  // Ưu tiên lấy từ msg.symbols nếu có
-  const validSymbols = Array.isArray(msg.symbols) ? msg.symbols : [];
-  if (validSymbols.length > 0) {
+  // Chỉ hiển thị nếu msg.symbols là mảng và có phần tử
+
+  if (Array.isArray(msg.symbols) && msg.symbols.length > 0) {
     return (
       <div style={{ marginTop: 16 }}>
-        {validSymbols.map(symbol => (
+        {msg.symbols.map(symbol => (
           <TradingViewWidget
             key={symbol}
             symbol={symbol}
@@ -2622,7 +2617,7 @@ const AgentChat = () => {
                         <span className="text-foreground">
                           Điền thông tin cho Task:
                         </span>{" "}
-                        <span className="text-primary">
+                        <span className="text-foreground">
                           {selectedTask.name}
                         </span>
                       </CardTitle>
@@ -2648,14 +2643,15 @@ const AgentChat = () => {
                         htmlFor="credential-select"
                         className="font-semibold flex items-center gap-2"
                       >
-                        <Key className="h-4 w-4 mr-1 text-primary" />
+                        <Key className="h-4 w-4 mr-1 text-foreground" />
                         Chọn Credential (nếu cần)
                       </Label>
                       <Select
                         value={selectedCredentialId || "none"}
-                        onValueChange={(val) =>
-                          setSelectedCredentialId(val === "none" ? "" : val)
-                        }
+                        onValueChange={(val) => {
+                          setSelectedCredentialId(val === "none" ? "" : val);
+                          console.log("Chọn credential:", val);
+                        }}
                         disabled={
                           loadingCredentials || credentials.length === 0
                         }
@@ -2668,7 +2664,7 @@ const AgentChat = () => {
                             Không gửi credential
                           </SelectItem>
                           {credentials.map((cred) => (
-                            <SelectItem key={cred.id} value={cred.id}>
+                            <SelectItem key={cred.id} value={String(cred.id)}>
                               {cred.provider.charAt(0).toUpperCase() +
                                 cred.provider.slice(1)}
                             </SelectItem>
