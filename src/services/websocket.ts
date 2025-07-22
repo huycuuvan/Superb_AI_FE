@@ -251,6 +251,64 @@ class WebSocketService {
       console.log("[DEBUG] FE nhận message từ server:", payload);
     });
   }
+
+  // Xử lý cập nhật thông tin scheduled task
+  public handleScheduledTaskUpdate(
+    callback: (data: {
+      workspace_id: string;
+      task_id: string;
+      total_runs: number;
+      successful_runs: number;
+      failed_runs: number;
+      last_run_at?: string;
+      next_run_at?: string;
+      thread_id?: string;
+      status?: "active" | "paused";
+    }) => void
+  ) {
+    this.subscribe("scheduled_task_update", (payload) => {
+      try {
+        // Parse message từ websocket
+        let wsMessage;
+        if (typeof payload === "string") {
+          wsMessage = JSON.parse(payload);
+        } else {
+          wsMessage = payload as {
+            type: string;
+            thread_id: string;
+            content: string;
+            timestamp: string;
+          };
+        }
+
+        // Parse content trong message
+        const data = JSON.parse(wsMessage.content);
+        console.log("[DEBUG] FE nhận scheduled task update:", data);
+
+        if (data.scheduled_task_id || data.task_id) {
+          // Validate status
+          const status =
+            data.status === "active" || data.status === "paused"
+              ? data.status
+              : undefined;
+
+          callback({
+            workspace_id: data.workspace_id,
+            task_id: data.scheduled_task_id || data.task_id, // Support both field names
+            total_runs: data.total_runs,
+            successful_runs: data.successful_runs,
+            failed_runs: data.failed_runs,
+            last_run_at: data.last_run_at,
+            next_run_at: data.next_run_at,
+            thread_id: wsMessage.thread_id,
+            status,
+          });
+        }
+      } catch (error) {
+        console.error("❌ Lỗi khi xử lý scheduled task update:", error);
+      }
+    });
+  }
 }
 
 export const websocketService = new WebSocketService();

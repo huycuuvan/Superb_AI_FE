@@ -20,14 +20,97 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { websocketService } from "@/services/websocket";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
+import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
+import { WS_URL } from "@/config/api";
 
-// Hook để lấy danh sách scheduled tasks
+// Hook để lấy danh sách scheduled tasks với realtime updates
 export const useScheduledTasks = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const { workspace } = useSelectedWorkspace();
+  const { user } = useAuth();
+
+  // Tạo stable callback để xử lý task updates
+  const handleTaskUpdate = useCallback(
+    (data: {
+      workspace_id: string;
+      task_id: string;
+      total_runs: number;
+      successful_runs: number;
+      failed_runs: number;
+      last_run_at?: string;
+      next_run_at?: string;
+      thread_id?: string;
+      status?: "active" | "paused";
+    }) => {
+      // Kiểm tra xem update có thuộc về workspace hiện tại không
+      if (!workspace || data.workspace_id !== workspace.id) return;
+
+      console.log(
+        "[DEBUG] Nhận được task update cho workspace hiện tại:",
+        data
+      );
+
+      // Sử dụng Promise để đảm bảo cập nhật state an toàn
+      Promise.resolve().then(() => {
+        queryClient.setQueryData<{ data: ScheduledTask[] }>(
+          ["scheduled-tasks"],
+          (oldData) => {
+            if (!oldData?.data) return oldData;
+
+            return {
+              ...oldData,
+              data: oldData.data.map((task) =>
+                task.id === data.task_id
+                  ? {
+                      ...task,
+                      total_runs: data.total_runs,
+                      successful_runs: data.successful_runs,
+                      failed_runs: data.failed_runs,
+                      last_run_at: data.last_run_at || task.last_run_at,
+                      next_run_at: data.next_run_at || task.next_run_at,
+                      status: data.status || task.status,
+                    }
+                  : task
+              ),
+            };
+          }
+        );
+      });
+    },
+    [workspace, queryClient]
+  );
+
+  useEffect(() => {
+    if (!workspace || !user) return;
+
+    // Thiết lập kết nối WebSocket
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Kết nối WebSocket nếu chưa kết nối
+    const wsUrl = `${WS_URL}?token=${token}`;
+    if (websocketService.getConnectionState() !== "open") {
+      websocketService.connect(wsUrl);
+    }
+
+    // Đăng ký lắng nghe task updates
+    websocketService.handleScheduledTaskUpdate(handleTaskUpdate);
+
+    return () => {
+      websocketService.unsubscribe("scheduled_task_update", handleTaskUpdate);
+    };
+  }, [workspace?.id, user?.id, handleTaskUpdate]);
+
+  const { data, error, isLoading } = useQuery({
     queryKey: ["scheduled-tasks"],
     queryFn: getScheduledTasks,
+    staleTime: 5 * 60 * 1000, // Cache trong 5 phút
+    gcTime: Infinity, // Giữ cache vô thời hạn
+    refetchOnWindowFocus: false, // Không fetch lại khi focus window
   });
+
+  return { data, error, isLoading };
 };
 
 // Hook để lấy chi tiết 1 scheduled task
@@ -72,20 +155,35 @@ export const useRunningTasksRealtime = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const handler = (data: { type: string; content: string }) => {
+    if (!user) {
+      setRunningCount(0);
+      return;
+    }
+
+    const handleRunningCount = (data: { type: string; content: string }) => {
       if (data.type === "running_count") {
-        const payload = JSON.parse(data.content);
-        if (payload.user_id === user?.id) {
-          setRunningCount(payload.count);
+        try {
+          const payload = JSON.parse(data.content);
+          if (payload.user_id === user.id) {
+            setRunningCount(payload.count);
+          }
+        } catch (error) {
+          console.error("Error parsing running_count payload:", error);
         }
       }
     };
-    websocketService.subscribe("running_count", handler);
-    return () => websocketService.unsubscribe("running_count", handler);
-  }, [user?.id]);
 
-  useEffect(() => {
-    if (!user) setRunningCount(0);
+    // Thiết lập kết nối WebSocket nếu chưa kết nối
+    const token = localStorage.getItem("token");
+    if (token && websocketService.getConnectionState() !== "open") {
+      websocketService.connect(`${WS_URL}?token=${token}`);
+    }
+
+    websocketService.subscribe("running_count", handleRunningCount);
+
+    return () => {
+      websocketService.unsubscribe("running_count", handleRunningCount);
+    };
   }, [user]);
 
   return runningCount;

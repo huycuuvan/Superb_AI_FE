@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { useCreateScheduledTask } from '@/hooks/useScheduledTasks';
 import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { getAgentTasks } from '@/services/api';
-import { useUniqueAgentsByFolders } from '@/hooks/useUniqueAgentsByFolders';
+import { usePublicAgents } from '@/hooks/useAgentsByFolders';
 import { Agent, ApiTaskType } from '@/types';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -43,8 +43,9 @@ export const CreateScheduledTaskDialog: React.FC<CreateScheduledTaskDialogProps>
   // Thêm state cho input động theo execution_config
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
-  // Lấy danh sách agent duy nhất từ hook chung
-  const { agents, isLoading: isLoadingAgents } = useUniqueAgentsByFolders();
+  // Lấy danh sách agent public
+  const { data: agentsData, isLoading: isLoadingAgents } = usePublicAgents(1, 1000);
+  const agents = Array.isArray(agentsData?.data?.data) ? agentsData.data.data : [];
   const [tasks, setTasks] = useState<ApiTaskType[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
 

@@ -56,18 +56,6 @@ export const ScheduledTasksManager: React.FC = () => {
 
   const scheduledTasks = scheduledTasksData?.data || [];
 
-  const handleToggleTask = (taskId: string, enabled: boolean) => {
-    const task = scheduledTasks.find(t => t.id === taskId);
-    
-    // Nếu task đang bị paused và muốn kích hoạt lại
-    if (task?.status === 'paused' && enabled) {
-      updateTaskStatus.mutate({ taskId, status: 'active', is_enabled: true });
-    } else {
-      // Xử lý bật/tắt bình thường
-      toggleTask.mutate({ taskId, enabled });
-    }
-  };
-
   // WebSocket handler cho scheduled task status
   useEffect(() => {
     const handler = (data: {
@@ -113,12 +101,25 @@ export const ScheduledTasksManager: React.FC = () => {
         });
       }
     };
+
     websocketService.handleScheduledTaskStatus(handler);
+
     return () => {
       websocketService.unsubscribe('status', handler);
-      websocketService.disconnect(); // Đảm bảo disconnect khi unmount
     };
   }, []); // Đăng ký handler chỉ 1 lần khi mount
+
+  const handleToggleTask = (taskId: string, enabled: boolean) => {
+    const task = scheduledTasks.find(t => t.id === taskId);
+    
+    // Nếu task đang bị paused và muốn kích hoạt lại
+    if (task?.status === 'paused' && enabled) {
+      updateTaskStatus.mutate({ taskId, status: 'active', is_enabled: true });
+    } else {
+      // Xử lý bật/tắt bình thường
+      toggleTask.mutate({ taskId, enabled });
+    }
+  };
 
   const handleRunNow = async (taskId: string) => {
     console.log('[DEBUG] Bắt đầu handleRunNow với taskId:', taskId);
