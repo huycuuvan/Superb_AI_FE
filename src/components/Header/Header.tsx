@@ -1,9 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, Share2, Loader2, Coins, Gift } from "lucide-react";
+import { 
+  Menu, X, LogOut, Clock, Bell, Users, Trash2, Puzzle, 
+  Share2, Loader2, Coins, Gift, CheckCircle2, AlertCircle,
+  Info, PlayCircle
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -28,9 +33,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -41,12 +52,25 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useSelectedWorkspace } from "@/hooks/useSelectedWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, acceptInvitation, rejectInvitation, Notification, Invitation, getAllInvitations, getWorkspaceMembers, WorkspaceMember, removeWorkspaceMember, getAgentById } from "@/services/api";
+import { 
+  getNotifications, 
+  acceptInvitation, 
+  rejectInvitation, 
+  Notification, 
+  Invitation, 
+  getAllInvitations, 
+  getWorkspaceMembers, 
+  WorkspaceMember, 
+  removeWorkspaceMember, 
+  getAgentById,
+  markAllNotificationsAsRead,
+  markNotificationAsRead
+} from "@/services/api";
 import { useAgentsByFolders } from "@/hooks/useAgentsByFolders";
-
-import React from "react";
+import { websocketService } from "@/services/websocket";
+import { WS_URL } from "@/config/api";
 import { toast } from "sonner";
-import './Header.css'; // <<<< Import file CSS mới
+import './Header.css';
 import { LanguageToggle } from "../LanguageToggle";
 import { ThemeToggle } from "../ThemeToggle";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
@@ -57,14 +81,160 @@ interface DetailedInvitation extends Invitation {
   InviterEmail?: string;
 }
 
-// REFACTORED: To use the new semantic theme system
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case 'scheduled_task_start':
+      return <PlayCircle className="h-5 w-5 text-blue-500" />;
+    case 'scheduled_task_complete':
+      return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+    case 'scheduled_task_error':
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
+    case 'task_start':
+      return <PlayCircle className="h-5 w-5 text-blue-500" />;
+    case 'task_complete':
+      return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+    case 'task_error':
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
+    case 'system':
+      return <Info className="h-5 w-5 text-purple-500" />;
+    default:
+      return <Bell className="h-5 w-5 text-gray-500" />;
+  }
+};
+
+const getNotificationStyle = (type: string) => {
+  switch (type) {
+    case 'scheduled_task_start':
+    case 'task_start':
+      return 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20';
+    case 'scheduled_task_complete':
+    case 'task_complete':
+      return 'border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/20';
+    case 'scheduled_task_error':
+    case 'task_error':
+      return 'border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20';
+    case 'system':
+      return 'border-l-4 border-l-purple-500 bg-purple-50 dark:bg-purple-950/20';
+    default:
+      return 'border-l-4 border-l-gray-500 bg-gray-50 dark:bg-gray-950/20';
+  }
+};
+
+const formatNotificationTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+  
+  if (diffInMinutes < 1) return 'Vừa xong';
+  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} giờ trước`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} ngày trước`;
+  
+  return date.toLocaleDateString('vi-VN');
+};
+
 const Header = React.memo(() => {
   const location = useLocation();
-  const pathSegments = location.pathname.split('/').filter(Boolean);
   const { t } = useLanguage();
   const { user, logout, updateUser } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [loadingNotifications, setLoadingNotifications] = useState<{ [key: string]: boolean }>({});
+
+  // Queries
+  const { data: notificationsData, isLoading: isLoadingNotifications } = useQuery<{ data: Notification[] }>({
+    queryKey: ['notifications'],
+    queryFn: getNotifications,
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: invitationsData, isLoading: isLoadingInvitations } = useQuery<{ data: Invitation[] }>({
+    queryKey: ['userInvitations'],
+    queryFn: getAllInvitations,
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  });
+
+  // Computed values
+  const unreadCount = notificationsData?.data?.filter(n => !n.is_read).length || 0;
+  const totalUnread = unreadCount + (invitationsData?.data?.length || 0);
+
+  const displayedNotifications = showAllNotifications 
+    ? notificationsData?.data 
+    : notificationsData?.data?.slice(0, 5);
+
+  // Handlers
+  const handleMarkAsRead = async (notificationId: string) => {
+    if (loadingNotifications[notificationId]) return;
+    
+    try {
+      setLoadingNotifications(prev => ({ ...prev, [notificationId]: true }));
+      await markNotificationAsRead(notificationId);
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success(t('common.notificationMarkedAsRead'));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast.error(t('common.errorMarkingNotificationAsRead'));
+    } finally {
+      setLoadingNotifications(prev => ({ ...prev, [notificationId]: false }));
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success(t('common.allNotificationsMarkedAsRead'));
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      toast.error(t('common.errorMarkingNotificationsAsRead'));
+    }
+  };
+
+  // WebSocket connection
+  useEffect(() => {
+    if (!user) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const wsUrl = `${WS_URL}?token=${token}`;
+    if (websocketService.getConnectionState() !== "open") {
+      websocketService.connect(wsUrl);
+    }
+
+    const handleTaskStatus = (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    };
+
+    const handleTaskUpdate = (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    };
+
+    websocketService.handleScheduledTaskStatus(handleTaskStatus);
+    websocketService.subscribe("scheduled_task_update", handleTaskUpdate);
+
+    return () => {
+      websocketService.unsubscribe("status", handleTaskStatus);
+      websocketService.unsubscribe("scheduled_task_update", handleTaskUpdate);
+    };
+  }, [user, queryClient]);
+
+  const isHomePage = location.pathname === '/dashboard';
+  const isAgentsPage = location.pathname.startsWith('/dashboard/agents');
+  const isTasksPage = location.pathname.startsWith('/dashboard/tasks');
+  const isScheduledTasksPage = location.pathname.startsWith('/dashboard/scheduled-tasks');
+  const isKnowledgePage = location.pathname.startsWith('/dashboard/knowledge');
+  const isSettingsPage = location.pathname.startsWith('/dashboard/settings');
+  const isCredentialPage = location.pathname.startsWith('/dashboard/credential');
+  const isFolderDetailPage = location.pathname.startsWith('/dashboard/folder/');
+
   const { workspace } = useSelectedWorkspace();
   const { agentId, folderId } = useParams<{ agentId: string; threadId?: string; folderId?: string }>();
 
@@ -74,13 +244,10 @@ const Header = React.memo(() => {
     enabled: !!user && !!agentId,
   });
 
-  // Sử dụng useAgentsByFolders để lấy thông tin folder
   const folderIds = folderId ? [folderId] : [];
   const { data: agentsByFoldersData } = useAgentsByFolders(folderIds, 1, 1);
   const folderInfo = agentsByFoldersData?.data?.[0];
 
-  const currentAgent = agentData?.data || null;
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
   const [memberToRemoveId, setMemberToRemoveId] = useState<string | null>(null);
@@ -88,24 +255,11 @@ const Header = React.memo(() => {
   const [showGiftcodeModal, setShowGiftcodeModal] = useState(false);
   const workspaceIdForMembers = workspace?.id || null;
 
-  const {
-    data: invitationsData,
-    isLoading: isLoadingInvitations,
-    error: errorInvitations,
-  } = useQuery<{ data: DetailedInvitation[] }, Error>({
-      queryKey: ['userInvitations'],
-      queryFn: getAllInvitations,
-      enabled: !!user && isNotificationsOpen,
-      staleTime: 60 * 1000,
-  });
-
   const { data: membersData, isLoading: isLoadingMembers, error: membersError } = useQuery<{ data: WorkspaceMember[] }>({
     queryKey: ['workspaceMembers', workspaceIdForMembers],
     queryFn: () => getWorkspaceMembers(workspaceIdForMembers as string),
     enabled: !!user && !!workspaceIdForMembers && isMembersModalOpen,
   });
-
-  const queryClient = useQueryClient();
 
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
@@ -143,22 +297,10 @@ const Header = React.memo(() => {
     }
   };
 
-  const isHomePage = location.pathname === '/dashboard';
-  const isAgentsPage = location.pathname.startsWith('/dashboard/agents');
-  const isTasksPage = location.pathname.startsWith('/dashboard/tasks');
-  const isScheduledTasksPage = location.pathname.startsWith('/dashboard/scheduled-tasks');
-  const isKnowledgePage = location.pathname.startsWith('/dashboard/knowledge');
-  const isSettingsPage = location.pathname.startsWith('/dashboard/settings');
-  const isCredentialPage = location.pathname.startsWith('/dashboard/credential');
-  const isFolderDetailPage = location.pathname.startsWith('/dashboard/folder/');
-
   return (
-    // CLEANED: Using `bg-background` for the header to match the layout.
     <header className="bg-background border-b border-border relative z-10 background-gradient-white">
       <div className="py-3 px-4 md:px-6 flex justify-between items-center">
-        {/* --- LEFT SECTION --- */}
         <div className="flex items-center gap-4">
-          {/* Mobile Menu Button */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -169,7 +311,6 @@ const Header = React.memo(() => {
               <SheetHeader className="p-4 border-b">
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
-              {/* Mobile Menu Content */}
               <div className="flex flex-col p-4">
                 <Button variant="ghost" className="justify-start" asChild>
                   <Link to="/dashboard">
@@ -208,7 +349,6 @@ const Header = React.memo(() => {
             </SheetContent>
           </Sheet>
 
-          {/* Breadcrumb Navigation */}
           {(() => {
             if (isHomePage) {
               return <div className="hidden md:block text-sm text-foreground">{t('common.dashboard')}</div>;
@@ -318,62 +458,112 @@ const Header = React.memo(() => {
         
         {/* --- RIGHT SECTION --- */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Notifications */}
           <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                {invitationsData?.data && invitationsData.data.length > 0 && (
-                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
+                {!isLoadingNotifications && !isLoadingInvitations && totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs animate-in fade-in duration-300">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
                 )}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>{t('common.notifications')}</DialogTitle>
-                <DialogDescription>
-                  {t('common.notificationsDescription')}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                {isLoadingInvitations ? (
+            <DialogContent className="sm:max-w-[600px] md:max-w-[700px]">
+              <div className="flex items-center justify-between border-b pb-4">
+                <div className="space-y-1">
+                  <DialogTitle>{t('common.notifications')}</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    {t('common.notificationsDescription')}
+                  </DialogDescription>
+                </div>
+                {totalUnread > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkAllAsRead}
+                    className="flex items-center gap-2 mr-6"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t('common.markAllAsRead')}
+                  </Button>
+                )}
+              </div>
+
+              <div className={cn(
+                "py-4",
+                showAllNotifications && "h-[500px] overflow-y-auto pr-4 no-scrollbar"
+              )}>
+                {isLoadingNotifications || isLoadingInvitations ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : errorInvitations ? (
-                  <div className="text-center text-red-500 py-4">
-                    {t('common.errorLoadingNotifications')}
-                  </div>
-                ) : invitationsData?.data && invitationsData.data.length > 0 ? (
-                  <div className="space-y-4">
-                    {invitationsData.data.map((invitation) => (
-                      <div key={invitation.ID} className="flex items-center justify-between gap-4 p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{t('common.invitations')}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Workspace: {invitation.WorkspaceName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Từ: {invitation.InviterEmail}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcceptInvitation(invitation.ID)}
-                          >
-                            {t('common.accept')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRejectInvitation(invitation.ID)}
-                          >
-                            {t('common.reject')}
-                          </Button>
-                        </div>
-                      </div>
+                ) : displayedNotifications && displayedNotifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {displayedNotifications.map((notification) => (
+                      <TooltipProvider key={notification.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
+                              disabled={loadingNotifications[notification.id]}
+                              className={cn(
+                                "w-full text-left p-4 rounded-lg flex items-start gap-3",
+                                "transition-all duration-200 ease-in-out",
+                                "hover:bg-accent/50",
+                                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "relative cursor-pointer",
+                                !notification.is_read && "font-medium",
+                                loadingNotifications[notification.id] && "opacity-70 cursor-wait",
+                                notification.is_read && "opacity-80"
+                              )}
+                            >
+                              <div className="flex-shrink-0 mt-1 relative">
+                                {loadingNotifications[notification.id] ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <Bell className="h-5 w-5" />
+                                )}
+                              </div>
+                              <div className="flex-grow min-w-0">
+                                <p className="text-sm truncate">{notification.content}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(notification.created_at).toLocaleTimeString()}
+                                  </p>
+                                  {!notification.is_read && (
+                                    <span className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500" />
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {notification.is_read 
+                              ? t('common.alreadyRead')
+                              : t('common.clickToMarkAsRead')
+                            }
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ))}
+
+                    {notificationsData?.data && notificationsData.data.length > 5 && (
+                      <div className="flex justify-center mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAllNotifications(!showAllNotifications)}
+                          className="min-w-[100px]"
+                        >
+                          {showAllNotifications 
+                            ? t('common.showLess')
+                            : `${t('common.viewAll')} (${notificationsData.data.length})`
+                          }
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-4">
@@ -384,7 +574,6 @@ const Header = React.memo(() => {
             </DialogContent>
           </Dialog>
 
-          {/* Members Management */}
           <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -416,7 +605,6 @@ const Header = React.memo(() => {
                           <p className="text-sm text-muted-foreground">{member.email || member.user_email}</p>
                           <p className="text-sm text-muted-foreground">Role: {member.role}</p>
                         </div>
-                        {/* Ẩn nút xóa nếu là chính mình */}
                         {user?.id !== member.user_id && (
                           <Button
                             size="icon"
@@ -442,7 +630,6 @@ const Header = React.memo(() => {
             </DialogContent>
           </Dialog>
 
-          {/* Confirm Remove Member Dialog */}
           <Dialog open={isRemoveMemberModalOpen} onOpenChange={setIsRemoveMemberModalOpen}>
             <DialogContent>
               <DialogHeader>
@@ -462,7 +649,6 @@ const Header = React.memo(() => {
             </DialogContent>
           </Dialog>
 
-          {/* Credits */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={() => setShowCreditPurchase(true)}>
               <Coins className="h-5 w-5 text-yellow-400" />

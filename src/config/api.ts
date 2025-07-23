@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
     getMembers: (workspaceId: string) =>
       `${API_BASE_URL}/workspaces/${workspaceId}/members`,
     scrapUrl: `${API_BASE_URL}/workspaces/profile/scrap-url`,
+    getNotifications: `${API_BASE_URL}/workspaces/notifications`,
+    markAllNotificationsAsRead: `${API_BASE_URL}/workspaces/notifications/mark-all-read`,
   },
   agents: {
     list: `${API_BASE_URL}/agents/all`,

@@ -72,6 +72,12 @@ export default {
     credential: "Credential",
     promptTemplates: "Prompt Templates",
     giftcode: "Giftcode",
+    viewAll: "View All",
+    markAllAsRead: "Mark All as Read",
+    notificationMarkedAsRead: "Notification marked as read",
+    errorMarkingNotificationAsRead: "Error marking notification as read",
+    allNotificationsMarkedAsRead: "All notifications marked as read",
+    errorMarkingNotificationsAsRead: "Error marking notifications as read",
   },
   auth: {
     login: "Login",

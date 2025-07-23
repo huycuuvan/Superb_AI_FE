@@ -808,13 +808,57 @@ export const getNotifications = async (): Promise<{ data: Notification[] }> => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Không tìm thấy token");
 
-  const response = await fetch(`${API_BASE_URL}/workspaces/notifications`, {
+  const response = await fetch(`${API_ENDPOINTS.workspace.getNotifications}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const markAllNotificationsAsRead = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_ENDPOINTS.workspace.markAllNotificationsAsRead}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Không tìm thấy token");
+
+  const response = await fetch(
+    `${API_ENDPOINTS.workspace.getNotifications}/${notificationId}/read`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     await handleApiError(response);

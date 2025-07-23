@@ -70,6 +70,12 @@ export default {
     credential: "Credential",
     promptTemplates: "Mẫu prompt",
     giftcode: "Mã quà tặng",
+    viewAll: "Xem tất cả",
+    markAllAsRead: "Đánh dấu tất cả đã đọc",
+    notificationMarkedAsRead: "Đã đánh dấu thông báo đã đọc",
+    errorMarkingNotificationAsRead: "Lỗi khi đánh dấu thông báo đã đọc",
+    allNotificationsMarkedAsRead: "Đã đánh dấu tất cả thông báo đã đọc",
+    errorMarkingNotificationsAsRead: "Lỗi khi đánh dấu tất cả thông báo đã đọc",
   },
   auth: {
     login: "Đăng nhập",
