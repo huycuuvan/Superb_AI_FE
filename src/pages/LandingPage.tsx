@@ -1,7 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiSearch, FiArrowRight, FiCode, FiUsers, FiLock, FiGithub, FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi';
 import Lottie from 'lottie-react';
+import { getPlans, subscribePlan, notifySubscriptionSuccess, getUserSubscription } from "../services/api";
+import { toast, useToast } from "../hooks/use-toast";
 
 // Lottie URL Loader Component
 const LottieFromURL = ({ src, className, loop = true, autoplay = true }: {
@@ -136,7 +140,7 @@ const PhoneIcon = ({ className = "w-5 h-5" }) => (
 const LocationIcon = ({ className = "w-5 h-5" }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
   </svg>
 );
 
@@ -536,6 +540,101 @@ const useActiveSection = () => {
   return activeSection;
 };
 
+// Định nghĩa type cho Plan
+interface Plan {
+  id: string;
+  name: string;
+  price: number | null;
+  billing_interval?: string;
+  features?: Record<string, string | number>;
+  is_active?: boolean;
+  display_order?: number;
+  paypal_plan_id?: string;
+  [key: string]: any;
+}
+
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+
+const PayPalSubscriptionModal: React.FC<{
+  plan: Plan | null;
+  user: any;
+  onClose: () => void;
+}> = ({ plan, user, onClose }) => {
+  const paypalRef = useRef<HTMLDivElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!plan) return;
+    let script: HTMLScriptElement | null = null;
+    if (!window.paypal) {
+      script = document.createElement("script");
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
+      script.async = true;
+      script.onload = () => renderPayPalButton();
+      document.body.appendChild(script);
+    } else {
+      renderPayPalButton();
+    }
+    return () => {
+      try {
+        if (paypalRef.current) {
+          paypalRef.current.innerHTML = "";
+        }
+        if (script) document.body.removeChild(script);
+      } catch (e) {
+        // ignore cleanup error
+      }
+    };
+    // eslint-disable-next-line
+  }, [plan]);
+
+  const renderPayPalButton = () => {
+    if (!paypalRef.current || !plan) return;
+    paypalRef.current.innerHTML = "";
+    window.paypal.Buttons({
+      createSubscription: function (data: any, actions: any) {
+        setIsProcessing(true);
+        return actions.subscription.create({
+          plan_id: plan.paypal_plan_id
+        });
+      },
+      onApprove: async function (data: any, actions: any) {
+        setIsProcessing(false);
+        try {
+          await notifySubscriptionSuccess(data.subscriptionID, plan.id);
+          toast({ title: "Thành công", description: "Đăng ký gói thành công!", variant: "default" });
+          onClose();
+          navigate("/dashboard");
+        } catch (err) {
+          toast({ title: "Lỗi", description: "Có lỗi khi xác nhận subscription với hệ thống!", variant: "destructive" });
+          onClose();
+        }
+      },
+      onError: function (err: any) {
+        setIsProcessing(false);
+        toast({ title: "Lỗi PayPal", description: "Có lỗi PayPal!", variant: "destructive" });
+      },
+      onCancel: function () {
+        setIsProcessing(false);
+      }
+    }).render(paypalRef.current);
+  };
+
+  if (!plan) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center">
+        <h3 className="text-2xl font-bold mb-4 text-purple-700">Thanh toán gói: {plan.name}</h3>
+        <div ref={paypalRef} className="w-full flex justify-center" />
+        {isProcessing && <div className="mt-2 text-sm text-muted-foreground">Đang xử lý...</div>}
+        <button onClick={onClose} className="mt-4 px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold shadow hover:from-purple-700 hover:to-violet-700 transition-all">Đóng</button>
+      </div>
+    </div>
+  );
+};
+
 const LandingPage: React.FC = () => {
   // State để quản lý trạng thái dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -580,10 +679,10 @@ const LandingPage: React.FC = () => {
   const [subscribeMsg, setSubscribeMsg] = useState("");
 
   // State cho pricing card active
-  const [activePricing, setActivePricing] = useState<number>(1); // 0: Startup, 1: Pro, 2: Enterprise
+  const [activePricing, setActivePricing] = useState(0);
 
   // Hàm xử lý subscribe
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleNewsletterSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     // Validate email đơn giản
     if (!subscribeEmail || !/^\S+@\S+\.\S+$/.test(subscribeEmail)) {
@@ -629,7 +728,34 @@ const LandingPage: React.FC = () => {
     }, 1000);
   };
 
-                return (
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [showPayPalModal, setShowPayPalModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    getPlans()
+      .then(data => {
+        setPlans(data.plans || []);
+      })
+      .finally(() => setLoadingPlans(false));
+  }, []);
+
+  const handleSubscribe = (plan: Plan) => {
+    if (!user) {
+      toast({ title: "Yêu cầu đăng nhập", description: "Vui lòng đăng nhập để đăng ký gói.", variant: "default" });
+      navigate("/login?redirect=/#pricing");
+      return;
+    }
+    setSelectedPlan(plan);
+    setShowPayPalModal(true);
+  };
+
+  // ... lấy user từ localStorage hoặc context nếu có ...
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  return (
+      <>
     <div className={`min-h-screen font-sans transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-purple-900/80 text-gray-100' 
@@ -1071,87 +1197,84 @@ const LandingPage: React.FC = () => {
               </AnimatedSection>
               <AnimatedSection>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-                  {/* Startup Plan */}
-                  <div
-                    className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
-                      activePricing === 0
-                        ? isDarkMode
-                          ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
-                          : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
-                        : isDarkMode 
-                          ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white' 
-                          : 'bg-white/60 border-white/40 hover:border-purple-400/60'
-                    } hover:shadow-lg min-h-[400px]`}
-                    onClick={() => setActivePricing(0)}
-                  >
-                    <h3 className="text-2xl font-bold mb-2 text-center">Startup</h3>
-                    <div className="text-4xl font-bold mb-2 text-center">$9<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
-                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
-                      <li className="flex items-center gap-2">✅ 9 active agents simultaneously</li>
-                      <li className="flex items-center gap-2">✅ 99 jobs run/month</li>
-                      <li className="flex items-center gap-2">✅ 999 tokens</li>
-                      <li className="flex items-center gap-2">✅ Community support</li>
-                    </ul>
-                    <div className="flex-1" />
-                    <button className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 0 ? '' : 'opacity-80'}`}
-                      onClick={() => navigate('/register')}
-                    >Get Started</button>
-                  </div>
-                  {/* Pro Plan */}
-                  <div
-                    className={`flex flex-col items-center justify-between p-5 rounded-xl border-2 relative backdrop-blur-sm transition-all duration-300 cursor-pointer ${
-                      activePricing === 1
-                        ? isDarkMode
-                          ? 'border-purple-500 bg-slate-800/80 shadow-2xl text-white'
-                          : 'border-purple-500 bg-purple-50/60 shadow-2xl'
-                        : isDarkMode ? 'border-slate-700/50 bg-purple-900/20 hover:border-purple-400/60 text-white' : 'border-purple-200/60 bg-purple-50/60 hover:border-purple-400/60'
-                    } min-h-[400px]`}
-                    onClick={() => setActivePricing(1)}
-                  >
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                      Most Popular
-                    </div>
-                    <h3 className="text-2xl font-bold mb-2 text-center">Pro</h3>
-                    <div className="text-4xl font-bold mb-2 text-center">$39<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>/month</span></div>
-                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
-                      <li className="flex items-center gap-2">✅ 39 active agents</li>
-                      <li className="flex items-center gap-2">✅ 399 jobs run/month</li>
-                      <li className="flex items-center gap-2">✅ 3999 + 999 (bonus) tokens</li>
-                      <li className="flex items-center gap-2">✅ Priority support</li>
-                    </ul>
-                    <div className="flex-1" />
-                    <button
-                      className={`w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 transition-all font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 1 ? '' : 'opacity-80'}`}
-                      onClick={e => { e.stopPropagation(); navigate('/register'); }}
-                    >Start Free Trial</button>
-                  </div>
-                  {/* Enterprise Plan */}
-                  <div
-                    className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
-                      activePricing === 2
-                        ? isDarkMode
-                          ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
-                          : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
-                        : isDarkMode 
-                          ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white' 
-                          : 'bg-white/60 border-white/40 hover:border-purple-400/60'
-                    } hover:shadow-lg min-h-[400px]`}
-                    onClick={() => setActivePricing(2)}
-                  >
-                    <h3 className="text-2xl font-bold mb-2 text-center">Enterprise</h3>
-                    <div className="text-4xl font-bold mb-2 text-center">Custom</div>
-                    <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
-                      <li className="flex items-center gap-2">✅ Unlimited agents</li>
-                      <li className="flex items-center gap-2">✅ Unlimited jobs run</li>
-                      <li className="flex items-center gap-2">✅ Custom deployment</li>
-                      <li className="flex items-center gap-2">✅ Dedicated support</li>
-                      <li className="flex items-center gap-2">✅ SLA guarantees</li>
-                    </ul>
-                    <div className="flex-1" />
-                    <button className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === 2 ? '' : 'opacity-80'}`}
-                      onClick={e => { e.stopPropagation(); setShowContactModal(true); }}
-                    >Contact Sales</button>
-                  </div>
+                  {loadingPlans ? (
+                    <div className="col-span-3 text-center py-10">Đang tải gói...</div>
+                  ) : plans.length === 0 ? (
+                    <div className="col-span-3 text-center py-10">Không có gói nào khả dụng</div>
+                  ) : (
+                    <>
+                      {plans.map((plan, idx) => (
+                        <div
+                          key={plan.id}
+                          className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
+                            activePricing === idx
+                              ? isDarkMode
+                                ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
+                                : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
+                              : isDarkMode
+                                ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white'
+                                : 'bg-white/60 border-white/40 hover:border-purple-400/60'
+                          } hover:shadow-lg min-h-[400px]`}
+                          onClick={() => setActivePricing(idx)}
+                        >
+                          {plan.name === "Pro" && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                              Most Popular
+                            </div>
+                          )}
+                          <h3 className="text-2xl font-bold mb-2 text-center">{plan.name}</h3>
+                          <div className="text-4xl font-bold mb-2 text-center">
+                            {plan.price === 0 || plan.price === null ? "Custom" : `$${plan.price}`}<span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>{plan.billing_interval ? `/${plan.billing_interval}` : ""}</span>
+                          </div>
+                          <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
+                            {plan.features && Object.entries(plan.features).map(([k, v]) => (
+                              <li key={k} className="flex items-center gap-2">✅ {typeof v === 'string' && v.includes('trial') ? v : `${v} ${k.replace(/_/g, ' ')}`}</li>
+                            ))}
+                          </ul>
+                          <div className="flex-1" />
+                          {plan.price === 0 || plan.price === null || plan.name === "Enterprise" ? (
+                            <button
+                              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === idx ? '' : 'opacity-80'}`}
+                              onClick={e => { e.stopPropagation(); setShowContactModal && setShowContactModal(true); }}
+                            >Contact Sales</button>
+                          ) : (
+                            <button
+                              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === idx ? '' : 'opacity-80'}`}
+                              onClick={e => { e.stopPropagation(); handleSubscribe(plan); }}
+                            >{plan.features && plan.features.trial ? "Start Free Trial" : "Get Started"}</button>
+                          )}
+                        </div>
+                      ))}
+                      {/* Card Enterprise/Custom */}
+                      <div
+                        className={`flex flex-col items-center justify-between p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
+                          activePricing === plans.length
+                            ? isDarkMode
+                              ? 'border-2 border-purple-500 bg-slate-800/80 shadow-2xl text-white'
+                              : 'border-2 border-purple-500 bg-purple-50/60 shadow-2xl'
+                            : isDarkMode
+                              ? 'bg-slate-800/50 border-slate-700/50 hover:border-purple-400/60 text-white'
+                              : 'bg-white/60 border-white/40 hover:border-purple-400/60'
+                        } hover:shadow-lg min-h-[400px]`}
+                        onClick={() => setActivePricing(plans.length)}
+                      >
+                        <h3 className="text-2xl font-bold mb-2 text-center">Enterprise</h3>
+                        <div className="text-4xl font-bold mb-2 text-center">Custom</div>
+                        <ul className="space-y-2 mb-3 text-left w-full max-w-sm mx-auto">
+                          <li className="flex items-center gap-2">✅ Unlimited agents</li>
+                          <li className="flex items-center gap-2">✅ Unlimited jobs run</li>
+                          <li className="flex items-center gap-2">✅ Custom deployment</li>
+                          <li className="flex items-center gap-2">✅ Dedicated support</li>
+                          <li className="flex items-center gap-2">✅ SLA guarantees</li>
+                        </ul>
+                        <div className="flex-1" />
+                        <button
+                          className={`w-full py-3 px-4 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-600 to-violet-600 text-white hover:from-purple-700 hover:to-violet-700 hover:shadow-purple-500/25 transform hover:scale-105 mt-2 ${activePricing === plans.length ? '' : 'opacity-80'}`}
+                          onClick={e => { e.stopPropagation(); setShowContactModal && setShowContactModal(true); }}
+                        >Contact Sales</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </AnimatedSection>
             </div>
@@ -1370,7 +1493,7 @@ const LandingPage: React.FC = () => {
                 <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} mb-6 text-sm md:text-base`}>
                   Get the latest news about new features, AI trends and tips to optimize your business
                 </p>
-                <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={handleSubscribe}>
+                <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={handleNewsletterSubscribe}>
                   <input
                     type="email"
                     value={subscribeEmail}
@@ -1447,8 +1570,19 @@ const LandingPage: React.FC = () => {
           </div>
         </footer>
 
-                        </div>
+                          </div>
                             </div>
+                            <div>
+      {showPayPalModal && (
+        <PayPalSubscriptionModal
+          plan={selectedPlan}
+          user={user}
+          onClose={() => setShowPayPalModal(false)}
+        />
+      )}
+    </div>
+  
+    </>
   );
 };
 

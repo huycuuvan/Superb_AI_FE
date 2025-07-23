@@ -76,6 +76,8 @@ export default {
     errorMarkingNotificationAsRead: "Lỗi khi đánh dấu thông báo đã đọc",
     allNotificationsMarkedAsRead: "Đã đánh dấu tất cả thông báo đã đọc",
     errorMarkingNotificationsAsRead: "Lỗi khi đánh dấu tất cả thông báo đã đọc",
+    alreadyRead: "Đã đọc",
+    clickToMarkAsRead: "Nhấn để đánh dấu đã đọc",
   },
   auth: {
     login: "Đăng nhập",

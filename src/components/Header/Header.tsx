@@ -64,7 +64,8 @@ import {
   removeWorkspaceMember, 
   getAgentById,
   markAllNotificationsAsRead,
-  markNotificationAsRead
+  markNotificationAsRead,
+  getUserSubscription
 } from "@/services/api";
 import { useAgentsByFolders } from "@/hooks/useAgentsByFolders";
 import { websocketService } from "@/services/websocket";
@@ -145,6 +146,8 @@ const Header = React.memo(() => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState<{ [key: string]: boolean }>({});
+  const [subscription, setSubscription] = useState<any>(null);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Queries
   const { data: notificationsData, isLoading: isLoadingNotifications } = useQuery<{ data: Notification[] }>({
@@ -225,6 +228,14 @@ const Header = React.memo(() => {
       websocketService.unsubscribe("scheduled_task_update", handleTaskUpdate);
     };
   }, [user, queryClient]);
+
+  useEffect(() => {
+    if (userDropdownOpen) {
+      getUserSubscription()
+        .then(sub => setSubscription(sub))
+        .catch(() => setSubscription(null));
+    }
+  }, [userDropdownOpen]);
 
   const isHomePage = location.pathname === '/dashboard';
   const isAgentsPage = location.pathname.startsWith('/dashboard/agents');
@@ -680,7 +691,7 @@ const Header = React.memo(() => {
           <ThemeToggle />
 
           {/* User Menu */}
-          <DropdownMenu>
+          <DropdownMenu open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
@@ -696,6 +707,11 @@ const Header = React.memo(() => {
               <DropdownMenuItem className="flex flex-col items-start">
                 <div className="text-sm font-medium">{user?.name}</div>
                 <div className="text-xs text-muted-foreground">{user?.email}</div>
+                {subscription?.plan?.name && (
+                  <div className="text-xs text-purple-600 font-semibold mt-1">
+                    Gói: {subscription.plan.name}
+                  </div>
+                )}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={(e) => {

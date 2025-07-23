@@ -78,6 +78,8 @@ export default {
     errorMarkingNotificationAsRead: "Error marking notification as read",
     allNotificationsMarkedAsRead: "All notifications marked as read",
     errorMarkingNotificationsAsRead: "Error marking notifications as read",
+    alreadyRead: "Already read",
+    clickToMarkAsRead: "Click to mark as read",
   },
   auth: {
     login: "Login",

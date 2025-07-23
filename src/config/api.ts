@@ -104,4 +104,8 @@ export const API_ENDPOINTS = {
     update: `${API_BASE_URL}/knowledge/update`,
     delete: (id: string) => `${API_BASE_URL}/knowledge/${id}`,
   },
+  plans: {
+    list: `${API_BASE_URL}/plans`,
+    subscribe: `${API_BASE_URL}/subscribe`,
+  },
 };

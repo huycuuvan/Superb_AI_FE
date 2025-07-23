@@ -2291,3 +2291,66 @@ export const saveAgentPlan = async (payload: {
   }
   return res.json();
 };
+
+// Lấy danh sách các gói subscription
+export const getPlans = async () => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.plans.list, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error("Không thể lấy danh sách gói");
+  return res.json();
+};
+
+// Đăng ký gói subscription
+export const subscribePlan = async (user_id: string, plan_id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.plans.subscribe, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ user_id, plan_id }),
+  });
+  if (!res.ok) throw new Error("Không thể đăng ký gói");
+  return res.json();
+};
+
+// Xác nhận subscription thành công sau khi thanh toán PayPal
+export const notifySubscriptionSuccess = async (
+  paypal_subscription_id: string,
+  plan_id: string
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/subscription/success`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      paypal_subscription_id,
+      plan_id,
+    }),
+  });
+  if (!res.ok) throw new Error("Không thể xác nhận subscription!");
+  return res.json();
+};
+
+// Lấy thông tin subscription hiện tại của user
+export const getUserSubscription = async () => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE_URL}/user/subscription`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error("Không thể lấy thông tin subscription!");
+  return res.json();
+};
