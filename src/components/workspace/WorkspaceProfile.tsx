@@ -15,15 +15,19 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import countries from '@/data/countries.json';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WorkspaceRole, WorkspaceError } from "@/types";
+import { hasPermission } from "@/utils/workspacePermissions";
+import { handleWorkspaceError } from "@/utils/errorHandler";
 
 interface WorkspaceProfileFormProps {
   workspaceId: string;
+  userRole: WorkspaceRole;
   initialData?: WorkspaceProfile;
   onSubmit?: (data: WorkspaceProfile) => Promise<void>;
   onSuccess?: () => void;
 }
 
-export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuccess }: WorkspaceProfileFormProps) {
+export function WorkspaceProfileForm({ workspaceId, userRole, initialData, onSubmit, onSuccess }: WorkspaceProfileFormProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Omit<WorkspaceProfile, "workspace_id">>({
@@ -36,12 +40,9 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
     website_url: "",
     brand_logo_url: "",
   });
-  // State cho nhập website và loading scrap
   const [websiteInput, setWebsiteInput] = useState("");
   const [scrapLoading, setScrapLoading] = useState(false);
-  // State điều khiển bước: 1 = nhập website, 2 = điền profile
   const [step, setStep] = useState(1);
-  // State lưu kết quả scrap (nếu có)
   const [scrapResult, setScrapResult] = useState<Record<string, unknown> | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -51,6 +52,8 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
   const [countryOptions, setCountryOptions] = useState<{code: string, name: string}[]>([]);
   const [countryOptionsLoading, setCountryOptionsLoading] = useState(true);
   const [countryOptionsError, setCountryOptionsError] = useState(false);
+
+  const canManageProfile = hasPermission(userRole, 'manage_profile');
 
   useEffect(() => {
     if (initialData) {
@@ -64,7 +67,7 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
         website_url: initialData.website_url || "",
         brand_logo_url: initialData.brand_logo_url || "",
       });
-      setStep(2); // Nếu có initialData thì vào luôn bước profile
+      setStep(2);
     }
   }, [initialData]);
 
@@ -93,18 +96,20 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
     }
   }, []);
 
-  // Xử lý scrap-url
   const handleScrapUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!websiteInput) return toast.error("Vui lòng nhập website công ty");
+    if (!canManageProfile) {
+      toast.error("Bạn không có quyền quản lý thông tin workspace");
+      return;
+    }
     setScrapLoading(true);
-    setProfileLoading(true); // chuyển sang loading profile
-    setStep(2); // chuyển luôn sang màn profile
+    setProfileLoading(true);
+    setStep(2);
     try {
       const res = await scrapWorkspaceProfile({ workspace_id: workspaceId, website_url: websiteInput });
       if (res && typeof res === "object" && res.data) {
         setScrapResult(res.data);
-        // Map tên sang code nếu cần
         let langCode = "en";
         let countryCode = "VN";
         if (res.data.default_language_code) {
@@ -122,26 +127,37 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
           default_location_code: countryCode,
           website_url: websiteInput,
         }));
-        setProfileLoading(false); // tắt loading khi xong
+        setProfileLoading(false);
         toast.success("Lấy thông tin doanh nghiệp thành công!");
       } else {
         toast.error("Không lấy được thông tin doanh nghiệp");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setProfileLoading(false);
-      toast.error("Không thể lấy thông tin doanh nghiệp từ website");
+      if (err && typeof err === 'object' && 'tag' in err) {
+        handleWorkspaceError(err as WorkspaceError);
+      } else {
+        toast.error("Không thể lấy thông tin doanh nghiệp từ website");
+      }
     } finally {
       setScrapLoading(false);
     }
   };
 
-  // Xử lý skip
   const handleSkip = () => {
+    if (!canManageProfile) {
+      toast.error("Bạn không có quyền quản lý thông tin workspace");
+      return;
+    }
     setStep(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageProfile) {
+      toast.error("Bạn không có quyền quản lý thông tin workspace");
+      return;
+    }
     setIsLoading(true);
     try {
       const fullData = {
@@ -149,18 +165,20 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
         workspace_id: workspaceId,
       };
       if (initialData) {
-        // Đã có profile, gọi update
         await updateWorkspaceProfile(workspaceId, fullData);
         toast.success("Cập nhật workspace profile thành công!");
       } else {
-        // Chưa có profile, gọi create
         await createWorkspaceProfile(fullData as WorkspaceProfile);
         toast.success("Tạo workspace profile thành công!");
         navigate("/workspace");
       }
       onSuccess?.();
-    } catch (error) {
-      toast.error("Lỗi khi lưu thông tin workspace");
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'tag' in error) {
+        handleWorkspaceError(error as WorkspaceError);
+      } else {
+        toast.error("Lỗi khi lưu thông tin workspace");
+      }
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -175,6 +193,64 @@ export function WorkspaceProfileForm({ workspaceId, initialData, onSubmit, onSuc
   };
 
   const formTitle = initialData ? "Edit Workspace Information" : "Workspace Information";
+
+  // If user can't manage profile, show read-only view
+  if (!canManageProfile && step === 2) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{formTitle}</CardTitle>
+          <CardDescription>Thông tin hồ sơ workspace</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Brand Name</Label>
+            <p className="text-sm">{formData.brand_name || "N/A"}</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Business Type</Label>
+            <p className="text-sm">{formData.business_type || "N/A"}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Language</Label>
+              <p className="text-sm">
+                {languageOptions.find(l => l.code === formData.default_language_code)?.name || formData.default_language_code || "N/A"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Country</Label>
+              <p className="text-sm">
+                {countryOptions.find(c => c.code === formData.default_location_code)?.name || formData.default_location_code || "N/A"}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Brand Description</Label>
+            <p className="text-sm whitespace-pre-wrap">{formData.brand_description || "N/A"}</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Products/Services</Label>
+            <p className="text-sm whitespace-pre-wrap">{formData.brand_products_services || "N/A"}</p>
+          </div>
+          {formData.website_url && (
+            <div className="space-y-2">
+              <Label>Website</Label>
+              <a href={formData.website_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                {formData.website_url}
+              </a>
+            </div>
+          )}
+          {formData.brand_logo_url && (
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <img src={formData.brand_logo_url} alt="Brand Logo" className="max-w-xs h-auto" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div>

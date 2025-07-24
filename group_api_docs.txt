@@ -1,0 +1,79 @@
+# Tài liệu API Group (Quản lý nhóm người dùng trong workspace)
+
+## 1. Tạo group
+- Endpoint: POST /api/groups
+- Body:
+  {
+    "workspace_id": "string",
+    "name": "string",
+    "description": "string (optional)"
+  }
+- Yêu cầu: User phải là thành viên workspace.
+- Response:
+  {
+    "success": true,
+    "data": { ... group info ... }
+  }
+
+## 2. Lấy danh sách group theo workspace
+- Endpoint: GET /api/groups?workspace_id=<workspace_id>
+- Response:
+  {
+    "success": true,
+    "data": [ ... group list ... ]
+  }
+
+## 3. Lấy danh sách thành viên group
+- Endpoint: GET /api/groups/:id/members
+- Response:
+  {
+    "success": true,
+    "data": [ ... member list ... ]
+  }
+
+## 4. Thêm user vào group
+- Endpoint: POST /api/groups/:id/members
+- Body:
+  {
+    "user_id": "string",
+    "role": "admin|member"
+  }
+- Yêu cầu: Chỉ owner hoặc admin group mới được thêm user.
+- Response: { "success": true }
+- Lỗi phân quyền: { "error": "Chỉ owner hoặc admin group mới được thêm user" }
+
+## 5. Xóa user khỏi group
+- Endpoint: DELETE /api/groups/:id/members/:userId
+- Yêu cầu: Chỉ owner hoặc admin group mới được xóa user.
+- Response: { "success": true }
+- Lỗi phân quyền: { "error": "Chỉ owner hoặc admin group mới được xóa user" }
+
+## 6. Chuyển owner group
+- Endpoint: POST /api/groups/:id/transfer-ownership
+- Body:
+  {
+    "new_owner_id": "string"
+  }
+- Yêu cầu: Chỉ owner hiện tại được chuyển owner cho thành viên khác.
+- Response: { "success": true, "message": "Chuyển quyền owner group thành công" }
+- Lỗi: { "error": "Chỉ owner hiện tại mới được chuyển quyền owner group" }
+
+## 7. Đổi role thành viên group
+- Endpoint: PUT /api/groups/:id/members/:userId/role
+- Body:
+  {
+    "role": "admin|member"
+  }
+- Yêu cầu: Chỉ owner hoặc admin group mới được đổi role thành viên khác (không thể đổi role của owner).
+- Response: { "success": true, "message": "Đổi role thành viên thành công" }
+- Lỗi: { "error": "Không thể đổi role của owner group" }
+
+## 8. Quy tắc phân quyền FE cần lưu ý
+- Chỉ owner hoặc admin group mới được thêm/xóa user, đổi role thành viên.
+- Chỉ owner group mới được chuyển owner.
+- FE nên disable/hide các nút thao tác nếu user không đủ quyền (dựa vào trường `role` của user trong group).
+
+## 9. Gợi ý UI/UX
+- Hiển thị danh sách group, thành viên group, role từng thành viên.
+- Chỉ hiển thị nút “Thêm thành viên”, “Xóa thành viên”, “Đổi role”, “Chuyển owner” nếu user là owner/admin group.
+- Khi chuyển owner, hiển thị modal chọn thành viên mới (chỉ chọn được thành viên hiện tại, không phải owner). 

@@ -76,6 +76,9 @@ import { LanguageToggle } from "../LanguageToggle";
 import { ThemeToggle } from "../ThemeToggle";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 import RedeemGiftcodeDialog from "@/components/RedeemGiftcodeDialog";
+import { TransferOwnerDialog } from "@/components/workspace/TransferOwnerDialog";
+import { InviteMember } from "@/components/workspace/InviteMember";
+import { WorkspaceRole } from "@/types";
 
 interface DetailedInvitation extends Invitation {
   WorkspaceName?: string;
@@ -148,6 +151,8 @@ const Header = React.memo(() => {
   const [loadingNotifications, setLoadingNotifications] = useState<{ [key: string]: boolean }>({});
   const [subscription, setSubscription] = useState<any>(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [showTransferOwnerDialog, setShowTransferOwnerDialog] = useState(false);
+  const [transferOwnerTargetId, setTransferOwnerTargetId] = useState<string | null>(null);
 
   // Queries
   const { data: notificationsData, isLoading: isLoadingNotifications } = useQuery<{ data: Notification[] }>({
@@ -296,7 +301,13 @@ const Header = React.memo(() => {
 
   const handleRemoveMember = async () => {
     if (!memberToRemoveId || !workspace?.id) return;
-
+    // Kiểm tra nếu member bị xóa là owner
+    const member = membersData?.data?.find(m => m.user_id === memberToRemoveId);
+    if (member?.role === "owner") {
+      setTransferOwnerTargetId(memberToRemoveId);
+      setShowTransferOwnerDialog(true);
+      return;
+    }
     try {
       await removeWorkspaceMember(workspace.id, memberToRemoveId);
       queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspace.id] });
@@ -307,6 +318,12 @@ const Header = React.memo(() => {
       toast.error(t('common.errorRemovingMember'));
     }
   };
+
+  // Map lại role thành WorkspaceRole để fix lỗi type
+  const membersForDialog = (membersData?.data || []).map(m => ({
+    ...m,
+    role: m.role as import('@/types').WorkspaceRole,
+  }));
 
   return (
     <header className="bg-background border-b border-border relative z-10 background-gradient-white">
@@ -515,40 +532,85 @@ const Header = React.memo(() => {
                       <TooltipProvider key={notification.id}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
-                              disabled={loadingNotifications[notification.id]}
-                              className={cn(
-                                "w-full text-left p-4 rounded-lg flex items-start gap-3",
-                                "transition-all duration-200 ease-in-out",
-                                "hover:bg-accent/50",
-                                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                "relative cursor-pointer",
-                                !notification.is_read && "font-medium",
-                                loadingNotifications[notification.id] && "opacity-70 cursor-wait",
-                                notification.is_read && "opacity-80"
-                              )}
-                            >
-                              <div className="flex-shrink-0 mt-1 relative">
-                                {loadingNotifications[notification.id] ? (
-                                  <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                  <Bell className="h-5 w-5" />
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
+                                disabled={loadingNotifications[notification.id]}
+                                className={cn(
+                                  "w-full text-left p-4 rounded-lg flex items-start gap-3",
+                                  "transition-all duration-200 ease-in-out",
+                                  "hover:bg-accent/50",
+                                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  "relative cursor-pointer",
+                                  !notification.is_read && "font-medium",
+                                  loadingNotifications[notification.id] && "opacity-70 cursor-wait",
+                                  notification.is_read && "opacity-80"
                                 )}
-                              </div>
-                              <div className="flex-grow min-w-0">
-                                <p className="text-sm truncate">{notification.content}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(notification.created_at).toLocaleTimeString()}
-                                  </p>
-                                  {!notification.is_read && (
-                                    <span className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500" />
+                              >
+                                <div className="flex-shrink-0 mt-1 relative">
+                                  {loadingNotifications[notification.id] ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                  ) : (
+                                    <Bell className="h-5 w-5" />
                                   )}
                                 </div>
-                              </div>
-                            </button>
+                                <div className="flex-grow min-w-0">
+                                  <p className="text-sm truncate">{notification.content}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(notification.created_at).toLocaleTimeString()}
+                                    </p>
+                                    {!notification.is_read && (
+                                      <span className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500" />
+                                    )}
+                                  </div>
+                                  {/* Nếu là invitation, hiển thị 2 nút chấp nhận/từ chối */}
+                                  {notification.type === "invitation" && !notification.is_read && (
+                                    <div className="flex gap-2 mt-2">
+                                      <Button
+                                        size="sm"
+                                        className="bg-green-600 text-white hover:bg-green-700"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // Tìm invitation phù hợp từ invitationsData
+                                          const invitation = invitationsData?.data?.find(inv =>
+                                            inv.WorkspaceID === notification.workspace_id &&
+                                            inv.InviteeEmail === user?.email &&
+                                            inv.Status === "pending"
+                                          );
+                                          if (invitation) {
+                                            await handleAcceptInvitation(invitation.ID);
+                                            await handleMarkAsRead(notification.id); // Đánh dấu đã đọc
+                                          } else {
+                                            toast.error("Không tìm thấy lời mời phù hợp!");
+                                          }
+                                        }}
+                                      >Chấp nhận</Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // Tìm invitation phù hợp từ invitationsData
+                                          const invitation = invitationsData?.data?.find(inv =>
+                                            inv.WorkspaceID === notification.workspace_id &&
+                                            inv.InviteeEmail === user?.email &&
+                                            inv.Status === "pending"
+                                          );
+                                          if (invitation) {
+                                            await handleRejectInvitation(invitation.ID);
+                                            await handleMarkAsRead(notification.id); // Đánh dấu đã đọc
+                                          } else {
+                                            toast.error("Không tìm thấy lời mời phù hợp!");
+                                          }
+                                        }}
+                                      >Từ chối</Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent side="left">
                             {notification.is_read 
@@ -598,6 +660,12 @@ const Header = React.memo(() => {
                   {t('common.membersDescription')}
                 </DialogDescription>
               </DialogHeader>
+              {/* Nút mời thành viên */}
+              {workspace && (
+                <div className="mb-4">
+                  <InviteMember workspaceId={workspace.id} userRole={user?.id === workspace.owner?.id ? 'owner' as WorkspaceRole : 'member' as WorkspaceRole} />
+                </div>
+              )}
               <div className="py-4">
                 {isLoadingMembers ? (
                   <div className="flex items-center justify-center py-4">
@@ -614,7 +682,11 @@ const Header = React.memo(() => {
                         <div>
                           <p className="font-medium">{member.name || member.user_name}</p>
                           <p className="text-sm text-muted-foreground">{member.email || member.user_email}</p>
-                          <p className="text-sm text-muted-foreground">Role: {member.role}</p>
+                          <span className={`inline-block text-xs px-2 py-0.5 rounded-full ml-1
+                            ${member.role === 'owner' ? 'bg-yellow-200 text-yellow-800' :
+                              member.role === 'admin' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'}`}>
+                            {member.role}
+                          </span>
                         </div>
                         {user?.id !== member.user_id && (
                           <Button
@@ -728,6 +800,23 @@ const Header = React.memo(() => {
 
       {/* Credit Purchase Dialog */}
       <CreditPurchaseDialog isOpen={showCreditPurchase} onClose={() => setShowCreditPurchase(false)} />
+      <TransferOwnerDialog
+        open={showTransferOwnerDialog}
+        onClose={() => setShowTransferOwnerDialog(false)}
+        members={membersForDialog}
+        currentOwnerId={transferOwnerTargetId || ""}
+        workspaceId={workspace?.id || ""}
+        onTransferSuccess={async (newOwnerId) => {
+          // Sau khi chuyển owner thành công, xóa owner cũ (lúc này đã là admin)
+          if (workspace?.id && transferOwnerTargetId) {
+            await removeWorkspaceMember(workspace.id, transferOwnerTargetId);
+            queryClient.invalidateQueries({ queryKey: ['workspaceMembers', workspace.id] });
+            setIsRemoveMemberModalOpen(false);
+            setTransferOwnerTargetId(null);
+            toast.success("Đã xóa owner cũ sau khi chuyển quyền!");
+          }
+        }}
+      />
     </header>
   );
 });

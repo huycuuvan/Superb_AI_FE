@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const SuperbAiLogo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
   const sizeClasses = {
@@ -31,6 +32,7 @@ export default function WorkspaceProfilePage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const profileCardRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
+  const userRole = useWorkspaceRole();
 
   useEffect(() => {
     if(profileCardRef.current){
@@ -62,7 +64,7 @@ export default function WorkspaceProfilePage() {
         )}>
       
           <CardContent className="p-4 sm:p-6">
-            <WorkspaceProfileForm workspaceId={workspaceId} />
+            <WorkspaceProfileForm workspaceId={workspaceId} userRole={userRole} />
           </CardContent>
         </Card>
       </div>

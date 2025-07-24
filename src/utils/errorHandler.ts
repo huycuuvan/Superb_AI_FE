@@ -1,3 +1,6 @@
+import { WorkspaceError } from "../types";
+import { toast } from "../components/ui/use-toast";
+
 export interface ApiError {
   message: string;
   code?: string;
@@ -58,6 +61,22 @@ export const handleApiError = async (response: Response): Promise<never> => {
   }
 
   throw new ApiErrorException(errorData);
+};
+
+export const handleWorkspaceError = (error: WorkspaceError) => {
+  const errorMessages: Record<WorkspaceError["tag"], string> = {
+    WORKSPACE_PERMISSION_DENIED: "Bạn không có quyền thực hiện thao tác này",
+    WORKSPACE_ACCESS_DENIED: "Bạn không phải là thành viên của workspace này",
+    WORKSPACE_ID_MISSING: "ID workspace không được cung cấp",
+    WORKSPACE_UNAUTHORIZED: "Không xác định được user_id từ token",
+    WORKSPACE_MEMBER_ERROR: "Lỗi khi kiểm tra quyền thành viên workspace",
+  };
+
+  toast({
+    variant: "destructive",
+    title: "Lỗi",
+    description: errorMessages[error.tag] || error.message,
+  });
 };
 
 export const isApiError = (error: unknown): error is ApiErrorException => {

@@ -4,27 +4,25 @@ import Header from "@/components/Header/Header";
 import { ThemeProvider } from "@/hooks/useTheme";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useState } from "react";
-import { Menu, ArrowLeft } from "lucide-react";;
+import { Menu, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const DashboardLayout = () => {
   const location = useLocation();
-  const { t } = useTranslation ();
+  const { t } = useTranslation();
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  // Logic này để xác định khi nào có padding, khi nào không, rất tốt!
   const isAgentChatPage = location.pathname.includes('/agents/');
   const navigate = useNavigate();
   const isDashboardRoot = location.pathname === '/dashboard';
   const isAgentChat = location.pathname.startsWith('/dashboard/agents/');
+  const userRole = useWorkspaceRole();
 
   return (
     <ProtectedRoute>
       <ThemeProvider>
-        {/* 1. Thay thế gradient bằng màu nền động */}
         <div className="flex h-screen bg-background background-gradient-white ">
-          {/* Sidebar cố định cho desktop */}
-          <Sidebar className="hidden md:flex" />
-          {/* Nút mở sidebar mobile */}
+          <Sidebar className="hidden md:flex" userRole={userRole} />
           <button
             className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-white md:hidden"
             onClick={() => setShowMobileSidebar(true)}
@@ -32,7 +30,6 @@ const DashboardLayout = () => {
           >
             <Menu className="w-6 h-6" />
           </button>
-          {/* Sidebar dạng drawer cho mobile */}
           {showMobileSidebar && (
             <>
               <div
@@ -50,7 +47,7 @@ const DashboardLayout = () => {
                 >
                   ×
                 </button>
-                <Sidebar className="flex md:hidden h-full" isMobileDrawer />
+                <Sidebar className="flex md:hidden h-full" isMobileDrawer userRole={userRole} />
               </aside>
               <style>{`
                 @keyframes slide-in {
@@ -62,7 +59,6 @@ const DashboardLayout = () => {
           )}
           <div className="flex flex-col flex-1 w-full overflow-hidden">
             <Header />
-            {/* Nút back: chỉ hiển thị nếu không phải trang dashboard gốc và không phải màn chat */}
             {!isDashboardRoot && !isAgentChat && (
               <button
                 className="flex items-center gap-2 mt-2 ml-4 w-fit text-muted-foreground hover:text-primary transition-colors"
@@ -72,7 +68,6 @@ const DashboardLayout = () => {
                 <span>{t('common.back')}</span>
               </button>
             )}
-            {/* 3. Đảm bảo main content cũng dùng màu nền động */}
             <main className={`flex-1 overflow-y-auto bg-transparent no-scrollbar ${!isAgentChatPage ? 'p-4 md:p-6' : 'p-0'}`}>
               <Outlet />
             </main>

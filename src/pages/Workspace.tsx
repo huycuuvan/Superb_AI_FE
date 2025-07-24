@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import PageLoader from "@/components/PageLoader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import gsap from 'gsap';
 import { InviteMember } from "@/components/workspace/InviteMember";
+import { WorkspaceRole } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,11 @@ import {
 } from "@/components/ui/dialog";
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from "@/lib/utils";
+import { TransferOwnerDialog } from "@/components/workspace/TransferOwnerDialog";
+import { removeWorkspaceMember } from "@/services/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-hot-toast";
+
 
 interface Workspace {
   id: string;
@@ -47,6 +54,8 @@ const WorkspacePage = () => {
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [workspaceIdForMembers, setWorkspaceIdForMembers] = useState<string | null>(null);
+  const [showTransferOwnerDialog, setShowTransferOwnerDialog] = useState(false);
+  const [membersForTransfer, setMembersForTransfer] = useState<any[]>([]);
 
   const { data, isLoading, error: fetchError, refetch } = useQuery<WorkspaceResponse | null>({
     queryKey: ['workspaces'],
@@ -162,6 +171,31 @@ const WorkspacePage = () => {
       gsap.from(cardRef.current, {opacity: 0, y: 20, duration: 0.7, ease: 'power2.out', delay: 0.2});
     }
   },[]);
+
+  // Lấy workspace hiện tại (selectedWorkspaceId)
+  const currentWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId);
+  const isCurrentUserOwner = currentWorkspace && currentWorkspace.owner?.id === user?.id;
+
+  // Lấy danh sách thành viên cho workspace hiện tại
+  const { data: membersDataForCurrent, refetch: refetchMembersForCurrent } = useQuery({
+    queryKey: ['workspaceMembers', selectedWorkspaceId],
+    queryFn: () => getWorkspaceMembers(selectedWorkspaceId as string),
+    enabled: !!selectedWorkspaceId,
+  });
+
+  const handleLeaveWorkspace = async () => {
+    if (!currentWorkspace || !user) return;
+    setLoading(true);
+    try {
+      await removeWorkspaceMember(currentWorkspace.id, user.id);
+      toast.success("Rời workspace thành công!");
+      window.location.reload();
+    } catch (err) {
+      toast.error("Lỗi khi rời workspace");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (showLoader) {
     return <PageLoader onComplete={() => setShowLoader(false)} />;
@@ -378,6 +412,62 @@ const WorkspacePage = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {selectedWorkspaceId && isCurrentUserOwner && (
+        <Button
+          variant="default"
+          className="mt-4"
+          onClick={() => {
+            setMembersForTransfer(membersDataForCurrent?.data || []);
+            setShowTransferOwnerDialog(true);
+          }}
+        >
+          Chuyển quyền owner
+        </Button>
+      )}
+      {selectedWorkspaceId && !isCurrentUserOwner && (
+        <Button
+          variant="destructive"
+          className="mt-4"
+          onClick={handleLeaveWorkspace}
+          disabled={loading}
+        >
+          Rời workspace
+        </Button>
+      )}
+      {/* Button mời thành viên mới */}
+      {selectedWorkspaceId && (
+        <div className="mt-6">
+          <InviteMember workspaceId={selectedWorkspaceId} userRole={isCurrentUserOwner ? "owner" as WorkspaceRole : "member" as WorkspaceRole} />
+        </div>
+      )}
+      {/* Danh sách thành viên workspace */}
+      {selectedWorkspaceId && membersDataForCurrent?.data && (
+        <div className="mt-8 w-full max-w-lg mx-auto">
+          <h3 className="font-semibold mb-2">Danh sách thành viên</h3>
+          <div className="space-y-2">
+            {membersDataForCurrent.data.map((member) => (
+              <div key={member.user_id} className="flex items-center justify-between border rounded px-3 py-2">
+                <div>
+                  <span className="font-medium">{member.name || member.email}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">({member.role})</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <TransferOwnerDialog
+        open={showTransferOwnerDialog}
+        onClose={() => setShowTransferOwnerDialog(false)}
+        members={membersForTransfer}
+        currentOwnerId={user?.id || ""}
+        workspaceId={selectedWorkspaceId || ""}
+        onTransferSuccess={async () => {
+          await refetchMembersForCurrent();
+          setShowTransferOwnerDialog(false);
+          toast.success("Chuyển quyền owner thành công! Bạn có thể rời workspace nếu muốn.");
+        }}
+      />
     </div>
   );
 };

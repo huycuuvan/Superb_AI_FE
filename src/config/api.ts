@@ -108,4 +108,18 @@ export const API_ENDPOINTS = {
     list: `${API_BASE_URL}/plans`,
     subscribe: `${API_BASE_URL}/subscribe`,
   },
+  group: {
+    create: `${API_BASE_URL}/groups`,
+    list: (workspaceId: string) =>
+      `${API_BASE_URL}/groups?workspace_id=${workspaceId}`,
+    getMembers: (groupId: string) =>
+      `${API_BASE_URL}/groups/${groupId}/members`,
+    addMember: (groupId: string) => `${API_BASE_URL}/groups/${groupId}/members`,
+    removeMember: (groupId: string, userId: string) =>
+      `${API_BASE_URL}/groups/${groupId}/members/${userId}`,
+    transferOwner: (groupId: string) =>
+      `${API_BASE_URL}/groups/${groupId}/transfer-ownership`,
+    updateRole: (groupId: string, userId: string) =>
+      `${API_BASE_URL}/groups/${groupId}/members/${userId}/role`,
+  },
 };

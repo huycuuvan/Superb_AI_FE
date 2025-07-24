@@ -356,6 +356,14 @@ const AgentChat = () => {
           const msgData = receivedData.chat_message
             ? receivedData.chat_message
             : receivedData;
+          // Merge symbols nếu cần
+          if (!msgData.symbols && receivedData.symbols) {
+            msgData.symbols = receivedData.symbols;
+          }
+          // Merge artifact nếu cần
+          if (!msgData.artifact && receivedData.artifact) {
+            msgData.artifact = receivedData.artifact;
+          }
 
           const optimisticId =
             receivedData.optimistic_id || msgData.optimistic_id;
@@ -371,6 +379,7 @@ const AgentChat = () => {
                 image_urls: msgData.image_urls,
                 ...(msgData.file_urls ? { file_urls: msgData.file_urls } : {}), // chỉ gán nếu có
                 isStreaming: false,
+                artifact: msgData.artifact, // merge artifact vào ChatMessage
               };
 
               const indexToReplace = prevMessages.findIndex(
@@ -441,6 +450,7 @@ const AgentChat = () => {
                       : {}),
                     isStreaming: true,
                     parent_message_id: msgData.parent_message_id,
+                    artifact: msgData.artifact, // merge artifact vào ChatMessage
                   };
                   if (prevMessages.some((m) => m.id === newChatMessage.id))
                     return prevMessages;
@@ -454,38 +464,42 @@ const AgentChat = () => {
                   setTimeout(() => {
                     import("@/utils/fakeStreaming").then(
                       ({ fakeStreamMessage }) => {
-                                fakeStreamMessage(
-          msgData.message_content || msgData.content,
-          (partial) => {
-            // Sử dụng callback để tránh re-render không cần thiết
-            setMessages((msgs) => {
-              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
-              if (messageIndex === -1) return msgs;
-              
-              const updatedMessages = [...msgs];
-              updatedMessages[messageIndex] = {
-                ...updatedMessages[messageIndex],
-                content: partial
-              };
-              return updatedMessages;
-            });
-          },
-          () => {
-            setMessages((msgs) => {
-              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
-              if (messageIndex === -1) return msgs;
-              
-              const updatedMessages = [...msgs];
-              updatedMessages[messageIndex] = {
-                ...updatedMessages[messageIndex],
-                isStreaming: false
-              };
-              return updatedMessages;
-            });
-          },
-          5, // speed
-          'chunk' // mode: hiển thị theo từng đoạn để mượt hơn
-        );
+                        // Sửa: chỉ stream 3-4 dòng đầu, sau đó xổ ra toàn bộ
+                        const lines = (msgData.message_content || msgData.content || "").split("\n");
+                        const previewLines = lines.slice(0, 4).join("\n");
+                        const restLines = lines.slice(4).join("\n");
+                        // Stream 3-4 dòng đầu
+                        fakeStreamMessage(
+                          previewLines,
+                          (partial) => {
+                            setMessages((msgs) => {
+                              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
+                              if (messageIndex === -1) return msgs;
+                              const updatedMessages = [...msgs];
+                              updatedMessages[messageIndex] = {
+                                ...updatedMessages[messageIndex],
+                                content: partial
+                              };
+                              return updatedMessages;
+                            });
+                          },
+                          () => {
+                            // Sau khi stream xong 3-4 dòng đầu, xổ ra toàn bộ
+                            setMessages((msgs) => {
+                              const messageIndex = msgs.findIndex(m => m.id === newChatMessage.id);
+                              if (messageIndex === -1) return msgs;
+                              const updatedMessages = [...msgs];
+                              updatedMessages[messageIndex] = {
+                                ...updatedMessages[messageIndex],
+                                content: [previewLines, restLines].filter(Boolean).join("\n"),
+                                isStreaming: false
+                              };
+                              return updatedMessages;
+                            });
+                          },
+                          5, // speed
+                          'chunk'
+                        );
                       }
                     );
                   }, 10); // delay nhỏ để đảm bảo message đã được thêm vào state (giảm xuống 10ms)
@@ -503,6 +517,7 @@ const AgentChat = () => {
                     : {}),
                   isStreaming: false,
                   parent_message_id: msgData.parent_message_id,
+                  artifact: msgData.artifact, 
                 };
                 if (prevMessages.some((m) => m.id === newChatMessage.id))
                   return prevMessages;
@@ -782,6 +797,7 @@ const AgentChat = () => {
                   image_urls: msg.image_urls,
                   ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
                   parent_message_id: msg.parent_message_id,
+                  artifact: msg.artifact, // Đảm bảo lấy artifact từ API
                 }))
                 .sort(
                   (a, b) =>
@@ -1047,6 +1063,7 @@ const AgentChat = () => {
             image_urls: msg.image_urls,
             ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
             parent_message_id: msg.parent_message_id,
+            artifact: msg.artifact, // Đảm bảo lấy artifact từ API
           }))
           .sort(
             (a, b) =>
@@ -1254,6 +1271,7 @@ const AgentChat = () => {
           image_urls: msg.image_urls,
           ...(msg.file_urls ? { file_urls: msg.file_urls } : {}), // <--- thêm dòng này
           parent_message_id: msg.parent_message_id,
+          artifact: msg.artifact, // Đảm bảo lấy artifact từ API
         }))
         .sort(
           (a, b) =>
@@ -2426,26 +2444,22 @@ const AgentChat = () => {
                               ) : null}
                             </div>
                           )}
-                          {/* Hiển thị biểu đồ TradingView nếu phát hiện nhiều mã chứng khoán hợp lệ */}
+                          {/* Hiển thị biểu đồ TradingView nếu phát hiện artifact chart hợp lệ */}
                           {(() => {
-  // Chỉ hiển thị nếu msg.symbols là mảng và có phần tử
-
-  if (Array.isArray(msg.symbols) && msg.symbols.length > 0) {
-    return (
-      <div style={{ marginTop: 16 }}>
-        {msg.symbols.map(symbol => (
-          <TradingViewWidget
-            key={symbol}
-            symbol={symbol}
-            theme={isDark ? "dark" : "light"}
-            locale="vi"
-          />
-        ))}
-      </div>
-    );
-  }
-  return null;
-})()}
+                            // Hiển thị nếu msg.artifact.type === 'chart' và có exchange_symbol
+                            if (msg.artifact && msg.artifact.type === 'chart' && msg.artifact.exchange_symbol) {
+                              return (
+                                <div style={{ marginTop: 16 }}>
+                                  <TradingViewWidget
+                                    artifact={msg.artifact}
+                                    theme={isDark ? "dark" : "light"}
+                                    locale="vi"
+                                  />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                       {/* Timestamp agent */}

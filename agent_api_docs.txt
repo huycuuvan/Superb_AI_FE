@@ -1,0 +1,272 @@
+# Workspace Permission System Update
+
+## 1. Workspace Roles
+
+There are now three distinct workspace roles:
+
+- `owner`: The creator/owner of the workspace
+- `admin`: Administrators with elevated permissions
+- `member`: Regular workspace members
+
+## 2. Role Permissions
+
+Each role has specific permissions:
+
+### Owner
+- All permissions including:
+  - Manage members (invite/remove)
+  - Manage workspace settings
+  - Manage workspace profile
+  - View workspace
+  - Manage documents
+  - Manage folders
+
+### Admin
+- Manage members (with restrictions)
+- Manage workspace settings
+- View workspace
+- Manage documents
+- Manage folders
+
+### Member
+- View workspace
+- View documents
+- View folders
+
+## 3. API Changes
+
+### Response Format
+
+All API responses now include standardized error responses for permission issues:
+
+```json
+{
+  "success": false,
+  "tag": "WORKSPACE_PERMISSION_DENIED",
+  "message": "Bạn không có quyền thực hiện thao tác này",
+  "code": 403
+}
+```
+
+Common error tags:
+- `WORKSPACE_ID_MISSING`: Missing workspace ID
+- `WORKSPACE_UNAUTHORIZED`: User not authenticated
+- `WORKSPACE_ACCESS_DENIED`: User not a workspace member
+- `WORKSPACE_PERMISSION_DENIED`: User lacks required permission
+- `WORKSPACE_MEMBER_ERROR`: Error checking member permissions
+
+### Workspace Member Object
+
+```json
+{
+  "workspace_id": "string",
+  "user_id": "string",
+  "role": "owner|admin|member",
+  "joined_at": "timestamp"
+}
+```
+
+### Updated Endpoints
+
+#### 1. Create Workspace
+- `POST /workspaces`
+- Creator automatically becomes owner
+- No special permissions needed
+- Request body:
+```json
+{
+  "name": "string",
+  "description": "string",
+  "company_id": "string" // optional
+}
+```
+
+#### 2. View Workspace
+- `GET /workspaces/:id`
+- Requires: Any workspace role
+- Returns workspace details including profile
+
+#### 3. Manage Members
+- `POST /workspaces/:id/invitations`
+  - Requires: `owner` or `admin` role
+  - Admin can only invite `member` role
+  - Owner can invite both `admin` and `member` roles
+  - Cannot invite with `owner` role
+  - Request body:
+```json
+{
+  "invitee_email": "string",
+  "role": "admin|member"
+}
+```
+
+- `DELETE /workspaces/:id/members/:userId`
+  - Requires: `owner` or `admin` role
+  - Restrictions:
+    - Cannot remove workspace owner
+    - Admin cannot remove other admins
+    - Admin cannot remove owner
+    - Members cannot remove anyone
+    - Owner must transfer ownership before leaving
+
+#### 4. Workspace Profile
+- `POST /workspaces/profile`
+- `GET /workspaces/:id/profile`
+- `PUT /workspaces/:id/profile`
+  - View: Any workspace role
+  - Create/Update: Requires `owner` role
+  - Profile fields:
+```json
+{
+  "brand_name": "string",
+  "business_type": "string",
+  "default_language_code": "string",
+  "default_location_code": "string",
+  "brand_description": "string",
+  "brand_products_services": "string",
+  "website_url": "string",
+  "brand_logo_url": "string"
+}
+```
+
+#### 5. Member List
+- `GET /workspaces/:id/members`
+- Requires: Any workspace role
+- Returns list of workspace members with roles
+
+#### 6. Invitations
+- `GET /workspaces/me/invitations`
+- `POST /workspaces/invitations/:id/accept`
+- `POST /workspaces/invitations/:id/decline`
+- No special permissions needed
+
+## 4. Frontend Implementation Guidelines
+
+### 1. Role Checking
+
+```typescript
+// Role types
+type WorkspaceRole = 'owner' | 'admin' | 'member';
+
+// Permission checking
+const hasPermission = (userRole: WorkspaceRole, requiredPermission: string): boolean => {
+  const permissions = {
+    owner: ['manage_members', 'manage_settings', 'manage_profile', 'view_workspace', 'manage_documents', 'manage_folders'],
+    admin: ['manage_members', 'manage_settings', 'view_workspace', 'manage_documents', 'manage_folders'],
+    member: ['view_workspace', 'view_documents', 'view_folders']
+  };
+  
+  return permissions[userRole]?.includes(requiredPermission) ?? false;
+};
+```
+
+### 2. UI Components
+
+Update UI to show/hide features based on permissions:
+
+```typescript
+// Example component
+const WorkspaceActions = ({ userRole }) => {
+  return (
+    <div>
+      {/* Only show for owner/admin */}
+      {hasPermission(userRole, 'manage_members') && (
+        <button onClick={inviteMember}>Invite Member</button>
+      )}
+      
+      {/* Only show for owner */}
+      {hasPermission(userRole, 'manage_profile') && (
+        <button onClick={editProfile}>Edit Profile</button>
+      )}
+      
+      {/* Available for all roles */}
+      {hasPermission(userRole, 'view_workspace') && (
+        <button onClick={viewDetails}>View Details</button>
+      )}
+    </div>
+  );
+};
+```
+
+### 3. Error Handling
+
+Handle permission-related errors:
+
+```typescript
+const handleApiError = (error) => {
+  switch (error.tag) {
+    case 'WORKSPACE_PERMISSION_DENIED':
+      notify.error('Bạn không có quyền thực hiện thao tác này');
+      break;
+    case 'WORKSPACE_ACCESS_DENIED':
+      notify.error('Bạn không phải là thành viên của workspace này');
+      break;
+    case 'WORKSPACE_ID_MISSING':
+      notify.error('ID workspace không được cung cấp');
+      break;
+    case 'WORKSPACE_UNAUTHORIZED':
+      notify.error('Không xác định được user_id từ token');
+      break;
+    case 'WORKSPACE_MEMBER_ERROR':
+      notify.error('Lỗi khi kiểm tra quyền thành viên workspace');
+      break;
+    default:
+      notify.error('Đã xảy ra lỗi không xác định');
+  }
+};
+```
+
+### 4. Role Display
+
+Show appropriate role labels:
+
+```typescript
+const getRoleLabel = (role: WorkspaceRole): string => {
+  const labels = {
+    owner: 'Chủ sở hữu',
+    admin: 'Quản trị viên',
+    member: 'Thành viên'
+  };
+  return labels[role] || role;
+};
+```
+
+## 5. Migration Notes
+
+1. Existing workspaces:
+   - Current workspace creators will become owners
+   - Current admins remain admins
+   - All other members become regular members
+
+2. UI Updates Required:
+   - Update member management interfaces
+   - Add role indicators in member lists
+   - Update permission checks in action buttons/menus
+   - Add role selection in invitation flow
+
+3. Error Handling:
+   - Update error handling to support new error tags
+   - Add appropriate user messages for permission errors
+   - Implement role-based UI visibility
+
+## 6. Testing Checklist
+
+1. Role Assignment:
+   - [ ] Workspace creation assigns owner role
+   - [ ] Invitation process respects role restrictions
+   - [ ] Role changes are reflected immediately
+
+2. Permissions:
+   - [ ] Owner can perform all actions
+   - [ ] Admin restrictions are enforced
+   - [ ] Member permissions are limited appropriately
+
+3. UI Elements:
+   - [ ] Role-specific actions are shown/hidden correctly
+   - [ ] Error messages are displayed appropriately
+   - [ ] Role labels are displayed correctly
+
+4. API Integration:
+   - [ ] All API calls include proper error handling
+   - [ ] Permission errors are handled gracefully
+   - [ ] Role-based routing restrictions work 

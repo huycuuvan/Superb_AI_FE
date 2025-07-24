@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Clock,
   Trash,
-  Gift
+  Gift,
+  Building
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import './Sidebar.css';
@@ -26,10 +27,10 @@ import { useSelectedWorkspace } from '@/hooks/useSelectedWorkspace';
 import { useToast } from '@/components/ui/use-toast';
 import { useFolders } from '@/contexts/FolderContext';
 import React from 'react';
-
 import gsap from 'gsap';
 import { usePublicAgents } from '@/hooks/useAgentsByFolders';
-import { Agent } from '@/types';
+import { Agent, WorkspaceRole, WorkspacePermission } from '@/types';
+import { hasPermission } from '@/utils/workspacePermissions';
 import RunningTasksBadge from '../RunningTasksBadge';
 import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
@@ -38,10 +39,17 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { Input } from '../ui/input';
 
-
 interface SidebarProps {
-    className?: string;
-    isMobileDrawer?: boolean;
+  className?: string;
+  isMobileDrawer?: boolean;
+  userRole: WorkspaceRole;
+}
+
+interface MenuItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  permission: keyof WorkspacePermission;
 }
 
 interface FolderType {
@@ -50,7 +58,7 @@ interface FolderType {
   workspace_id: string;
 }
 
-const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
+const Sidebar = React.memo(({ className, isMobileDrawer, userRole }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -62,15 +70,12 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // State cho dialog xác nhận xóa lịch sử chat agent
   const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
   const [agentIdToClear, setAgentIdToClear] = useState<string | null>(null);
   const [isClearingHistory, setIsClearingHistory] = useState(false);
 
-  // Lấy danh sách agent theo folder_ids (by-folders)
   const folderIds = Array.isArray(folders) ? folders.map(f => f.id) : [];
   const { data: agentsData, isLoading: isLoadingAgents, error: errorAgents } = usePublicAgents(1, 1000);
-  // Chỉ hiển thị mỗi agent 1 lần duy nhất (theo agent.id)
   const agents = Array.isArray(agentsData?.data?.data)
     ? Array.from(new Map((agentsData.data.data as Agent[]).map((agent) => [agent.id, agent])).values())
     : [];
@@ -78,51 +83,49 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
   const asideRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (workspace?.id) {
-// fetchFolders(workspace.id); // Remove this line
-    }
-  }, [workspace?.id]);
-
-  useEffect(() => {
     if (asideRef.current) {
       gsap.to(asideRef.current, {
-        width: collapsed ? 64 : 256, // 16 * 4 = 64px, 64 * 4 = 256px
+        width: collapsed ? 64 : 256,
         duration: 0.3,
         ease: 'power2.inOut',
       });
     }
   }, [collapsed]);
 
-
- 
-
   const menuItems = [
-    { icon: Home, label: t('common.home'), path: '/dashboard' },
+    { icon: Home, label: t('common.home'), path: '/dashboard', permission: 'view_workspace' },
     {
       label: t('folder.departments'),
       icon: Folder,
       path: '/dashboard/departments',
+      permission: 'view_folders'
     },
-    { icon: Users, label: t('common.agents'), path: '/dashboard/agents' },
-    { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks' },
-    // Thêm tab Scheduled Tasks
-    { icon: Calendar, label: t('common.scheduled_tasks'), path: '/dashboard/scheduled-tasks' },
-    { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge' },
-    { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings' },
+    { icon: Users, label: t('common.agents'), path: '/dashboard/agents', permission: 'view_workspace' },
+    { icon: Users, label: 'Nhóm', path: '/dashboard/groups', permission: 'view_workspace' },
+    { icon: CheckCircle, label: t('common.tasks'), path: '/dashboard/tasks', permission: 'view_workspace' },
+    { icon: Calendar, label: t('common.scheduled_tasks'), path: '/dashboard/scheduled-tasks', permission: 'view_workspace' },
+    { icon: Book, label: t('common.knowledge'), path: '/dashboard/knowledge', permission: 'view_documents' },
+    { icon: SettingsIcon, label: t('common.settings'), path: '/dashboard/settings', permission: 'manage_settings' },
     ...(user?.role === 'admin' || user?.role === 'super_admin' ? [
-      { icon: Cpu, label: t('common.promptTemplates'), path: '/dashboard/prompts' },
-      { icon: Gift, label: t('common.giftcode'), path: '/dashboard/giftcodes' },
+      { icon: Cpu, label: t('common.promptTemplates'), path: '/dashboard/prompts', permission: 'manage_settings' },
+      { icon: Gift, label: t('common.giftcode'), path: '/dashboard/giftcodes', permission: 'manage_settings' },
     ] : []),
     {
       label: t('common.credential'),
       icon: Key,
       path: '/dashboard/credentials',
+      permission: 'view_workspace'
     },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
+    // First check workspace permissions
+    if (!hasPermission(userRole, item.permission as keyof WorkspacePermission)) {
+      return false;
+    }
+    // Then check system role permissions
     if (item.label === t('common.agents') && user?.role === 'user') {
-      return false; 
+      return false;
     }
     if (item.label === t('common.tasks') && user?.role === 'user') {
       return false;
@@ -130,11 +133,8 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
     return true;
   });
 
-
-  // State for search functionality
   const [searchAgent, setSearchAgent] = useState('');
 
-  // Filter agents based on search và sort theo last_message_time mới nhất
   const filteredAgents = agents
     .filter(agent => {
       const nameMatch = agent.name.toLowerCase().includes(searchAgent.toLowerCase());
@@ -147,7 +147,6 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
       return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
     });
 
-  // Hàm mở dialog xác nhận xóa lịch sử chat với agent
   const handleOpenClearHistoryModal = (agentId: string) => {
     setAgentIdToClear(agentId);
     setShowClearHistoryDialog(true);
@@ -164,7 +163,7 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
       });
       setShowClearHistoryDialog(false);
       setAgentIdToClear(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: t('error'),
         description: 'Xóa lịch sử trò chuyện thất bại!',
@@ -175,8 +174,7 @@ const Sidebar = React.memo(({ className, isMobileDrawer }: SidebarProps) => {
     }
   };
 
-  // TODO: Lấy số task thường chưa hoàn thành (ví dụ: todo, in-progress) từ API hoặc state
-  const normalTasksCount = 0; // Thay bằng logic lấy số task thường chưa hoàn thành
+  const normalTasksCount = 0;
 
   return (
     <>

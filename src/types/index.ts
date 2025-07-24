@@ -131,6 +131,13 @@ export interface ApiMessage {
   parent_message_id?: string; // For replies
   image_urls?: string[];
   file_urls?: string[];
+  artifact?: {
+    exchange_symbol?: string;
+    interval?: string;
+    studies?: string[];
+    type?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface ChatTask {
@@ -152,6 +159,13 @@ export interface ChatMessage {
   isStreaming?: boolean;
   parent_message_id?: string;
   symbols?: string[];
+  artifact?: {
+    exchange_symbol?: string;
+    interval?: string;
+    studies?: string[];
+    type?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface SidebarItem {
@@ -304,14 +318,48 @@ export interface Invitation {
   InviterEmail?: string;
 }
 
+export type WorkspaceRole = "owner" | "admin" | "member";
+
+export interface WorkspacePermission {
+  manage_members: boolean;
+  manage_settings: boolean;
+  manage_profile: boolean;
+  view_workspace: boolean;
+  manage_documents: boolean;
+  manage_folders: boolean;
+}
+
 export interface WorkspaceMember {
   id: string;
   workspace_id: string;
   user_id: string;
-  role: string;
+  role: WorkspaceRole;
   joined_at: string;
   name: string;
   email: string;
+}
+
+export interface WorkspaceProfile {
+  brand_name: string;
+  business_type: string;
+  default_language_code: string;
+  default_location_code: string;
+  brand_description: string;
+  brand_products_services: string;
+  website_url: string;
+  brand_logo_url: string;
+}
+
+export interface WorkspaceError {
+  success: false;
+  tag:
+    | "WORKSPACE_PERMISSION_DENIED"
+    | "WORKSPACE_UNAUTHORIZED"
+    | "WORKSPACE_ACCESS_DENIED"
+    | "WORKSPACE_ID_MISSING"
+    | "WORKSPACE_MEMBER_ERROR";
+  message: string;
+  code: number;
 }
 
 export interface Notification {

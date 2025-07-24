@@ -46,6 +46,8 @@ import { PayPalCallback } from '@/components/PayPalCallback';
 import KnowledgeDetailPage from '@/pages/KnowledgeDetail';
 import ForgotPassword from '@/pages/ForgotPassword';
 import GiftcodesPage from '@/pages/admin/Giftcodes';
+import React from 'react';
+import GroupsPage from '@/pages/Groups';
 
 const routes: RouteObject[] = [
   {
@@ -152,6 +154,10 @@ const routes: RouteObject[] = [
       {
         path: 'giftcodes',
         element: <GiftcodesPage />,
+      },
+      {
+        path: 'groups',
+        element: <GroupsPage />,
       },
     ],
   },

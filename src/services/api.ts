@@ -2354,3 +2354,125 @@ export const getUserSubscription = async () => {
   if (!res.ok) throw new Error("Không thể lấy thông tin subscription!");
   return res.json();
 };
+
+// ========== GROUP API ========== //
+export interface Group {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMember {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  role: "owner" | "admin" | "member";
+}
+
+export const createGroup = async (data: {
+  workspace_id: string;
+  name: string;
+  description?: string;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.create, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const getGroups = async (workspace_id: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.list(workspace_id), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const getGroupMembers = async (groupId: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.getMembers(groupId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const addGroupMember = async (
+  groupId: string,
+  data: { user_id: string; role: "admin" | "member" }
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.addMember(groupId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const removeGroupMember = async (groupId: string, userId: string) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.removeMember(groupId, userId), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const transferGroupOwner = async (
+  groupId: string,
+  new_owner_id: string
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.transferOwner(groupId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ new_owner_id }),
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};
+
+export const updateGroupMemberRole = async (
+  groupId: string,
+  userId: string,
+  role: "admin" | "member"
+) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(API_ENDPOINTS.group.updateRole(groupId, userId), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) await handleApiError(res);
+  return res.json();
+};

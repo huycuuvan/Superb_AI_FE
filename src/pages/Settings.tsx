@@ -13,14 +13,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import toast, { Toaster } from "react-hot-toast";
-import { Coins, Plus } from "lucide-react";
+import { Coins, Plus, AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWorkspace, getWorkspaceProfile } from "@/services/api";
 import { WorkspaceProfileForm } from "@/components/workspace/WorkspaceProfile";
+import { WorkspaceRole } from "@/types";
+import { hasPermission } from "@/utils/workspacePermissions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+
+interface SettingsProps {
+  userRole: WorkspaceRole;
+}
 
 const Settings = () => {
-  // Lấy workspace đầu tiên và profile
+  const userRole = useWorkspaceRole();
   const { data: wsData } = useQuery({ queryKey: ['workspaces'], queryFn: getWorkspace });
   const workspace = wsData && 'data' in wsData && Array.isArray(wsData.data) ? wsData.data[0] : undefined;
   const workspaceId = workspace?.id;
@@ -32,7 +40,10 @@ const Settings = () => {
   const { user, updateUser } = useAuth();
   const [showCreditPurchase, setShowCreditPurchase] = useState(false);
 
-  // State for account form
+  const canManageSettings = hasPermission(userRole, 'manage_settings');
+  const canManageProfile = hasPermission(userRole, 'manage_profile');
+  const canViewWorkspace = hasPermission(userRole, 'view_workspace');
+
   const [accountForm, setAccountForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -41,7 +52,6 @@ const Settings = () => {
     confirmPassword: ""
   });
 
-  // Update form when user data changes
   useEffect(() => {
     if (user) {
       setAccountForm(prev => ({
@@ -66,7 +76,6 @@ const Settings = () => {
   };
 
   const handleUpdateAccount = () => {
-    // Validate form
     if (!accountForm.name.trim()) {
       toast.error("Name is required");
       return;
@@ -77,14 +86,12 @@ const Settings = () => {
       return;
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(accountForm.email)) {
       toast.error("Please enter a valid email address");
       return;
     }
 
-    // If password change is requested, validate passwords
     if (accountForm.newPassword || accountForm.confirmPassword) {
       if (!accountForm.currentPassword) {
         toast.error("Current password is required to change password");
@@ -100,7 +107,6 @@ const Settings = () => {
       }
     }
 
-    // Update user data
     if (user) {
       const updatedUser = {
         ...user,
@@ -111,7 +117,6 @@ const Settings = () => {
       updateUser(updatedUser);
       toast.success("Account updated successfully!");
       
-      // Clear password fields
       setAccountForm(prev => ({
         ...prev,
         currentPassword: "",
@@ -120,6 +125,20 @@ const Settings = () => {
       }));
     }
   };
+
+  if (!canViewWorkspace) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You don't have permission to view workspace settings.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -133,9 +152,7 @@ const Settings = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
-          
           <TabsTrigger value="credit">Credit</TabsTrigger>
-          
         </TabsList>
         
         <TabsContent value="workspace">
@@ -147,7 +164,6 @@ const Settings = () => {
                   <CardDescription>Thông tin cơ bản workspace</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  
                   <div><b>Name:</b> {workspace.name}</div>
                   <div><b>Owner:</b> {workspace.owner.name}</div>
                   {workspace.description && <div><b>Description:</b> {workspace.description}</div>}
@@ -161,7 +177,21 @@ const Settings = () => {
                   <CardDescription>Thông tin profile workspace</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <WorkspaceProfileForm workspaceId={workspaceId} initialData={workspaceProfile || undefined} />
+                  {canManageProfile ? (
+                    <WorkspaceProfileForm 
+                      workspaceId={workspaceId} 
+                      userRole={userRole}
+                      initialData={workspaceProfile || undefined} 
+                    />
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Permission Required</AlertTitle>
+                      <AlertDescription>
+                        You need manage_profile permission to edit workspace profile.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -197,7 +227,6 @@ const Settings = () => {
                 />
               </div>
               
-              {/* User Role Display */}
               {user?.role && (
                 <div className="space-y-2">
                   <Label>Role</Label>
@@ -209,7 +238,6 @@ const Settings = () => {
                 </div>
               )}
 
-              {/* User ID Display */}
               {user?.id && (
                 <div className="space-y-2">
                   <Label>User ID</Label>
@@ -269,7 +297,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
    
-        
         <TabsContent value="credit">
           <div className="space-y-6">
             <Card>
@@ -306,8 +333,6 @@ const Settings = () => {
             <TransactionHistory />
           </div>
         </TabsContent>
-        
-        
       </Tabs>
 
       <CreditPurchaseDialog
