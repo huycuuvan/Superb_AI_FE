@@ -1,0 +1,161 @@
+# Artifact API Documentation
+
+## 1. Định nghĩa Artifact
+Artifact là thực thể đại diện cho file do user upload hoặc AI sinh ra (báo cáo, bảng, hình ảnh, v.v.), có thể chia sẻ, phân quyền, chuyển owner, và quản lý truy cập.
+
+### Trường dữ liệu chính
+| Trường              | Kiểu         | Ý nghĩa                                                         |
+|---------------------|--------------|-----------------------------------------------------------------|
+| id                  | string       | ID duy nhất của artifact                                        |
+| owner_id            | string       | ID user sở hữu                                                  |
+| workspace_id        | string       | ID workspace                                                    |
+| type                | string       | Loại file: table, rag, image, video, link, file, artifact,...   |
+| file_url            | string       | Đường dẫn file                                                  |
+| is_ai               | bool         | Có phải file do AI sinh ra không                                |
+| tags                | []string     | Tag phân loại (ví dụ: "AI", "báo cáo")                      |
+| shared_with_users   | []string     | Danh sách user được chia sẻ                                     |
+| shared_with_groups  | []string     | Danh sách group được chia sẻ                                    |
+| permission          | string       | Quyền chia sẻ: "view" hoặc "edit"                           |
+| is_public           | bool         | Công khai cho toàn bộ workspace                                 |
+| created_at          | timestamp    | Ngày tạo                                                        |
+| updated_at          | timestamp    | Ngày cập nhật                                                    |
+
+---
+
+## 2. API Endpoints
+
+### 2.1. Tạo artifact
+POST /artifacts
+Body:
+{
+  "owner_id": "string",
+  "workspace_id": "string",
+  "type": "string",
+  "file_url": "string",
+  "is_ai": true,
+  "tags": ["AI", "báo cáo"],
+  "shared_with_users": [],
+  "shared_with_groups": [],
+  "permission": "view",
+  "is_public": false
+}
+Response: Artifact vừa tạo (có id, created_at, ...)
+
+---
+
+### 2.2. Lấy artifact theo ID
+GET /artifacts/:id
+Response: Artifact
+Phân quyền:
+- Chỉ trả về nếu user là owner, hoặc nằm trong shared_with_users/shared_with_groups (đúng quyền), hoặc is_public=true.
+
+---
+
+### 2.3. Lấy danh sách artifact
+GET /artifacts?workspace_id=...&owner_id=...
+Response:
+[
+  { ...artifact1... },
+  { ...artifact2... }
+]
+Lưu ý:
+- FE nên filter theo workspace_id, owner_id hoặc các trường khác nếu cần.
+
+---
+
+### 2.4. Cập nhật artifact
+PUT /artifacts/:id
+Body: Artifact (giống khi tạo)
+Phân quyền:
+- Chỉ owner hoặc user có quyền "edit" mới được cập nhật.
+
+---
+
+### 2.5. Xóa artifact
+DELETE /artifacts/:id
+Phân quyền:
+- Chỉ owner hoặc user có quyền "edit" mới được xóa.
+
+---
+
+### 2.6. Chia sẻ artifact
+POST /artifacts/:id/share
+Body:
+{
+  "shared_with_users": ["user_id1", "user_id2"],
+  "shared_with_groups": ["group_id1"],
+  "permission": "view", // hoặc "edit"
+  "is_public": false
+}
+Phân quyền:
+- Chỉ owner hoặc user có quyền "edit" mới được chia sẻ.
+
+---
+
+### 2.7. Chuyển owner artifact
+POST /artifacts/:id/transfer-owner
+Body:
+{
+  "new_owner_id": "user_id"
+}
+Phân quyền:
+- Chỉ owner hoặc admin workspace mới được chuyển owner.
+
+---
+
+### 2.8. Import artifact vào Knowledge Base
+POST /artifacts/:id/import-to-knowledge
+
+- Import artifact thành bản ghi mới trong Knowledge Base.
+- Nếu artifact là file AI sinh ra (is_ai=true), knowledge sẽ tự động gắn tag "AI".
+
+Response:
+{
+  "id": "knowledge_id",
+  "title": "Imported from artifact ...",
+  "content": "...", // nếu là file text/table
+  "file_url": "...",
+  "type": "...",
+  "tags": ["AI", ...],
+  "is_ai": true/false
+}
+
+---
+
+## 3. Logic phân quyền (Backend đã kiểm tra):
+- Owner: Toàn quyền (view, edit, share, chuyển owner, xóa).
+- is_public: Ai trong workspace cũng có thể xem (view).
+- shared_with_users/shared_with_groups:
+  - Nếu permission là "view": chỉ xem.
+  - Nếu permission là "edit": được sửa, xóa.
+- Không có quyền: Trả về 403 Forbidden.
+
+---
+
+## 4. UI/UX Gợi ý cho FE
+- Hiển thị danh sách artifact: Cho phép filter theo loại, tag, quyền truy cập.
+- Chia sẻ file: Dialog chọn user/group, chọn quyền (view/edit), có nút public.
+- Chuyển owner: Chỉ hiển thị cho owner hoặc admin.
+- Phân biệt file AI sinh ra: Hiển thị tag "AI" nổi bật.
+- Ẩn/khóa nút sửa/xóa nếu user không có quyền edit.
+- Hiển thị rõ ai là owner, ai được chia sẻ, quyền hiện tại.
+- Khi user bị remove khỏi workspace, FE nên reload lại danh sách artifact (owner sẽ được chuyển cho admin).
+
+---
+
+## 5. Lưu ý xử lý
+- FE cần truyền token xác thực (Authorization) khi gọi API.
+- Nếu nhận 403, cần hiển thị thông báo "Bạn không có quyền truy cập file này".
+- Khi upload file mới hoặc AI sinh file, cần gọi API tạo artifact.
+- Khi chia sẻ file, cần gọi API share.
+- Khi chuyển owner, cần gọi API transfer-owner.
+
+---
+
+## 6. Yêu cầu bổ sung/trao đổi
+- Nếu cần API filter nâng cao (theo tag, type, ...), hoặc API upload file trực tiếp, hãy trao đổi thêm.
+- Nếu cần UI/UX mẫu cho dialog chia sẻ, chuyển owner, hãy yêu cầu để được tư vấn chi tiết.
+
+---
+
+Nếu FE có câu hỏi hoặc cần bổ sung logic nào, hãy gửi lại để backend cập nhật! 
