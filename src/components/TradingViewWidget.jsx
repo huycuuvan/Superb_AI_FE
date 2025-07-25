@@ -1,6 +1,6 @@
 // src/components/TradingViewWidget.jsx
 import React, { useEffect, useRef, memo } from 'react';
-import useIsMobile from '@/hooks/use-mobile';
+import {useIsMobile} from '@/hooks/use-mobile';
 
 function normalizeInterval(interval) {
   if (!interval) return 'D';
