@@ -706,7 +706,10 @@ export const ChatMessageContent = memo(
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <div className={cn(containerClassName, "pr-6 pb-2")}>
+        <div className={cn(
+          containerClassName,
+          "max-w-[60vw] overflow-x-auto break-words sm:max-w-[85%] md:max-w-[75%] p-2 sm:p-3 pr-6 pb-2"
+        )}>
           {renderContent()}
           {/* Floating Action Button để lưu */}
           {isAgent && onSavePlan && isSpecialContent(content) && (

@@ -1421,13 +1421,18 @@ export const updateCredential = async (id: string, data: object) => {
   return res.json();
 };
 
-export const deleteCredential = async (id: string) => {
+export const deleteCredential = async (
+  id: string,
+  provider: string,
+  name: string
+) => {
   const token = localStorage.getItem("token");
   const res = await fetch(API_ENDPOINTS.credentials.delete(id), {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify({ provider, name }),
   });
   if (!res.ok) {
     await handleApiError(res);

@@ -80,6 +80,10 @@ import { TransferOwnerDialog } from "@/components/workspace/TransferOwnerDialog"
 import { InviteMember } from "@/components/workspace/InviteMember";
 import { WorkspaceRole } from "@/types";
 
+interface HeaderProps {
+  onOpenSidebar?: () => void;
+}
+
 interface DetailedInvitation extends Invitation {
   WorkspaceName?: string;
   InviterEmail?: string;
@@ -141,7 +145,7 @@ const formatNotificationTime = (dateString: string) => {
   return date.toLocaleDateString('vi-VN');
 };
 
-const Header = React.memo(() => {
+const Header = React.memo(({ onOpenSidebar }: HeaderProps) => {
   const location = useLocation();
   const { t } = useLanguage();
   const { user, logout, updateUser } = useAuth();
@@ -327,55 +331,19 @@ const Header = React.memo(() => {
 
   return (
     <header className="bg-background border-b border-border relative z-10 background-gradient-white">
-      <div className="py-3 px-4 md:px-6 flex justify-between items-center">
+      <div className="py-1.5 px-4 md:px-6 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0">
-              <SheetHeader className="p-4 border-b">
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              <div className="flex flex-col p-4">
-                <Button variant="ghost" className="justify-start" asChild>
-                  <Link to="/dashboard">
-                    <Clock className="mr-2 h-4 w-4" />
-                    {t('common.dashboard')}
-                  </Link>
-                </Button>
-                <Button variant="ghost" className="justify-start" asChild>
-                  <Link to="/dashboard/agents">
-                    <Users className="mr-2 h-4 w-4" />
-                    {t('common.agents')}
-                  </Link>
-                </Button>
-                <Button variant="ghost" className="justify-start" asChild>
-                  <Link to="/dashboard/tasks">
-                    <Puzzle className="mr-2 h-4 w-4" />
-                    {t('common.tasks')}
-                  </Link>
-                </Button>
-                <Button variant="ghost" className="justify-start" asChild>
-                  <Link to="/dashboard/settings">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {t('common.settings')}
-                  </Link>
-                </Button>
-              </div>
-              <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 border-t">
-                <Button variant="ghost" className="w-full justify-start text-red-500" onClick={(e) => {
-                  e.preventDefault();
-                  logout();
-                }}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('common.logout')}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
+          {/* Nút menu mobile */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden mr-2"
+            onClick={onOpenSidebar}
+            aria-label="Mở menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          
 
           {(() => {
             if (isHomePage) {

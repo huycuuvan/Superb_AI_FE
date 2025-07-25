@@ -285,19 +285,38 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
           </div>
         );
       }
-      // Nếu là object thông thường: hiển thị bảng hoặc thông báo nếu toàn bộ giá trị rỗng
+      // Nếu là object thông thường: clean UI
       const entries = Object.entries(output);
       const allEmpty = entries.every(([_, value]) => !value || (typeof value === 'string' && value.trim() === ''));
       if (allEmpty) {
         return <div className="text-muted-foreground italic">Không có dữ liệu hiển thị.</div>;
       }
+      // Nếu chỉ có 1 trường: hiển thị label nhỏ phía trên, value bọc box đẹp
+      if (entries.length === 1) {
+        const [key, value] = entries[0];
+        return (
+          <div>
+            <div className="text-xs font-semibold text-muted-foreground mb-1">{key}</div>
+            <div className="bg-muted rounded p-3 text-sm whitespace-pre-line break-words max-w-full overflow-x-auto">
+              {typeof value === 'string' && /[*_`#[\]]/.test(value)
+                ? <ReactMarkdown>{value}</ReactMarkdown>
+                : renderOutput(value)}
+            </div>
+          </div>
+        );
+      }
+      // Nếu nhiều trường: bảng style nhẹ, key đậm nhỏ, value wrap tốt
       return (
-        <table className="min-w-full text-xs border mt-2">
+        <table className="min-w-full text-xs border mt-2 border-border bg-muted/30 rounded">
           <tbody>
             {entries.map(([key, value]) => (
               <tr key={key}>
-                <td className="font-semibold pr-2">{key}</td>
-                <td>{renderOutput(value)}</td>
+                <td className="font-semibold pr-2 text-muted-foreground align-top whitespace-nowrap py-1 px-2">{key}</td>
+                <td className="py-1 px-2 break-words max-w-2xl">
+                  {typeof value === 'string' && /[*_`#[\]]/.test(value)
+                    ? <ReactMarkdown>{value}</ReactMarkdown>
+                    : renderOutput(value)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -364,7 +383,10 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
 
               {/* Input */}
               <div className="rounded-lg bg-muted/60 p-4 mb-2 border border-border">
-                <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary"><Code size={16} /> Dữ liệu đầu vào (Input)</h4>
+                <h4 className="font-bold mb-2 flex items-center gap-2 text-primary dark:text-blue-400 text-lg tracking-wide">
+                  <Code size={18} className="text-primary dark:text-blue-400" />
+                  Dữ liệu đầu vào (Input)
+                </h4>
                 <div className="space-y-2 font-mono text-sm">
                   {Object.entries(run.input_data).map(([key, value]) => {
                     const valueStr = String(value);
@@ -385,18 +407,21 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
 
               {/* Output */}
               <div className="rounded-lg bg-muted/40 p-4 border border-border">
-                <h4 className="font-semibold mb-2 flex items-center gap-2 text-green-500"><FileVideo size={16} /> Kết quả (Output)</h4>
+                <h4 className="font-bold mb-2 flex items-center gap-2 text-green-600 dark:text-green-400 text-lg tracking-wide">
+                  <FileVideo size={18} className="text-green-600 dark:text-green-400" />
+                  Kết quả (Output)
+                </h4>
                 {(run.status === 'error' || run.status === 'failed') ? null :
                   ((!run.output_data || Object.keys(run.output_data).length === 0) ? (
                     <div className="p-3 rounded-md bg-background text-sm text-muted-foreground">Không có dữ liệu đầu ra.</div>
                   ) : (
                     <div className="space-y-2">
                       <div className="text-xs text-foreground mb-2">
-                        <code className="text-foreground">Output type: {typeof run.output_data}</code>
+                        <span className="font-semibold text-primary dark:text-blue-400">Output type:</span> <code className="text-foreground">{typeof run.output_data}</code>
                       </div>
                       {/* Dữ liệu gốc collapse */}
                       <details className="text-xs mb-2">
-                        <summary className="cursor-pointer text-foreground hover:text-white font-semibold">Dữ liệu gốc (JSON)</summary>
+                        <summary className="cursor-pointer text-primary dark:text-blue-400 hover:text-foreground font-bold">Dữ liệu gốc (JSON)</summary>
                         <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-80 text-xs">{JSON.stringify(run.output_data, null, 2)}</pre>
                       </details>
                       {/* Hiển thị output đẹp */}
@@ -404,7 +429,7 @@ export const TaskHistory = ({ runs, agentId, onRetry }: { runs: TaskRun[], agent
                         <div className="space-y-4">
                           {run.output_data.map((item, index) => (
                             <div key={`${run.id}-output-array-${index}-${run.updated_at}`} className="border border-border rounded-md p-3">
-                              <h5 className="text-sm font-semibold mb-2">Kết quả #{index + 1}</h5>
+                              <h5 className="text-base font-bold mb-2 text-green-600 dark:text-green-400">Kết quả #{index + 1}</h5>
                               {renderOutput(item)}
                             </div>
                           ))}

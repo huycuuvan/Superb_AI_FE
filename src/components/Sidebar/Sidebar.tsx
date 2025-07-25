@@ -43,6 +43,7 @@ interface SidebarProps {
   className?: string;
   isMobileDrawer?: boolean;
   userRole: WorkspaceRole;
+  onCloseSidebar?: () => void;
 }
 
 interface MenuItem {
@@ -58,7 +59,7 @@ interface FolderType {
   workspace_id: string;
 }
 
-const Sidebar = React.memo(({ className, isMobileDrawer, userRole }: SidebarProps) => {
+const Sidebar = React.memo(({ className, isMobileDrawer, userRole, onCloseSidebar }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -178,10 +179,20 @@ const Sidebar = React.memo(({ className, isMobileDrawer, userRole }: SidebarProp
 
   return (
     <>
+      {/* Overlay cho mobile, click để đóng sidebar */}
+      {isMobileDrawer && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40"
+          onClick={onCloseSidebar}
+          aria-label="Đóng sidebar"
+        />
+      )}
       <aside
         ref={asideRef}
         className={cn(
-          "flex flex-col h-screen overflow-hidden dark:bg-primary-white border-r border-border",
+          isMobileDrawer
+            ? "fixed inset-0 z-50 w-full max-w-xs h-full bg-background dark:bg-primary-white border-r border-border flex flex-col"
+            : "flex flex-col h-screen overflow-hidden dark:bg-primary-white border-r border-border",
           className
         )}
 >
@@ -243,6 +254,7 @@ const Sidebar = React.memo(({ className, isMobileDrawer, userRole }: SidebarProp
                     : 'text-muted-foreground ' + (isDark ? 'hover:button-gradient-dark hover:text-white' : 'hover:button-gradient-light hover:text-white')
                 )
               }
+              onClick={() => { if (isMobileDrawer && onCloseSidebar) onCloseSidebar(); }}
             >
               {item.icon && React.createElement(item.icon, { className: cn("sidebar-icon", !collapsed && "mr-2") })}
               {!collapsed && (
@@ -272,7 +284,7 @@ const Sidebar = React.memo(({ className, isMobileDrawer, userRole }: SidebarProp
               <Input
                 type="text"
                 placeholder="Tìm kiếm agent..."
-                className="px-2 py-1 rounded border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary w-full"
+                className="sm:overflow-hidden px-2 py-1 rounded border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary w-full"
                 value={searchAgent}
                 onChange={e => setSearchAgent(e.target.value)}
                

@@ -23,32 +23,14 @@ const DashboardLayout = () => {
       <ThemeProvider>
         <div className="flex h-screen bg-background background-gradient-white ">
           <Sidebar className="hidden md:flex" userRole={userRole} />
-          <button
-            className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-white md:hidden"
-            onClick={() => setShowMobileSidebar(true)}
-            aria-label="Mở menu"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
           {showMobileSidebar && (
             <>
-              <div
-                className="fixed inset-0 bg-black/40 z-40"
-                onClick={() => setShowMobileSidebar(false)}
+              <Sidebar
+                className="flex md:hidden h-full"
+                isMobileDrawer
+                userRole={userRole}
+                onCloseSidebar={() => setShowMobileSidebar(false)}
               />
-              <aside
-                className="fixed top-0 left-0 h-full w-64 bg-background z-50 shadow-lg animate-slide-in"
-                style={{ animation: 'slide-in 0.3s ease' }}
-              >
-                <button
-                  className="absolute top-4 right-4 p-2 rounded-full bg-gray-200 text-gray-700"
-                  onClick={() => setShowMobileSidebar(false)}
-                  aria-label="Đóng menu"
-                >
-                  ×
-                </button>
-                <Sidebar className="flex md:hidden h-full" isMobileDrawer userRole={userRole} />
-              </aside>
               <style>{`
                 @keyframes slide-in {
                   from { transform: translateX(-100%); }
@@ -58,7 +40,7 @@ const DashboardLayout = () => {
             </>
           )}
           <div className="flex flex-col flex-1 w-full overflow-hidden">
-            <Header />
+            <Header onOpenSidebar={() => setShowMobileSidebar(true)} />
             {!isDashboardRoot && !isAgentChat && (
               <button
                 className="flex items-center gap-2 mt-2 ml-4 w-fit text-muted-foreground hover:text-primary transition-colors"

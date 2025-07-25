@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Plus, Pencil, Trash } from 'lucide-react';
-import { createCredential, getCredentials, deleteCredential } from '@/services/api';
+import { createCredential, getCredentials, deleteCredential, updateCredential } from '@/services/api';
 import { CREDENTIAL_SCHEMAS, ProviderSchema, CredentialField } from '@/data/credentialSchemas';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 // Định nghĩa interface Credential tạm thời
 interface Credential {
@@ -39,6 +40,9 @@ export default function CredentialsPage() {
 
   // Thêm state cho edit
   const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
+
+  // Thêm state cho modal xác nhận xóa
+  const [deletingCredential, setDeletingCredential] = useState<Credential | null>(null);
 
   const { toast } = useToast();
 
@@ -96,13 +100,12 @@ export default function CredentialsPage() {
   };
 
   // Xử lý xóa credential
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn chắc chắn muốn xóa credential này?')) return;
+  const handleDelete = async (id: string, provider: string, name: string) => {
     try {
-      await deleteCredential(id);
+      await deleteCredential(id, provider, name);
       fetchCredentials();
     } catch (err) {
-      alert('Xóa credential thất bại');
+      toast({ title: 'Lỗi', description: 'Xóa credential thất bại', variant: 'destructive' });
     }
   };
 
@@ -137,19 +140,18 @@ export default function CredentialsPage() {
         credentialObj[field.name] = form[field.name];
       });
       if (editingCredential) {
-        // (Chỉ sketch logic, chưa code updateCredential API)
-        // await updateCredential(editingCredential.id, {
-        //   provider: selectedProvider.provider,
-        //   name: credentialName.trim(),
-        //   credential: credentialObj
-        // });
-        // setSuccess('Cập nhật credential thành công!');
-        // setEditingCredential(null);
-        // setShowCreate(false);
-        // setForm({});
-        // setCredentialName('');
-        // setSelectedProvider(CREDENTIAL_SCHEMAS[0]);
-        // toast({ title: 'Thành công', description: 'Cập nhật credential thành công!' });
+        await updateCredential(editingCredential.id, {
+          provider: selectedProvider.provider,
+          name: credentialName.trim(),
+          credential: credentialObj
+        });
+        setSuccess('Cập nhật credential thành công!');
+        setEditingCredential(null);
+        setShowCreate(false);
+        setForm({});
+        setCredentialName('');
+        setSelectedProvider(CREDENTIAL_SCHEMAS[0]);
+        toast({ title: 'Thành công', description: 'Cập nhật credential thành công!' });
       } else {
         await createCredential({ 
           provider: selectedProvider.provider, 
@@ -210,7 +212,7 @@ export default function CredentialsPage() {
                     </div>
                     <div className="flex items-center">
                       <Button variant="outline" size="sm" className="mr-2" onClick={() => handleEdit(cred)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(cred.id.toString())}><Trash className="w-4 h-4" /></Button>
+                      <Button variant="destructive" size="sm" onClick={() => setDeletingCredential(cred)}><Trash className="w-4 h-4" /></Button>
                     </div>
                   </div>
                 );
@@ -298,6 +300,24 @@ export default function CredentialsPage() {
           </form>
         </div>
       )}
+      {/* Modal xác nhận xóa credential */}
+      <Dialog open={!!deletingCredential} onOpenChange={open => { if (!open) setDeletingCredential(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa Credential</DialogTitle>
+          </DialogHeader>
+          <div>Bạn có chắc chắn muốn xóa credential <span className="font-semibold">{deletingCredential?.name}</span> không?</div>
+          <DialogFooter className="gap-2 mt-4">
+            <Button variant="destructive" onClick={async () => {
+              if (deletingCredential) {
+                await handleDelete(deletingCredential.id.toString(), deletingCredential.provider, deletingCredential.name);
+                setDeletingCredential(null);
+              }
+            }}>Xóa</Button>
+            <Button variant="outline" onClick={() => setDeletingCredential(null)}>Hủy</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
@@ -306,9 +326,16 @@ export default function CredentialsPage() {
 function SensitiveField({ value, sensitive }: { value: unknown, sensitive?: boolean }): React.ReactElement {
   const [show, setShow] = useState(false);
   if (!value) return <span className="font-mono">[Ẩn]</span>;
-  if (!sensitive) return <span className="font-mono">{String(value)}</span>;
+  if (!sensitive) return (
+    <span
+      className="font-mono break-all max-w-xs inline-block overflow-x-auto align-middle"
+      style={{ verticalAlign: 'middle', maxWidth: 220 }}
+    >
+      {String(value)}
+    </span>
+  );
   return (
-    <span className="font-mono">
+    <span className="font-mono break-all max-w-xs inline-block overflow-x-auto align-middle" style={{ verticalAlign: 'middle', maxWidth: 220 }}>
       {show ? String(value) : '****'}
       <button type="button" className="ml-2 text-blue-500 underline text-xs" onClick={() => setShow(s => !s)}>
         {show ? 'Ẩn' : 'Hiện'}

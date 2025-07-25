@@ -1,5 +1,6 @@
 // src/components/TradingViewWidget.jsx
 import React, { useEffect, useRef, memo } from 'react';
+import useIsMobile from '@/hooks/use-mobile';
 
 function normalizeInterval(interval) {
   if (!interval) return 'D';
@@ -22,6 +23,7 @@ function normalizeInterval(interval) {
 
 function TradingViewWidget({ symbol, theme = "dark", locale = "en", artifact }) {
   const container = useRef();
+  const isMobile = useIsMobile ? useIsMobile() : (typeof window !== 'undefined' && window.innerWidth <= 640);
   console.log("artifact", artifact);
   // Lấy thông tin từ artifact nếu có
   const chartSymbol = artifact?.exchange_symbol || symbol || "NASDAQ:AAPL";
@@ -73,7 +75,7 @@ function TradingViewWidget({ symbol, theme = "dark", locale = "en", artifact }) 
     <div
       className="tradingview-widget-container"
       ref={container}
-      style={{ height: "650px", width: "100%" }}
+      style={{ height: isMobile ? '300px' : '650px', width: '100%' }}
     >
       <div className="tradingview-widget-container__widget" style={{ height: "100%", width: "100%" }}></div>
       <div className="tradingview-widget-copyright">

@@ -2244,7 +2244,7 @@ const AgentChat = () => {
                         {/* Bubble agent */}
                         <div
                           className={cn(
-                            "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative",
+                            "max-w-[60vw] overflow-x-auto break-words sm:max-w-[85%] md:max-w-[75%] p-2 sm:p-3 rounded-2xl shadow-sm relative",
                             "dark:bg-[#23272f] light:bg-gradient-light text-foreground rounded-bl-lg",
                             "whitespace-normal"
                           )}
@@ -2486,7 +2486,7 @@ const AgentChat = () => {
                       {/* Bubble user */}
                       <div
                         className={cn(
-                          "max-w-[85%] md:max-w-[75%] p-3 rounded-2xl shadow-sm relative",
+                          "max-w-[90vw] sm:max-w-[85%] md:max-w-[75%] p-2 sm:p-3 rounded-2xl shadow-sm relative",
                           "bg-gradient-light dark:bg-gradient-dark text-white rounded-br-lg",
                           "whitespace-normal"
                         )}
